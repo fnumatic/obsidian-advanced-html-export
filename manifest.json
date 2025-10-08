@@ -1,0 +1,9 @@
+{
+  "id": "obsidian-plugin-test",
+  "name": "Obsidian Plugin Test",
+  "author": "fnumatic",
+  "description": "description",
+  "minAppVersion": "0.0.1",
+  "version": "0.0.1",
+  "repo": "fnumatic/obsidian-plugin-test"
+}

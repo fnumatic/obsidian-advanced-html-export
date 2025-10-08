@@ -1,0 +1,42 @@
+{
+  "name": "obsidian-plugin-test",
+  "version": "0.0.1",
+  "description": "An Obsidian plugin",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "preview": "node scripts/copy-to-vault.js",
+    "build": "vite build && cp manifest.json dist/",
+    "type-check": "tsc --noEmit",
+    "release": "release-it",
+    "release:dry": "release-it --dry-run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate-workflow": "./bin/act push --eventpath push_event.json -P ubuntu-latest=catthehacker/ubuntu:act-latest"
+  },
+  "devDependencies": {
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.5",
+    "@lezer/common": "^1.2.3",
+    "@release-it/conventional-changelog": "^10.0.1",
+    "@types/chai": "^5.2.2",
+    "@types/node": "^24.7.0",
+    "builtin-modules": "^5.0.0",
+    "obsidian": ">=1.10.0",
+    "release-it": "^19.0.5",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vitest": "^3.0.0"
+  },
+  "overrides": {
+    "@conventional-changelog/git-client": ">=2.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@conventional-changelog/git-client": ">=2.0.0"
+    }
+  }
+}
