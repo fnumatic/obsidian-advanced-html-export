@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.4](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.3...0.0.4) (2025-10-09)
+
+
+### Bug Fixes
+
+* **ci:** correct plugin name in workflow environments ([a167d4e](https://github.com/fnumatic/obsidian-advanced-html-export/commit/a167d4ec29bcd3817ec4b0ff608c9160115509be))
+
 ## [0.0.3](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.2...0.0.3) (2025-10-09)
 
 
