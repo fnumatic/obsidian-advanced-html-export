@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.3](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.2...0.0.3) (2025-10-09)
+
+
+### Bug Fixes
+
+* **ci:** update beta workflow to use Node.js 22 and pnpm ([5949a5c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/5949a5c026beb1093ceab0ba702a441f8170ec6f))
+
 ## 0.0.2 (2025-10-09)
 
 
