@@ -1,5 +1,6 @@
 import { Plugin } from "obsidian";
 import "./styles.css";
+import { ExportSingleFileCommand } from "./commands/exportSingleFile";
 
 export default class TestPlugin extends Plugin {
   onload = async () => {
@@ -14,6 +15,16 @@ export default class TestPlugin extends Plugin {
       callback: () => {
         console.log("Test Plugin: Command executed successfully");
         console.log("Test Plugin: Current timestamp:", new Date().toISOString());
+      }
+    });
+
+    // Add export single file command
+    const exportCommand = new ExportSingleFileCommand(this.app, this);
+    this.addCommand({
+      id: 'export-current-file-as-html',
+      name: 'Export Current File as HTML',
+      callback: () => {
+        exportCommand.execute();
       }
     });
   };

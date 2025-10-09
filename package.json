@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-plugin-test",
+  "name": "obsidian-advanced-html-export",
   "version": "0.0.1",
-  "description": "An Obsidian plugin",
+  "description": "Export Obsidian notes as self-contained HTML files with advanced features",
   "main": "main.js",
   "license": "MIT",
   "scripts": {
