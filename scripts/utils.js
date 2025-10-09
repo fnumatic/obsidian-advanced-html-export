@@ -64,6 +64,15 @@ function promptUser(question, options, formerVault = null) {
   })
 }
 
+function ensureHotReloadFile(vaultPath, pluginName) {
+  const pluginDir = path.join(vaultPath, '.obsidian', 'plugins', pluginName)
+  const hotReloadPath = path.join(pluginDir, '.hotreload')
+  if (!fs.existsSync(hotReloadPath)) {
+    fs.writeFileSync(hotReloadPath, '')
+    console.log('Created .hotreload file for hot reload support')
+  }
+}
+
 function copyPluginToVault(vaultPath, pluginName) {
   const pluginDir = path.join(vaultPath, '.obsidian', 'plugins', pluginName)
   const distDir = path.join(__dirname, '..', 'dist')
@@ -72,6 +81,9 @@ function copyPluginToVault(vaultPath, pluginName) {
   if (!fs.existsSync(pluginDir)) {
     fs.mkdirSync(pluginDir, { recursive: true })
   }
+
+  // Ensure hot reload file exists in plugin directory
+  ensureHotReloadFile(vaultPath, pluginName)
 
   // Files to copy
   const filesToCopy = ['manifest.json', 'main.js']
@@ -109,5 +121,6 @@ module.exports = {
   loadVaultPath,
   saveVaultPath,
   promptUser,
-  copyPluginToVault
+  copyPluginToVault,
+  ensureHotReloadFile
 }

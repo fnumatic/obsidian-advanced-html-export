@@ -22,7 +22,7 @@ Current development process requires manual vault selection and lacks hot reload
 ## Technical Implementation
 
 ### Hot Reload Integration
-The [Hot Reload plugin](https://github.com/pjeby/hot-reload) requires a `.hotreload` file in the vault root to enable automatic plugin reloading. This file should be automatically created when running dev mode.
+The [Hot Reload plugin](https://github.com/pjeby/hot-reload) requires a `.hotreload` file in the plugin directory to enable automatic plugin reloading. This file should be automatically created when running dev mode.
 
 ### Default Vault Script
 Add `dev:default` script that:
@@ -37,7 +37,8 @@ scripts/
   utils.js          # Enhanced with hot reload utilities
   dev-default.js    # New script for default vault dev mode
 .vault              # Current vault selection (existing)
-.hotreload          # Auto-generated in dev vaults
+.obsidian/plugins/{plugin-name}/
+  .hotreload        # Auto-generated in plugin directory
 ```
 
 ## User Experience
@@ -56,8 +57,9 @@ scripts/
 ### Hot Reload File Creation
 ```javascript
 // In utils.js - copyPluginToVault function
-function ensureHotReloadFile(vaultPath) {
-  const hotReloadPath = path.join(vaultPath, '.hotreload');
+function ensureHotReloadFile(vaultPath, pluginName) {
+  const pluginDir = path.join(vaultPath, '.obsidian', 'plugins', pluginName);
+  const hotReloadPath = path.join(pluginDir, '.hotreload');
   if (!fs.existsSync(hotReloadPath)) {
     fs.writeFileSync(hotReloadPath, '');
     console.log('Created .hotreload file for hot reload support');
@@ -86,7 +88,7 @@ async function main() {
   }
 
   // Ensure hot reload file exists
-  ensureHotReloadFile(vaultPath);
+  ensureHotReloadFile(vaultPath, pluginName);
 
   // Start dev build with auto-copy
   await build({ /* ... */ });
