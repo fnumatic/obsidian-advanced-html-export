@@ -9,4 +9,4 @@ dist/
 .DS_STORE
 .hotreload
 archive/
-```
+testdata/
