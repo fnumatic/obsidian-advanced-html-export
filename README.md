@@ -1,24 +1,46 @@
-# Obsidian Plugin Starter
+# Obsidian Advanced HTML Export
 
-A simple starter project for Obsidian plugins that demonstrates a semi-automatic pipeline for builds using Vite.js.
+Export Obsidian notes as self-contained HTML files with advanced features for sharing and archiving.
 
-## What is this plugin template used for
+## What is this plugin for
 
-This template provides a foundation for developing Obsidian plugins with modern tooling. It includes:
-- TypeScript setup for type-safe development
-- Vite for fast builds and development
-- Automated release management with release-it
-- GitHub Actions for CI/CD
-- Testing framework with Vitest
+The Advanced HTML Export plugin allows you to export individual Obsidian notes as self-contained HTML files. Key features include:
 
-## Why use Vite.js
+- **Self-contained exports**: All CSS is embedded, no external dependencies
+- **Clean formatting**: Uses GitHub-style markdown rendering with responsive design
+- **Safe filenames**: Automatically generates web-safe filenames
+- **Progress feedback**: Shows export progress and completion notifications
+- **Current file export**: Quick export of the currently active note via command palette
 
-Vite.js is used for its:
-- Fast development server with hot module replacement
-- Optimized production builds
-- Modern ES module support
-- Excellent TypeScript integration
-- Plugin ecosystem for Obsidian-specific optimizations
+## Why another HTML export plugin
+
+While Obsidian has built-in HTML export capabilities, this plugin offers several advantages:
+
+- **Clean export of inline nested notes**: Properly handles and displays nested note structures with clean formatting
+- **TOC with fully working links**: Generates table of contents with functional internal links for navigation within complex documents
+- **Export renderings of other plugins**: Captures and exports the rendered output from other Obsidian plugins (like Dataview, Kanban, etc.)
+- **Smallest HTML files possible**: Produces highly optimized, minimal HTML files even when embedding images and other assets
+
+## Installation
+
+### Via BRAT Plugin (Recommended)
+
+1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from Obsidian's community plugins
+2. Open BRAT settings and add this repository: `fnumatic/obsidian-advanced-html-export`
+3. Enable the plugin in your Obsidian settings
+
+### Manual Installation
+
+1. Download the latest release from the [GitHub releases page](https://github.com/fnumatic/obsidian-advanced-html-export/releases)
+2. Extract the files to your vault's `.obsidian/plugins/obsidian-advanced-html-export/` directory
+3. Reload Obsidian and enable the plugin in settings
+
+## Usage
+
+1. Open any note in Obsidian
+2. Use the command palette (`Ctrl/Cmd + P`) and search for "Export Current File as HTML"
+3. The file will be exported as a self-contained HTML file and downloaded to your default downloads folder
+4. Open the HTML file in any web browser to view the formatted note
 
 ## Development Process
 
@@ -57,49 +79,7 @@ For automatic plugin reloading in Obsidian without restarting the app, install t
 - Run tests in watch mode: `pnpm test:watch`
 - Type check: `pnpm type-check`
 
-## How to clone into new git project with fresh history
 
-### Using GitHub as template
-
-1. Click "Use this template" on the GitHub repository
-2. Create a new repository from the template
-3. Clone your new repository
-
-### Using degit
-
-```bash
-npx degit https://github.com/fnumatic/obsidian-plugin-starter your-plugin-name
-cd your-plugin-name
-git init
-git add .
-git commit -m "Initial commit"
-```
-
-### Using default git with fresh history
-
-```bash
-git clone https://github.com/fnumatic/obsidian-plugin-starter your-plugin-name
-cd your-plugin-name
-rm -rf .git
-git init
-git add .
-git commit -m "Initial commit"
-```
-
-## How to adapt plugin template to your needs
-
-### Change plugin name
-
-1. Update `package.json`:
-   - Change `name`, `description`, `author`
-   - Update repository URL and homepage
-2. Update `manifest.json`:
-   - Change `id`, `name`, `description`
-   - Update `author` and `authorUrl`
-3. Update `main.ts`:
-   - Change the plugin class name
-   - Update any string literals with the old name
-4. Update `README.md` and other documentation files
 
 ## Release procedure
 
