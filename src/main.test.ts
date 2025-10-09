@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import TestPlugin from './main';
+
+// Mock PluginSettingTab
+vi.mock('obsidian', async () => {
+  const actual = await vi.importActual('obsidian');
+  return {
+    ...actual,
+    PluginSettingTab: class {}
+  };
+});
 
 describe('TestPlugin', () => {
   it('should be instantiable', () => {

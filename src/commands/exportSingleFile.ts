@@ -38,7 +38,10 @@ export class ExportSingleFileCommand {
       const content = await this.app.vault.cachedRead(activeFile);
 
       // Create HTML renderer
-      const htmlRenderer = new HtmlRenderer(this.app, this.plugin);
+      const htmlRenderer = new HtmlRenderer(this.app, this.plugin, {
+        imageQuality: this.plugin.settings.imageQuality,
+        enableLazyLoading: this.plugin.settings.enableLazyLoading
+      });
 
       // Render markdown to HTML
       const htmlContent = await htmlRenderer.render(content);
