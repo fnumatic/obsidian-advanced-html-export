@@ -2,21 +2,11 @@ import { Plugin } from "obsidian";
 import "./styles.css";
 import { ExportSingleFileCommand } from "./commands/exportSingleFile";
 
-export default class TestPlugin extends Plugin {
+export default class AdvancedHtmlExportPlugin extends Plugin {
   onload = async () => {
-    console.log("Test Plugin: Loading started");
-    console.log("Test Plugin: Version 0.0.1 initialized");
-    console.log("loading test plugin");
-
-    // Add test command
-    this.addCommand({
-      id: 'test-log-command',
-      name: 'Test Log Command',
-      callback: () => {
-        console.log("Test Plugin: Command executed successfully");
-        console.log("Test Plugin: Current timestamp:", new Date().toISOString());
-      }
-    });
+    console.log("Advanced HTML Export Plugin: Loading started");
+    console.log("Advanced HTML Export Plugin: Version 0.0.3 initialized");
+    console.log("loading advanced html export plugin");
 
     // Add export single file command
     const exportCommand = new ExportSingleFileCommand(this.app, this);
