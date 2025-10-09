@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HtmlRenderer from './htmlRenderer';
 
+// Mock ImageOptimizer
+vi.mock('./imageOptimizer', () => ({
+  ImageOptimizer: {
+    optimizeImage: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+    getMimeType: vi.fn().mockReturnValue('image/webp')
+  }
+}));
+
 // Mock DOM elements
 const mockBody = {
   createDiv: vi.fn()
@@ -47,7 +55,7 @@ describe('HtmlRenderer', () => {
     mockComponent = {};
 
     // Create renderer instance
-    renderer = new HtmlRenderer(mockApp, mockComponent);
+    renderer = new HtmlRenderer(mockApp, mockComponent, { imageQuality: 'medium', enableLazyLoading: true });
   });
 
   describe('render', () => {
@@ -110,7 +118,7 @@ describe('HtmlRenderer', () => {
 
       expect(mockApp.vault.getFiles).toHaveBeenCalled();
       expect(mockApp.vault.adapter.readBinary).toHaveBeenCalledWith('test.png');
-      expect(result).toContain('data:image/png;base64,');
+      expect(result).toContain('data:image/webp;base64,');
     });
 
     it('should return empty string for missing images', async () => {

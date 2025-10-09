@@ -1,20 +1,28 @@
 import { App, arrayBufferToBase64, Component, MarkdownRenderer, TFile } from 'obsidian';
+import { ImageOptimizer } from './imageOptimizer';
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
+
+interface HtmlRendererSettings {
+  imageQuality: 'high' | 'medium' | 'low';
+  enableLazyLoading: boolean;
+}
 
 export default class HtmlRenderer {
   private app: App;
   private component: Component;
+  private settings: HtmlRendererSettings;
 
-  constructor (app: App, component: Component) {
+  constructor (app: App, component: Component, settings: HtmlRendererSettings) {
     this.app = app;
     this.component = component;
+    this.settings = settings;
   }
 
   /**
-   * Converts an image path to base64 string for embedding
+   * Converts an image path to optimized base64 string for embedding
    * @param imagePath The image path as returned by the MarkdownRenderer
-   * @returns The base64 representation of the image or empty string if not found
+   * @returns The base64 representation of the optimized image or empty string if not found
    */
   private async convertImageToBase64String (imagePath: string): Promise<string> {
     const vault = this.app.vault;
@@ -42,31 +50,24 @@ export default class HtmlRenderer {
 
     try {
       const buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
-      const mimeType = this.getMimeType(file.extension);
-      return `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
+
+      // Optimize the image
+      const qualityMap = { high: 90, medium: 80, low: 70 };
+      const quality = qualityMap[this.settings.imageQuality];
+      const optimizedBuffer = await ImageOptimizer.optimizeImage(buffer, {
+        quality,
+        format: 'webp'
+      });
+
+      const mimeType = ImageOptimizer.getMimeType('webp');
+      return `data:${mimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
     } catch (error) {
-      console.error(`Error reading image ${file.path}:`, error);
+      console.error(`Error processing image ${file.path}:`, error);
       return '';
     }
   }
 
-  /**
-   * Gets the MIME type for a file extension
-   * @param extension File extension without the dot
-   * @returns MIME type string
-   */
-  private getMimeType(extension: string): string {
-    const mimeTypes: Record<string, string> = {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'bmp': 'image/bmp',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'webp': 'image/webp'
-    };
-    return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
-  }
+
 
   /**
    * Renders markdown content to HTML with embedded images
@@ -88,6 +89,9 @@ export default class HtmlRenderer {
       const src = img.src;
       if (src && src !== null && src !== undefined) {
         img.src = await this.convertImageToBase64String(src);
+        if (this.settings.enableLazyLoading) {
+          img.setAttribute('loading', 'lazy');
+        }
       }
     });
 

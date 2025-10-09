@@ -38,6 +38,9 @@
   "pnpm": {
     "overrides": {
       "@conventional-changelog/git-client": ">=2.0.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
