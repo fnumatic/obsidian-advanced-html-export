@@ -6,7 +6,7 @@ on:
       - "*b"
 
 env:
-  PLUGIN_NAME: NONE # Change this to match the id of your plugin.
+  PLUGIN_NAME: obsidian-advanced-html-export # Plugin ID from manifest.json
 
 jobs:
   build:
