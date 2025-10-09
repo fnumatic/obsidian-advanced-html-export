@@ -1,9 +1,9 @@
 {
-  "id": "obsidian-plugin-test",
-  "name": "Obsidian Plugin Test",
+  "id": "obsidian-advanced-html-export",
+  "name": "Advanced HTML Export",
   "author": "fnumatic",
-  "description": "description",
-  "minAppVersion": "0.0.1",
-  "version": "0.0.1",
-  "repo": "fnumatic/obsidian-plugin-test"
+  "description": "Export Obsidian notes as self-contained HTML files with advanced features",
+  "minAppVersion": "1.9.0",
+  "version": "0.0.2",
+  "repo": "fnumatic/obsidian-advanced-html-export"
 }
