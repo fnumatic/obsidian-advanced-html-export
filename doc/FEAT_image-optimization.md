@@ -1,7 +1,7 @@
 # Feature Document: Image Optimization for HTML Export
 
 ## Overview
-Enhance the HTML export functionality by adding automatic image optimization, converting images to WebP format and compressing them to significantly reduce file sizes.
+Enhance the HTML export functionality by adding automatic image optimization using browser-native APIs, converting images to WebP format and compressing them to significantly reduce file sizes.
 
 ## Motivation
 Images are a major contributor to export file bloat; optimizing them allows for smaller, more portable HTML files suitable for email attachments and quick sharing.
@@ -15,19 +15,19 @@ Images are a major contributor to export file bloat; optimizing them allows for 
 ## Out of Scope (Future)
 - Manual image editing
 - Support for formats other than WebP
-- Advanced compression algorithms beyond Sharp
+- Advanced compression algorithms beyond Canvas API
 
 ## Technical Implementation
 
 ### Image Processing Pipeline
 1. Identify images in vault using Obsidian's metadata cache
-2. Convert to WebP using Sharp library
+2. Convert to WebP using Canvas API and toBlob()
 3. Apply compression based on quality settings
 4. Embed as base64 or lazy-load for large files
 5. Exclude unused images via graph analysis
 
 ### Key Components
-- **Sharp Integration**: Node.js library for image processing
+- **Canvas API Integration**: Browser-native image processing using Canvas and toBlob()
 - **Quality Settings**: Configurable compression levels (e.g., 80% quality)
 - **Lazy Loading**: Defer loading of below-fold images
 - **Graph Analysis**: Remove unreferenced images to reduce size
@@ -54,7 +54,7 @@ src/
 - ✅ Works with existing image formats (PNG, JPG, etc.)
 
 ## Dependencies
-- Sharp library for image processing
+- Browser Canvas API and toBlob() for image processing
 - Existing Obsidian APIs for file access
 - Follows existing code patterns from htmlRenderer.ts
 
