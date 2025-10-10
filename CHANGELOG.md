@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.5](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.4...0.0.5) (2025-10-10)
+
+
+### Features
+
+* **img:** add WebP support detection and fallback for image optimization ([ec50052](https://github.com/fnumatic/obsidian-advanced-html-export/commit/ec500525fd17da040a780a27288357e36ee12109))
+* implement browser-only image optimization using Canvas API ([2336669](https://github.com/fnumatic/obsidian-advanced-html-export/commit/2336669674ab94e4c2101517a60d8c3e094ca686))
+
 ## [0.0.4](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.3...0.0.4) (2025-10-09)
 
 
