@@ -25,7 +25,13 @@ const mockBody = {
 };
 
 const mockDocument = {
-  body: mockBody
+  body: mockBody,
+  createElement: vi.fn((tag) => {
+    if (tag === 'script') {
+      return { textContent: '', tagName: 'SCRIPT' };
+    }
+    return {};
+  })
 };
 
 Object.defineProperty(global, 'document', {
@@ -65,13 +71,29 @@ describe('HtmlRenderer', () => {
     mockComponent = {};
 
     // Create renderer instance
-    renderer = new HtmlRenderer(mockApp, mockComponent, { imageQuality: 'medium', enableLazyLoading: true });
+    renderer = new HtmlRenderer(mockApp, mockComponent, { imageQuality: 'medium', enableLazyLoading: true, enableImageDeduplication: true });
   });
 
   describe('render', () => {
-    it('should render markdown content to HTML', async () => {
+    it('should render markdown content to HTML with deduplication enabled', async () => {
+      const mockImg = {
+        src: 'app://test.png?1234567890',
+        setAttribute: vi.fn()
+      };
+      Object.defineProperty(mockImg, 'src', {
+        set: vi.fn(),
+        get: () => 'app://test.png?1234567890'
+      });
+
       const mockElement = {
-        querySelectorAll: vi.fn().mockReturnValue([]),
+        querySelectorAll: vi.fn((selector) => {
+          if (selector === '.copy-code-button') return [];
+          if (selector === 'img') return [mockImg];
+          return [];
+        }),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as any,
         innerHTML: '<p>Rendered content</p>'
       };
 
@@ -81,7 +103,21 @@ describe('HtmlRenderer', () => {
       const { MarkdownRenderer } = await import('obsidian');
       (MarkdownRenderer.render as any).mockResolvedValue(undefined);
 
-      const result = await renderer.render('# Test Content');
+      // Mock image processing
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      vi.mocked(ImageOptimizer.generateImageHash).mockResolvedValue('testhash');
+      vi.mocked(ImageOptimizer.optimizeImage).mockResolvedValue(new ArrayBuffer(8));
+
+      const mockFile = {
+        name: 'test.png',
+        extension: 'png',
+        path: 'test.png',
+        stat: { mtime: 1234567890 }
+      };
+      mockApp.vault.getFiles.mockReturnValue([mockFile]);
+      mockApp.vault.adapter.readBinary.mockResolvedValue(new ArrayBuffer(8));
+
+      await renderer.render('# Test Content');
 
       expect(MarkdownRenderer.render).toHaveBeenCalledWith(
         mockApp,
@@ -90,13 +126,64 @@ describe('HtmlRenderer', () => {
         '.',
         mockComponent
       );
-      expect(result).toBe('<p>Rendered content</p>');
+       expect(mockImg.setAttribute).toHaveBeenCalledWith('data-hash', 'testhash');
+       expect(mockImg.setAttribute).toHaveBeenCalledWith('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+    });
+
+    it('should render with deduplication disabled', async () => {
+      const rendererNoDedup = new HtmlRenderer(mockApp, mockComponent, {
+        imageQuality: 'medium',
+        enableLazyLoading: true,
+        enableImageDeduplication: false
+      });
+
+      const mockImg = {
+        setAttribute: vi.fn()
+      };
+      Object.defineProperty(mockImg, 'src', {
+        set: vi.fn(),
+        get: () => 'app://test.png?1234567890'
+      });
+      const mockElement = {
+        querySelectorAll: vi.fn((selector) => {
+          if (selector === '.copy-code-button') return [];
+          if (selector === 'img') return [mockImg];
+          return [];
+        }),
+        appendChild: vi.fn(),
+        innerHTML: '<img src="app://test.png?1234567890"><p>Content</p>'
+      };
+
+      mockBody.createDiv.mockReturnValue(mockElement as any);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as any).mockResolvedValue(undefined);
+
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      vi.mocked(ImageOptimizer.optimizeImage).mockResolvedValue(new ArrayBuffer(8));
+
+      const mockFile = {
+        name: 'test.png',
+        extension: 'png',
+        path: 'test.png',
+        stat: { mtime: 1234567890 }
+      };
+      mockApp.vault.getFiles.mockReturnValue([mockFile]);
+      mockApp.vault.adapter.readBinary.mockResolvedValue(new ArrayBuffer(8));
+
+       await rendererNoDedup.render('# Test Content');
+
+       expect(mockImg.setAttribute).toHaveBeenCalledWith('src', expect.stringContaining('data:image/webp;base64,'));
+       expect(mockImg.setAttribute).toHaveBeenCalledWith('loading', 'lazy');
     });
 
     it('should remove copy-code buttons', async () => {
       const mockButton = { remove: vi.fn() };
       const mockElement = {
         querySelectorAll: vi.fn().mockReturnValue([mockButton]),
+        insertBefore: vi.fn(),
+        appendChild: vi.fn(),
+        firstChild: null as any,
         innerHTML: '<p>Content</p>'
       };
 

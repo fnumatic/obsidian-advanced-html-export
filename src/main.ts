@@ -5,11 +5,13 @@ import { ExportSingleFileCommand } from "./commands/exportSingleFile";
 interface AdvancedHtmlExportSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
+  enableImageDeduplication: boolean;
 }
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   imageQuality: 'medium',
-  enableLazyLoading: true
+  enableLazyLoading: true,
+  enableImageDeduplication: true
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -81,6 +83,16 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.enableLazyLoading)
         .onChange(async (value) => {
           this.plugin.settings.enableLazyLoading = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Enable Image Deduplication')
+      .setDesc('Reduce file size by embedding identical images only once using JavaScript (recommended)')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.enableImageDeduplication)
+        .onChange(async (value) => {
+          this.plugin.settings.enableImageDeduplication = value;
           await this.plugin.saveSettings();
         }));
   }

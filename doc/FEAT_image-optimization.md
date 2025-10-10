@@ -35,7 +35,7 @@ Images are a major contributor to export file bloat; optimizing them allows for 
 - **Lazy Loading**: Defer loading of below-fold images
 - **Graph Analysis**: Remove unreferenced images to reduce size
 - **Image Detection**: Currently scans only `<img>` elements; future versions may include CSS and other attributes
-- **Caching Mechanism**: SHA-256 hash-based deduplication to avoid re-embedding identical images
+- **Deduplication**: Optional JavaScript-based embedding to store unique images once and reference via onload handlers
 
 ### File Structure
 ```
@@ -47,9 +47,10 @@ src/
 
 ## User Experience
 1. Export process automatically optimizes images
-2. Settings panel allows quality adjustment (high/medium/low)
+2. Settings panel allows quality adjustment (high/medium/low) and optional deduplication
 3. Progress bar shows optimization status for large vaults
 4. Exported HTML loads faster with smaller file sizes
+5. Deduplication can be disabled for simpler HTML output without JavaScript dependencies
 
 ## Success Criteria
 - ✅ WebP conversion reduces image sizes by 30-60%

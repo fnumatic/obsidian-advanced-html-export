@@ -40,7 +40,8 @@ export class ExportSingleFileCommand {
       // Create HTML renderer
       const htmlRenderer = new HtmlRenderer(this.app, this.plugin, {
         imageQuality: this.plugin.settings.imageQuality,
-        enableLazyLoading: this.plugin.settings.enableLazyLoading
+        enableLazyLoading: this.plugin.settings.enableLazyLoading,
+        enableImageDeduplication: this.plugin.settings.enableImageDeduplication
       });
 
       // Render markdown to HTML
