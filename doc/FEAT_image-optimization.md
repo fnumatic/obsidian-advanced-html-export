@@ -21,13 +21,15 @@ Images are a major contributor to export file bloat; optimizing them allows for 
 
 ### Image Processing Pipeline
 1. Identify images in vault using Obsidian's metadata cache
-2. Convert to WebP using Canvas API and toBlob()
-3. Apply compression based on quality settings
-4. Embed as base64 or lazy-load for large files
-5. Exclude unused images via graph analysis
+2. Check WebP support using Canvas API toDataURL()
+3. Convert to WebP using Canvas API and toBlob() if supported
+4. Apply compression based on quality settings
+5. Embed as base64 or lazy-load for large files
+6. Exclude unused images via graph analysis
 
 ### Key Components
 - **Canvas API Integration**: Browser-native image processing using Canvas and toBlob()
+- **WebP Support Detection**: Checks if WebP format is supported; falls back to original format if not
 - **Quality Settings**: Configurable compression levels (e.g., 80% quality)
 - **Lazy Loading**: Defer loading of below-fold images
 - **Graph Analysis**: Remove unreferenced images to reduce size
