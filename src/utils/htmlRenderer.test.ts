@@ -14,7 +14,8 @@ vi.mock('./imageOptimizer', () => ({
       };
       return mimeTypes[format.toLowerCase()] || 'application/octet-stream';
     }),
-    isWebPSupported: vi.fn().mockReturnValue(true)
+    isWebPSupported: vi.fn().mockReturnValue(true),
+    generateImageHash: vi.fn()
   }
 }));
 
@@ -160,6 +161,79 @@ describe('HtmlRenderer', () => {
       const result = await (renderer as any).convertImageToBase64String('app://missing.png?123');
 
       expect(result).toBe('');
+    });
+
+    it('should cache and reuse optimized images for identical content', async () => {
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      const mockBuffer = new ArrayBuffer(8);
+      const mockOptimizedBuffer = new ArrayBuffer(4);
+      const mockHash = 'abcd1234';
+
+      vi.mocked(ImageOptimizer.generateImageHash).mockResolvedValue(mockHash);
+      vi.mocked(ImageOptimizer.optimizeImage).mockResolvedValue(mockOptimizedBuffer);
+
+      const mockFile = {
+        name: 'test.png',
+        extension: 'png',
+        path: 'test.png',
+        stat: { mtime: 1234567890 }
+      };
+
+      mockApp.vault.getFiles.mockReturnValue([mockFile]);
+      mockApp.vault.adapter.readBinary.mockResolvedValue(mockBuffer);
+
+      // First call - should optimize and cache
+      const result1 = await (renderer as any).convertImageToBase64String('app://test.png?1234567890');
+      expect(ImageOptimizer.optimizeImage).toHaveBeenCalledTimes(1);
+      expect(result1).toContain('data:image/webp;base64,');
+
+      // Second call with same image - should use cache
+      const result2 = await (renderer as any).convertImageToBase64String('app://test.png?1234567890');
+      expect(ImageOptimizer.optimizeImage).toHaveBeenCalledTimes(1); // Still 1, not called again
+      expect(result2).toBe(result1); // Same result
+    });
+
+    it('should handle different images with different hashes', async () => {
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      const mockBuffer1 = new ArrayBuffer(8);
+      const mockBuffer2 = new ArrayBuffer(8);
+      const mockOptimizedBuffer1 = new Uint8Array([1, 2, 3, 4]).buffer;
+      const mockOptimizedBuffer2 = new Uint8Array([5, 6, 7, 8]).buffer;
+      const mockHash1 = 'abcd1234';
+      const mockHash2 = 'efgh5678';
+
+      vi.mocked(ImageOptimizer.generateImageHash)
+        .mockResolvedValueOnce(mockHash1)
+        .mockResolvedValueOnce(mockHash2);
+      vi.mocked(ImageOptimizer.optimizeImage)
+        .mockResolvedValueOnce(mockOptimizedBuffer1)
+        .mockResolvedValueOnce(mockOptimizedBuffer2);
+
+      const mockFile1 = {
+        name: 'test1.png',
+        extension: 'png',
+        path: 'test1.png',
+        stat: { mtime: 1234567890 }
+      };
+      const mockFile2 = {
+        name: 'test2.png',
+        extension: 'png',
+        path: 'test2.png',
+        stat: { mtime: 1234567891 }
+      };
+
+      mockApp.vault.getFiles.mockReturnValue([mockFile1, mockFile2]);
+      mockApp.vault.adapter.readBinary
+        .mockResolvedValueOnce(mockBuffer1)
+        .mockResolvedValueOnce(mockBuffer2);
+
+      // First image
+      const result1 = await (renderer as any).convertImageToBase64String('app://test1.png?1234567890');
+      // Second image (different hash)
+      const result2 = await (renderer as any).convertImageToBase64String('app://test2.png?1234567891');
+
+      expect(ImageOptimizer.optimizeImage).toHaveBeenCalledTimes(2);
+      expect(result1).not.toBe(result2);
     });
   });
 });
