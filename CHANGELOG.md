@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.6](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.5...0.0.6) (2025-10-10)
+
+
+### Features
+
+* **img:** add image deduplication to reduce export file sizes ([19688ec](https://github.com/fnumatic/obsidian-advanced-html-export/commit/19688ecaf559beadbba4dc31e02e9bc82fb5d00b))
+* **img:** add optional image deduplication with JavaScript embedding ([c5cb406](https://github.com/fnumatic/obsidian-advanced-html-export/commit/c5cb406e3b8165a03530a92eeb0d98457e3d119f))
+
 ## [0.0.5](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.4...0.0.5) (2025-10-10)
 
 
