@@ -4,8 +4,17 @@ import HtmlRenderer from './htmlRenderer';
 // Mock ImageOptimizer
 vi.mock('./imageOptimizer', () => ({
   ImageOptimizer: {
-    optimizeImage: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
-    getMimeType: vi.fn().mockReturnValue('image/webp')
+    optimizeImage: vi.fn(),
+    getMimeType: vi.fn((format) => {
+      const mimeTypes: Record<string, string> = {
+        'webp': 'image/webp',
+        'jpeg': 'image/jpeg',
+        'jpg': 'image/jpeg',
+        'png': 'image/png'
+      };
+      return mimeTypes[format.toLowerCase()] || 'application/octet-stream';
+    }),
+    isWebPSupported: vi.fn().mockReturnValue(true)
   }
 }));
 
@@ -104,6 +113,9 @@ describe('HtmlRenderer', () => {
 
   describe('convertImageToBase64String', () => {
     it('should convert image to base64', async () => {
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      vi.mocked(ImageOptimizer.optimizeImage).mockResolvedValue(new ArrayBuffer(8));
+
       const mockFile = {
         name: 'test.png',
         extension: 'png',
@@ -119,6 +131,27 @@ describe('HtmlRenderer', () => {
       expect(mockApp.vault.getFiles).toHaveBeenCalled();
       expect(mockApp.vault.adapter.readBinary).toHaveBeenCalledWith('test.png');
       expect(result).toContain('data:image/webp;base64,');
+    });
+
+    it('should fallback to original format when optimization fails', async () => {
+      const mockFile = {
+        name: 'test.jpg',
+        extension: 'jpg',
+        path: 'test.jpg',
+        stat: { mtime: 1234567890 }
+      };
+
+      mockApp.vault.getFiles.mockReturnValue([mockFile]);
+      const originalBuffer = new ArrayBuffer(8);
+      mockApp.vault.adapter.readBinary.mockResolvedValue(originalBuffer);
+
+      // Mock optimizeImage to throw
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      vi.mocked(ImageOptimizer.optimizeImage).mockRejectedValue(new Error('WebP not supported'));
+
+      const result = await (renderer as any).convertImageToBase64String('app://test.jpg?1234567890');
+
+      expect(result).toContain('data:image/jpeg;base64,');
     });
 
     it('should return empty string for missing images', async () => {

@@ -16,9 +16,7 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
   settings: AdvancedHtmlExportSettings;
 
   onload = async () => {
-    console.log("Advanced HTML Export Plugin: Loading started");
     console.log("Advanced HTML Export Plugin: Version 0.0.4 initialized");
-    console.log("loading advanced html export plugin");
 
     await this.loadSettings();
 

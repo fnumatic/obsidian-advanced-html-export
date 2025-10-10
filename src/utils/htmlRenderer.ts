@@ -48,9 +48,9 @@ export default class HtmlRenderer {
       return '';
     }
 
-    try {
-      const buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
+    const buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
 
+    try {
       // Optimize the image
       const qualityMap = { high: 90, medium: 80, low: 70 };
       const quality = qualityMap[this.settings.imageQuality];
@@ -62,8 +62,10 @@ export default class HtmlRenderer {
       const mimeType = ImageOptimizer.getMimeType('webp');
       return `data:${mimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
     } catch (error) {
-      console.error(`Error processing image ${file.path}:`, error);
-      return '';
+      console.warn(`Failed to optimize image ${file.path}, using original:`, error);
+      // Fallback to original image
+      const mimeType = ImageOptimizer.getMimeType(file.extension);
+      return `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
     }
   }
 
