@@ -5,6 +5,17 @@ export interface ImageOptimizationOptions {
 
 export class ImageOptimizer {
   /**
+   * Generates a SHA-256 hash of the image buffer for deduplication
+   * @param buffer The image buffer
+   * @returns Promise resolving to hex string hash
+   */
+  static async generateImageHash(buffer: ArrayBuffer): Promise<string> {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
    * Checks if WebP format is supported by the browser
    * @returns True if WebP is supported
    */

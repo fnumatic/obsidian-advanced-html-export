@@ -12,6 +12,7 @@ export default class HtmlRenderer {
   private app: App;
   private component: Component;
   private settings: HtmlRendererSettings;
+  private imageCache: Map<string, string> = new Map();
 
   constructor (app: App, component: Component, settings: HtmlRendererSettings) {
     this.app = app;
@@ -50,6 +51,16 @@ export default class HtmlRenderer {
 
     const buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
 
+    // Generate hash for deduplication
+    const imageHash = await ImageOptimizer.generateImageHash(buffer);
+
+    // Check cache first
+    if (this.imageCache.has(imageHash)) {
+      return this.imageCache.get(imageHash)!;
+    }
+
+    let optimizedBase64: string;
+
     try {
       // Optimize the image
       const qualityMap = { high: 90, medium: 80, low: 70 };
@@ -60,13 +71,18 @@ export default class HtmlRenderer {
       });
 
       const mimeType = ImageOptimizer.getMimeType('webp');
-      return `data:${mimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
+      optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
     } catch (error) {
       console.warn(`Failed to optimize image ${file.path}, using original:`, error);
       // Fallback to original image
       const mimeType = ImageOptimizer.getMimeType(file.extension);
-      return `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
+      optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
     }
+
+    // Cache the result
+    this.imageCache.set(imageHash, optimizedBase64);
+
+    return optimizedBase64;
   }
 
 

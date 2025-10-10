@@ -35,7 +35,7 @@ Images are a major contributor to export file bloat; optimizing them allows for 
 - **Lazy Loading**: Defer loading of below-fold images
 - **Graph Analysis**: Remove unreferenced images to reduce size
 - **Image Detection**: Currently scans only `<img>` elements; future versions may include CSS and other attributes
-- **Caching Mechanism**: Future implementation to deduplicate identical images and reduce redundancy
+- **Caching Mechanism**: SHA-256 hash-based deduplication to avoid re-embedding identical images
 
 ### File Structure
 ```
@@ -75,6 +75,6 @@ src/
 - Image resizing for different screen sizes
 - Batch optimization for multiple exports
 - Comprehensive data URL scanning: Detect and optimize images embedded in CSS properties (e.g., background-image), inline styles, and other HTML attributes beyond `<img>` tags
-- Image deduplication: Cache optimized base64 strings to avoid re-embedding the same image multiple times, reducing file size
+- ✅ Image deduplication: Cache optimized base64 strings to avoid re-embedding the same image multiple times, reducing file size
 
 This feature provides immediate value by reducing export file sizes, making HTML exports more practical for sharing and archiving.
