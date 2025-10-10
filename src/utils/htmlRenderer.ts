@@ -6,6 +6,7 @@ const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
 interface HtmlRendererSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
+  enableImageDeduplication: boolean;
 }
 
 export default class HtmlRenderer {
@@ -21,35 +22,152 @@ export default class HtmlRenderer {
   }
 
   /**
+   * Parses a data: URL to extract the ArrayBuffer
+   * @param dataUrl The data: URL string
+   * @returns ArrayBuffer of the decoded data
+   */
+  private parseDataUrlToBuffer(dataUrl: string): ArrayBuffer {
+    const parts = dataUrl.split(',');
+    if (parts.length !== 2 || !parts[0].startsWith('data:')) {
+      throw new Error('Invalid data URL');
+    }
+    const base64 = parts[1];
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  /**
+   * Converts an image path to hash for deduplication
+   * @param imagePath The image path as returned by the MarkdownRenderer
+   * @returns The hash of the optimized image or empty string if not found
+   */
+  private async convertImageToHash (imagePath: string): Promise<string> {
+    let buffer: ArrayBuffer;
+    let mimeType: string;
+
+    if (imagePath.startsWith('data:')) {
+      // Parse data: URL
+      try {
+        buffer = this.parseDataUrlToBuffer(imagePath);
+        const mimeMatch = imagePath.match(/^data:([^;]+)/);
+        mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      } catch (error) {
+        console.warn(`Failed to parse data URL [${imagePath}]:`, error);
+        return '';
+      }
+    } else {
+      // Existing logic for app:// URLs
+      const vault = this.app.vault;
+      const images = vault.getFiles().filter(file => IMAGE_EXTENSIONS.includes(file.extension.toLowerCase()));
+
+      const pathParts = imagePath.split('/');
+      const fileNameWithTimestamp = pathParts[pathParts.length - 1];
+      const paramParts = fileNameWithTimestamp?.split('?');
+      const fileName = paramParts?.[0];
+      const timestamp = paramParts?.[1];
+
+      let file: TFile | undefined;
+
+      for (const image of images) {
+        if (fileName !== undefined && timestamp !== undefined && image.name === decodeURIComponent(fileName) && image.stat.mtime === parseInt(timestamp)) {
+          file = image;
+          break;
+        }
+      }
+
+      if (file === undefined) {
+        console.warn(`Could not find image [${imagePath}]. Skipping.`);
+        return '';
+      }
+
+      buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
+      mimeType = ImageOptimizer.getMimeType(file.extension);
+    }
+
+    // Generate hash for deduplication
+    const imageHash = await ImageOptimizer.generateImageHash(buffer);
+
+    // Check cache first
+    if (this.imageCache.has(imageHash)) {
+      return imageHash;
+    }
+
+    let optimizedBase64: string;
+
+    try {
+      // Optimize the image
+      const qualityMap = { high: 90, medium: 80, low: 70 };
+      const quality = qualityMap[this.settings.imageQuality];
+      const optimizedBuffer = await ImageOptimizer.optimizeImage(buffer, {
+        quality,
+        format: 'webp'
+      });
+
+      const optimizedMimeType = ImageOptimizer.getMimeType('webp');
+      optimizedBase64 = `data:${optimizedMimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
+    } catch (error) {
+      console.warn(`Failed to optimize image, using original:`, error);
+      // Fallback to original image
+      optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
+    }
+
+    // Cache the result
+    this.imageCache.set(imageHash, optimizedBase64);
+
+    return imageHash;
+  }
+
+  /**
    * Converts an image path to optimized base64 string for embedding
    * @param imagePath The image path as returned by the MarkdownRenderer
    * @returns The base64 representation of the optimized image or empty string if not found
    */
   private async convertImageToBase64String (imagePath: string): Promise<string> {
-    const vault = this.app.vault;
-    const images = vault.getFiles().filter(file => IMAGE_EXTENSIONS.includes(file.extension.toLowerCase()));
+    let buffer: ArrayBuffer;
+    let mimeType: string;
 
-    const pathParts = imagePath.split('/');
-    const fileNameWithTimestamp = pathParts[pathParts.length - 1];
-    const paramParts = fileNameWithTimestamp?.split('?');
-    const fileName = paramParts?.[0];
-    const timestamp = paramParts?.[1];
-
-    let file: TFile | undefined;
-
-    for (const image of images) {
-      if (fileName !== undefined && timestamp !== undefined && image.name === decodeURIComponent(fileName) && image.stat.mtime === parseInt(timestamp)) {
-        file = image;
-        break;
+    if (imagePath.startsWith('data:')) {
+      // Parse data: URL
+      try {
+        buffer = this.parseDataUrlToBuffer(imagePath);
+        const mimeMatch = imagePath.match(/^data:([^;]+)/);
+        mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      } catch (error) {
+        console.warn(`Failed to parse data URL [${imagePath}]:`, error);
+        return '';
       }
-    }
+    } else {
+      // Existing logic for app:// URLs
+      const vault = this.app.vault;
+      const images = vault.getFiles().filter(file => IMAGE_EXTENSIONS.includes(file.extension.toLowerCase()));
 
-    if (file === undefined) {
-      console.warn(`Could not find image [${imagePath}]. Skipping.`);
-      return '';
-    }
+      const pathParts = imagePath.split('/');
+      const fileNameWithTimestamp = pathParts[pathParts.length - 1];
+      const paramParts = fileNameWithTimestamp?.split('?');
+      const fileName = paramParts?.[0];
+      const timestamp = paramParts?.[1];
 
-    const buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
+      let file: TFile | undefined;
+
+      for (const image of images) {
+        if (fileName !== undefined && timestamp !== undefined && image.name === decodeURIComponent(fileName) && image.stat.mtime === parseInt(timestamp)) {
+          file = image;
+          break;
+        }
+      }
+
+      if (file === undefined) {
+        console.warn(`Could not find image [${imagePath}]. Skipping.`);
+        return '';
+      }
+
+      buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
+      mimeType = ImageOptimizer.getMimeType(file.extension);
+    }
 
     // Generate hash for deduplication
     const imageHash = await ImageOptimizer.generateImageHash(buffer);
@@ -70,12 +188,11 @@ export default class HtmlRenderer {
         format: 'webp'
       });
 
-      const mimeType = ImageOptimizer.getMimeType('webp');
-      optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
+      const optimizedMimeType = ImageOptimizer.getMimeType('webp');
+      optimizedBase64 = `data:${optimizedMimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
     } catch (error) {
-      console.warn(`Failed to optimize image ${file.path}, using original:`, error);
+      console.warn(`Failed to optimize image, using original:`, error);
       // Fallback to original image
-      const mimeType = ImageOptimizer.getMimeType(file.extension);
       optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
     }
 
@@ -101,26 +218,73 @@ export default class HtmlRenderer {
       e.remove();
     });
 
-    // Convert images to base64 strings
+    let html: string;
+    if (this.settings.enableImageDeduplication) {
+      html = await this.renderWithDeduplication(el);
+    } else {
+      await this.renderWithoutDeduplication(el);
+      html = el.innerHTML;
+    }
+
+    return html;
+  }
+
+  /**
+   * Renders with image deduplication using JavaScript embedding
+   */
+  private async renderWithDeduplication(el: Element): Promise<string> {
     const imgElements = el.querySelectorAll('img');
     const imagePromises = Array.from(imgElements).map(async (img) => {
       const src = img.src;
       if (src && src !== null && src !== undefined) {
-        img.src = await this.convertImageToBase64String(src);
+        const hash = await this.convertImageToHash(src);
+        img.setAttribute('data-hash', hash);
+        // Replace src with placeholder to prevent browser errors
+        img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
         if (this.settings.enableLazyLoading) {
           img.setAttribute('loading', 'lazy');
         }
       }
     });
 
-    // Wait for all images to be processed
     await Promise.all(imagePromises);
 
-    // Small delay to ensure DOM updates are complete
-    await new Promise((resolve) => {
-      setTimeout(() => resolve(null), 50);
+    // Get HTML with placeholders
+    let html = el.innerHTML;
+
+    // Create images object
+    const imagesObject: Record<string, string> = {};
+    for (const [hash, base64] of this.imageCache) {
+      imagesObject[hash] = base64;
+    }
+
+    // Append script as string to avoid execution during export
+    const scriptContent = `
+      var images = ${JSON.stringify(imagesObject)};
+      document.querySelectorAll('img[data-hash]').forEach(function(img) {
+        img.src = images[img.dataset.hash];
+      });
+    `;
+    html += `<script>${scriptContent}</script>`;
+
+    return html;
+  }
+
+  /**
+   * Renders without deduplication using direct base64 embedding
+   */
+  private async renderWithoutDeduplication(el: Element): Promise<void> {
+    const imgElements = el.querySelectorAll('img');
+    const imagePromises = Array.from(imgElements).map(async (img) => {
+      const src = img.src;
+      if (src && src !== null && src !== undefined) {
+        img.setAttribute('src', await this.convertImageToBase64String(src));
+        if (this.settings.enableLazyLoading) {
+          img.setAttribute('loading', 'lazy');
+        }
+      }
     });
 
-    return el.innerHTML;
+    await Promise.all(imagePromises);
   }
 }
