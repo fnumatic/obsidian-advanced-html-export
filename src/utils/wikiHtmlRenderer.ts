@@ -219,7 +219,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             .wiki-search input { width: 100%; padding: 0.5rem 0.75rem 0.5rem 2.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem; outline: none; background: #fff; transition: all 0.15s ease; box-sizing: border-box; }
             .wiki-search input::placeholder { color: #94a3b8; }
             .wiki-search input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
-            .wiki-content { flex: 1; padding: 1.5rem 2rem; max-width: 800px; margin: 0 auto; }
+            .wiki-content { flex: 1; padding: 1.5rem 2rem; margin: 0 auto; }
             .wiki-page { display: none; }
             .wiki-page.active { display: block; }
             #wiki-sidebar-toggle:hover:not(:disabled),
