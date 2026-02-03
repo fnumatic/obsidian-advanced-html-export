@@ -10,15 +10,16 @@ interface HtmlRendererSettings {
 }
 
 export default class HtmlRenderer {
-  private app: App;
-  private component: Component;
-  private settings: HtmlRendererSettings;
-  private imageCache: Map<string, string> = new Map();
+  protected app: App;
+  protected component: Component;
+  protected settings: HtmlRendererSettings;
+  protected imageCache: Map<string, string>;
 
-  constructor (app: App, component: Component, settings: HtmlRendererSettings) {
+  constructor(app: App, component: Component, settings: HtmlRendererSettings, sharedImageCache?: Map<string, string>) {
     this.app = app;
     this.component = component;
     this.settings = settings;
+    this.imageCache = sharedImageCache || new Map();
   }
 
   /**
@@ -26,7 +27,7 @@ export default class HtmlRenderer {
    * @param dataUrl The data: URL string
    * @returns ArrayBuffer of the decoded data
    */
-  private parseDataUrlToBuffer(dataUrl: string): ArrayBuffer {
+  protected parseDataUrlToBuffer(dataUrl: string): ArrayBuffer {
     const parts = dataUrl.split(',');
     if (parts.length !== 2 || !parts[0].startsWith('data:')) {
       throw new Error('Invalid data URL');
@@ -45,7 +46,7 @@ export default class HtmlRenderer {
    * @param imagePath The image path as returned by the MarkdownRenderer
    * @returns The hash of the optimized image or empty string if not found
    */
-  private async convertImageToHash (imagePath: string): Promise<string> {
+  protected async convertImageToHash(imagePath: string): Promise<string> {
     let buffer: ArrayBuffer;
     let mimeType: string;
 
@@ -126,7 +127,7 @@ export default class HtmlRenderer {
    * @param imagePath The image path as returned by the MarkdownRenderer
    * @returns The base64 representation of the optimized image or empty string if not found
    */
-  private async convertImageToBase64String (imagePath: string): Promise<string> {
+  protected async convertImageToBase64String(imagePath: string): Promise<string> {
     let buffer: ArrayBuffer;
     let mimeType: string;
 
@@ -232,7 +233,7 @@ export default class HtmlRenderer {
   /**
    * Renders with image deduplication using JavaScript embedding
    */
-  private async renderWithDeduplication(el: Element): Promise<string> {
+  protected async renderWithDeduplication(el: Element): Promise<string> {
     const imgElements = el.querySelectorAll('img');
     const imagePromises = Array.from(imgElements).map(async (img) => {
       const src = img.src;
@@ -273,7 +274,7 @@ export default class HtmlRenderer {
   /**
    * Renders without deduplication using direct base64 embedding
    */
-  private async renderWithoutDeduplication(el: Element): Promise<void> {
+  protected async renderWithoutDeduplication(el: Element): Promise<void> {
     const imgElements = el.querySelectorAll('img');
     const imagePromises = Array.from(imgElements).map(async (img) => {
       const src = img.src;

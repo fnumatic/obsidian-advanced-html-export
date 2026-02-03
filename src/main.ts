@@ -1,17 +1,22 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import "./styles.css";
 import { ExportSingleFileCommand } from "./commands/exportSingleFile";
+import { ExportWikiCommand } from "./commands/exportWiki";
 
 interface AdvancedHtmlExportSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
+  linkDepth: number;
+  wikiTitle: string;
 }
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   imageQuality: 'medium',
   enableLazyLoading: true,
-  enableImageDeduplication: true
+  enableImageDeduplication: true,
+  linkDepth: 1,
+  wikiTitle: ''
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -29,6 +34,16 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
       name: 'Export Current File as HTML',
       callback: () => {
         exportCommand.execute();
+      }
+    });
+
+    // Add export wiki command
+    const exportWikiCommand = new ExportWikiCommand(this.app, this);
+    this.addCommand({
+      id: 'export-wiki-as-html',
+      name: 'Export Wiki as HTML',
+      callback: () => {
+        exportWikiCommand.execute();
       }
     });
 
@@ -93,6 +108,28 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.enableImageDeduplication)
         .onChange(async (value) => {
           this.plugin.settings.enableImageDeduplication = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Wiki Link Depth')
+      .setDesc('How many levels of links to include in wiki export (1 = direct links only)')
+      .addSlider(slider => slider
+        .setLimits(1, 10, 1)
+        .setValue(this.plugin.settings.linkDepth)
+        .onChange(async (value) => {
+          this.plugin.settings.linkDepth = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Wiki Title')
+      .setDesc('Custom title for wiki export (leave empty to use note title)')
+      .addText(text => text
+        .setPlaceholder('My Wiki')
+        .setValue(this.plugin.settings.wikiTitle)
+        .onChange(async (value) => {
+          this.plugin.settings.wikiTitle = value;
           await this.plugin.saveSettings();
         }));
   }
