@@ -63,17 +63,26 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
 
         const renderedPages: Map<string, string> = new Map();
 
-        let currentIndex = 0;
         const totalPages = collectedFiles.length;
+        const CHUNK_SIZE = 5;
 
-        for (const file of collectedFiles) {
-            currentIndex++;
-            progressCallback(currentIndex, totalPages);
+        for (let i = 0; i < collectedFiles.length; i += CHUNK_SIZE) {
+            const chunk = collectedFiles.slice(i, i + CHUNK_SIZE);
 
-            const slug = this.linkResolver.slugify(file.basename);
-            const content = await this.app.vault.cachedRead(file);
-            const html = await this.renderPage(content);
-            renderedPages.set(slug, html);
+            const results = await Promise.all(
+                chunk.map(async (file) => {
+                    const slug = this.linkResolver.slugify(file.basename);
+                    const content = await this.app.vault.cachedRead(file);
+                    const html = await this.renderPage(content);
+                    return [slug, html] as [string, string];
+                })
+            );
+
+            results.forEach(([slug, html]) => renderedPages.set(slug, html));
+
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            progressCallback(Math.min(i + CHUNK_SIZE, totalPages), totalPages);
         }
 
         return this.generateWikiHtml(centralFile, renderedPages);
