@@ -1,5 +1,19 @@
 # Changelog
 
+# [0.2.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.6...0.2.0) (2026-02-03)
+
+
+### Features
+
+* **wiki:** add bulk wiki export with single-page navigation UI ([51dccb5](https://github.com/fnumatic/obsidian-advanced-html-export/commit/51dccb5f6412f98c7925bab7d757a42b9fab9a5b))
+
+# [0.1.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.6...0.1.0) (2026-02-03)
+
+
+### Features
+
+* **wiki:** add bulk wiki export with single-page navigation UI ([51dccb5](https://github.com/fnumatic/obsidian-advanced-html-export/commit/51dccb5f6412f98c7925bab7d757a42b9fab9a5b))
+
 ## [0.0.6](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.5...0.0.6) (2025-10-10)
 
 
