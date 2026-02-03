@@ -11,6 +11,9 @@ The Advanced HTML Export plugin allows you to export individual Obsidian notes a
 - **Safe filenames**: Automatically generates web-safe filenames
 - **Progress feedback**: Shows export progress and completion notifications
 - **Current file export**: Quick export of the currently active note via command palette
+- **Bulk wiki export**: Export entire wikis as single HTML with SPA navigation
+- **Wiki link resolution**: Automatically resolves [[Wiki Links]] across all notes
+- **Sidebar navigation**: Collapsible sidebar with page list and search
 
 ## Why another HTML export plugin
 
@@ -20,6 +23,26 @@ While Obsidian has built-in HTML export capabilities, this plugin offers several
 - **TOC with fully working links**: Generates table of contents with functional internal links for navigation within complex documents
 - **Export renderings of other plugins**: Captures and exports the rendered output from other Obsidian plugins (like Dataview, Kanban, etc.)
 - **Smallest HTML files possible**: Produces highly optimized, minimal HTML files even when embedding images and other assets
+
+## Wiki Export
+
+Export a network of linked notes as a single HTML file with single-page application navigation.
+
+### Features
+
+- **Single HTML file**: All notes embedded in one portable file
+- **SPA navigation**: Instant page switches without reload
+- **History support**: Browser back/forward buttons work
+- **Breadcrumb navigation**: Shows current location in wiki
+- **Collapsible sidebar**: Hide/show navigation panel
+- **Page search**: Filter pages in sidebar
+
+### Usage
+
+1. Open any note in the wiki
+2. Run "Export wiki as HTML" from command palette
+3. All linked notes are collected and exported
+4. Open the HTML file - navigate between pages using the sidebar or links
 
 ## Installation
 
@@ -37,10 +60,19 @@ While Obsidian has built-in HTML export capabilities, this plugin offers several
 
 ## Usage
 
+### Single File Export
+
 1. Open any note in Obsidian
 2. Use the command palette (`Ctrl/Cmd + P`) and search for "Export Current File as HTML"
 3. The file will be exported as a self-contained HTML file and downloaded to your default downloads folder
 4. Open the HTML file in any web browser to view the formatted note
+
+### Wiki Export
+
+1. Open any note in your wiki (a note with [[Wiki Links]] to other notes)
+2. Use the command palette (`Ctrl/Cmd + P`) and search for "Export wiki as HTML"
+3. All linked notes are collected and exported to a single HTML file
+4. Open the HTML file to navigate between pages using the sidebar or links
 
 ## Development Process
 
