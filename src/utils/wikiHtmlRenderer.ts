@@ -1,6 +1,11 @@
 import { App, Component, MarkdownRenderer, TFile } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
+import template from './wikiTemplates/template.html?raw';
+import styles from './wikiTemplates/styles.css?raw';
+import signals from './wikiTemplates/signals.js?raw';
+import helpers from './wikiTemplates/helpers.js?raw';
+import appTemplate from './wikiTemplates/app.js?raw';
 
 export interface WikiRenderOptions {
     imageQuality: 'high' | 'medium' | 'low';
@@ -9,6 +14,9 @@ export interface WikiRenderOptions {
     linkDepth: number;
     includeUnlinked: boolean;
     wikiTitle?: string;
+    enableThemeToggle?: boolean;
+    enableInlineTOC?: boolean;
+    defaultTheme?: 'light' | 'dark';
 }
 
 export interface PageInfo {
@@ -181,101 +189,72 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             a.removeAttribute('style');
         });
 
-        return el.innerHTML;
+        let html = el.innerHTML;
+        html = this.addHeadingIds(html);
+
+        return html;
+    }
+
+    private addHeadingIds(html: string): string {
+        const idCounter: Record<string, number> = {};
+        
+        return html.replace(/<h([123])>([^<]+)<\/h\1>/g, (_match, level, text) => {
+            let baseId = text
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            
+            if (!idCounter[baseId]) {
+                idCounter[baseId] = 0;
+            }
+            idCounter[baseId]++;
+            const id = idCounter[baseId] === 1 ? baseId : `${baseId}-${idCounter[baseId]}`;
+            
+            return `<h${level} id="${id}">${text}</h${level}>`;
+        });
     }
 
     private generateWikiHtml(centralFile: TFile, renderedPages: Map<string, string>): string {
         const options = this.settings as WikiRenderOptions;
         const wikiTitle = options.wikiTitle || centralFile.basename;
-
+        const defaultTheme = options.defaultTheme || 'light';
+        const centralSlug = this.pageList.length > 0 ? this.pageList[0].slug : 'central';
         const pagesJson = JSON.stringify(this.pageList);
+        const imageRestoration = this.settings.enableImageDeduplication ? this.getImageRestorationScript() : '';
 
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${wikiTitle}</title>
-    <style>
-        ${this.getWikiStyles()}
-    </style>
-</head>
-<body>
-    ${this.getWikiHtmlStructure(renderedPages)}
-    <script>
-        ${this.getWikiJavaScript(pagesJson)}
-    </script>
-</body>
-</html>`;
-    }
+        const scripts = signals + '\n' + helpers + '\n' + 
+            appTemplate
+                .replace(/\{\{CENTRAL_SLUG\}\}/g, centralSlug)
+                .replace(/\{\{DEFAULT_THEME\}\}/g, defaultTheme)
+                .replace('{{WIKI_PAGES}}', pagesJson)
+                .replace('{{IMAGE_RESTORATION}}', imageRestoration);
 
-    private getWikiStyles(): string {
-        return `
-            .wiki-container { display: flex; min-height: 100vh; overflow-x: hidden; }
-            .wiki-sidebar { width: 280px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 1rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; transition: transform 0.2s ease, width 0.2s ease; transform: translateX(0); }
-            .wiki-sidebar.collapsed { width: 0; padding: 1rem 0; transform: translateX(-100%); }
-            .wiki-sidebar-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; min-width: 0; }
-            .wiki-search { position: relative; flex: 1; min-width: 0; }
-            .wiki-search input { width: 100%; padding: 0.5rem 0.75rem 0.5rem 2.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem; outline: none; background: #fff; transition: all 0.15s ease; box-sizing: border-box; }
-            .wiki-search input::placeholder { color: #94a3b8; }
-            .wiki-search input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
-            .wiki-content { flex: 1; padding: 1.5rem 2rem; margin: 0 auto; }
-            .wiki-page { display: none; }
-            .wiki-page.active { display: block; }
-            #wiki-sidebar-toggle:hover:not(:disabled),
-            #wiki-back:hover:not(:disabled),
-            #wiki-forward:hover:not(:disabled) { background: #f1f5f9; color: #334155; }
-            #wiki-sidebar-toggle:focus-visible,
-            #wiki-back:focus-visible,
-            #wiki-forward:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
-            #wiki-sidebar-toggle:disabled,
-            #wiki-back:disabled,
-            #wiki-forward:disabled { opacity: 0.4; cursor: default; }
-            .wiki-breadcrumb { font-size: 0.875rem; color: #64748b; display: flex; align-items: center; gap: 0.5rem; }
-            .wiki-breadcrumb a { color: #475569; text-decoration: none; cursor: pointer; font-weight: 500; transition: color 0.15s ease; }
-            .wiki-breadcrumb a:hover { color: #0ea5e9; }
-            .wiki-toc h3 { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-            .wiki-toc ul { list-style: none; padding: 0; margin: 0; }
-            .wiki-toc li { margin: 0.125rem 0; }
-            .wiki-toc a { color: #475569; text-decoration: none; padding: 0.375rem 0.625rem; border-radius: 6px; display: block; font-size: 0.875rem; transition: all 0.15s ease; }
-            .wiki-toc a:hover { background: #f1f5f9; color: #0ea5e9; }
-            .wiki-toc a.active { background: #f0f9ff; color: #0284c7; font-weight: 500; }
-            @media (max-width: 768px) {
-                .wiki-container { display: block; }
-                .wiki-sidebar { width: 100%; position: static; height: auto; border-right: none; border-bottom: 1px solid #e2e8f0; transform: none !important; overflow: hidden; box-sizing: border-box; background: #f8fafc; }
-                .wiki-sidebar.collapsed { display: none; width: 0; padding: 0; }
-                .wiki-sidebar-header { flex-wrap: nowrap; }
-                .wiki-content { padding: 1rem; max-width: 100%; box-sizing: border-box; }
-            }
-            ${this.getMarkdownStyles()}
-        `;
-    }
-
-    private getMarkdownStyles(): string {
-        return `
-            .markdown-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 0.9375rem; line-height: 1.7; color: #1e293b; }
-            .markdown-body h1 { font-size: 1.875rem; font-weight: 600; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; margin-top: 2rem; margin-bottom: 1rem; color: #0f172a; letter-spacing: -0.025em; }
-            .markdown-body h2 { font-size: 1.5rem; font-weight: 600; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; margin-top: 2rem; margin-bottom: 1rem; color: #1e293b; letter-spacing: -0.025em; }
-            .markdown-body h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #334155; }
-            .markdown-body p { margin-top: 0; margin-bottom: 1rem; color: #475569; }
-            .markdown-body ul { margin-top: 0; margin-bottom: 1rem; padding-left: 1.5rem; }
-            .markdown-body li { margin-bottom: 0.25rem; color: #475569; }
-            .wiki-content a { color: #0ea5e9; text-decoration: none; cursor: pointer; font-weight: 500; transition: color 0.15s ease; }
-            .wiki-content a:hover { color: #0284c7; text-decoration: underline; }
-            .wiki-content a:visited { color: #8b5cf6; }
-        `;
+        return template
+            .replace('{{WIKI_TITLE}}', wikiTitle)
+            .replace('{{DEFAULT_THEME}}', defaultTheme)
+            .replace('{{STYLES}}', styles)
+            .replace('{{CONTENT}}', this.getWikiHtmlStructure(renderedPages))
+            .replace('{{SCRIPTS}}', scripts);
     }
 
     private getWikiHtmlStructure(renderedPages: Map<string, string>): string {
+        const options = this.settings as WikiRenderOptions;
         const centralSlug = this.pageList.length > 0 ? this.pageList[0].slug : 'central';
+        const centralTitle = this.pageList.length > 0 ? this.pageList[0].title : 'Wiki';
+        const noteCount = this.pageList.length;
+        const showThemeToggle = options.enableThemeToggle !== false;
+        const showInlineTOC = options.enableInlineTOC !== false;
 
         return `
     <div class="wiki-container">
         <aside class="wiki-sidebar" id="wiki-sidebar">
             <div class="wiki-sidebar-header">
-                <div class="wiki-search" style="position: relative; flex: 1;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <input type="text" id="wiki-search-input" placeholder="Search notes..." style="width: 100%; padding: 0.5rem 0.75rem 0.5rem 2.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem; outline: none; background: #fff; transition: all 0.15s ease; box-sizing: border-box;">
+                <div class="wiki-search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="wiki-search-input" placeholder="Search ${noteCount} notes...">
                 </div>
             </div>
             <nav class="wiki-toc">
@@ -284,25 +263,102 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             </nav>
         </aside>
 
-        <main class="wiki-content" id="wiki-content">
-            <div class="wiki-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <button id="wiki-sidebar-toggle" title="Toggle sidebar" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 6px; color: #64748b; transition: all 0.15s ease;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-                </button>
-                <div class="wiki-nav" style="display: flex; align-items: center; gap: 0.25rem; border-left: 1px solid #e2e8f0; padding-left: 1rem; margin-left: 0.25rem;">
-                    <button id="wiki-back" disabled style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 6px; color: #64748b; transition: all 0.15s ease;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        <main class="wiki-main" id="wiki-main">
+            <div class="wiki-content">
+                <div class="wiki-header">
+                    <button id="wiki-sidebar-toggle" title="Toggle sidebar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="4" x2="20" y1="12" y2="12"/>
+                            <line x1="4" x2="20" y1="6" y2="6"/>
+                            <line x1="4" x2="20" y1="18" y2="18"/>
+                        </svg>
                     </button>
-                    <button id="wiki-forward" disabled style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 6px; color: #64748b; transition: all 0.15s ease;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    </button>
+                    <div class="wiki-nav">
+                        <button id="wiki-back" disabled title="Back">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m12 19-7-7 7-7"/>
+                                <path d="M19 12H5"/>
+                            </svg>
+                        </button>
+                        <button id="wiki-forward" disabled title="Forward">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14"/>
+                                <path d="m12 5 7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <nav class="wiki-breadcrumb" id="wiki-breadcrumb">
+                        <a href="javascript:void(0)" data-page="${centralSlug}">${centralTitle}</a>
+                    </nav>
+                    
+                    ${showInlineTOC || showThemeToggle ? `
+                    <div class="theme-toggle">
+                        ${showInlineTOC ? `
+                        <button id="toc-toggle" title="Toggle outline" aria-expanded="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="21" y1="10" x2="7" y2="10"/>
+                                <line x1="21" y1="6" x2="3" y2="6"/>
+                                <line x1="21" y1="14" x2="3" y2="14"/>
+                                <line x1="21" y1="18" x2="7" y2="18"/>
+                            </svg>
+                        </button>
+                        ` : ''}
+                        ${showThemeToggle ? `
+                        <button id="theme-toggle" title="Toggle theme">
+                            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                                <circle cx="12" cy="12" r="5"/>
+                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                            </svg>
+                            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                            </svg>
+                        </button>
+                        ` : ''}
+                    </div>
+                    ` : ''}
+                        <button id="toc-toggle" title="Toggle outline" aria-expanded="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="21" y1="10" x2="7" y2="10"/>
+                                <line x1="21" y1="6" x2="3" y2="6"/>
+                                <line x1="21" y1="14" x2="3" y2="14"/>
+                                <line x1="21" y1="18" x2="7" y2="18"/>
+                            </svg>
+                        </button>
+                        <button id="theme-toggle" title="Toggle theme">
+                            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                                <circle cx="12" cy="12" r="5"/>
+                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                            </svg>
+                            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <nav class="wiki-breadcrumb" id="wiki-breadcrumb" style="font-size: 0.875rem; color: #64748b; display: flex; align-items: center; gap: 0.5rem;">
-                    <a href="javascript:void(0)" data-page="${centralSlug}" style="cursor: pointer; color: #475569; text-decoration: none; font-weight: 500;">Home</a>
-                </nav>
+ 
+                ${showInlineTOC ? `
+                <div class="wiki-body-layout toc-collapsed" id="wiki-body-layout">
+                    <div class="wiki-article">
+                        ${this.generatePageSections(renderedPages)}
+                    </div>
+ 
+                    <aside class="wiki-inline-toc collapsed" id="wiki-inline-toc">
+                        <div class="wiki-inline-toc-header">
+                            <h3>On this page</h3>
+                        </div>
+                        <div class="wiki-inline-toc-body" id="wiki-inline-toc-body">
+                            <ul id="page-toc-list"></ul>
+                        </div>
+                    </aside>
+                </div>
+                ` : `
+                <div class="wiki-body-layout">
+                    <div class="wiki-article">
+                        ${this.generatePageSections(renderedPages)}
+                    </div>
+                </div>
+                `}
             </div>
-
-            ${this.generatePageSections(renderedPages)}
         </main>
     </div>`;
     }
@@ -311,171 +367,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         return this.pageList.map(page => {
             const html = renderedPages.get(page.slug) || '';
             const isActive = page.slug === this.pageList[0].slug ? ' active' : '';
-            return `<section id="page-${page.slug}" class="wiki-page${isActive}" data-title="${page.title}">${html}</section>`;
+            return `<div id="page-${page.slug}" class="wiki-page markdown-body${isActive}" data-title="${page.title}">${html}</div>`;
         }).join('\n');
-    }
-
-    private getWikiJavaScript(pagesJson: string): string {
-        return `
-            const wikiPages = ${pagesJson};
-            const wikiState = {
-                currentPage: '${this.pageList.length > 0 ? this.pageList[0].slug : 'central'}',
-                history: ['${this.pageList.length > 0 ? this.pageList[0].slug : 'central'}'],
-                forwardStack: []
-            };
-
-            function initWiki() {
-                updatePageList();
-                setupNavigation();
-                setupSearch();
-                setupPopstate();
-                ${this.settings.enableImageDeduplication ? this.getImageRestorationScript() : ''}
-            }
-
-            function updatePageList() {
-                const list = document.getElementById('wiki-page-list');
-                list.innerHTML = '';
-                wikiPages.forEach(function(page) {
-                    const li = document.createElement('li');
-                    const a = document.createElement('a');
-                    a.href = 'javascript:void(0)';
-                    a.setAttribute('data-page', page.slug);
-                    a.style.cursor = 'pointer';
-                    a.textContent = page.title;
-                    li.appendChild(a);
-                    list.appendChild(li);
-                });
-            }
-
-            function setupNavigation() {
-                const sidebar = document.getElementById('wiki-sidebar');
-                const content = document.getElementById('wiki-content');
-                const toggle = document.getElementById('wiki-sidebar-toggle');
-
-                function toggleSidebar() {
-                    sidebar.classList.toggle('collapsed');
-                    content.classList.toggle('expanded');
-                    localStorage.setItem('wikiSidebarCollapsed', sidebar.classList.contains('collapsed'));
-                }
-
-                toggle.addEventListener('click', toggleSidebar);
-
-                const savedCollapsed = localStorage.getItem('wikiSidebarCollapsed') === 'true';
-                if (savedCollapsed) {
-                    sidebar.classList.add('collapsed');
-                    content.classList.add('expanded');
-                }
-
-                document.getElementById('wiki-back').addEventListener('click', wikiBack);
-                document.getElementById('wiki-forward').addEventListener('click', wikiForward);
-
-                document.getElementById('wiki-page-list').addEventListener('click', function(e) {
-                    if (e.target.tagName === 'A') {
-                        e.preventDefault();
-                        const page = e.target.getAttribute('data-page');
-                        if (page) {
-                            showPage(page);
-                        }
-                    }
-                });
-
-                document.addEventListener('click', function(e) {
-                    const link = e.target.closest('a[data-page]');
-                    if (link) {
-                        e.preventDefault();
-                        const page = link.getAttribute('data-page');
-                        if (page) {
-                            showPage(page);
-                        }
-                    }
-                });
-            }
-
-            function setupSearch() {
-                document.getElementById('wiki-search-input').addEventListener('input', function(e) {
-                    const query = e.target.value.toLowerCase();
-                    const list = document.getElementById('wiki-page-list');
-                    list.querySelectorAll('li').forEach(function(li) {
-                        const match = li.textContent.toLowerCase().includes(query);
-                        li.style.display = match ? 'block' : 'none';
-                    });
-                });
-            }
-
-            function setupPopstate() {
-                window.addEventListener('popstate', function(e) {
-                    if (e.state && e.state.slug) {
-                        showPage(e.state.slug);
-                    }
-                });
-            }
-
-            function showPage(slug, addToHistory = true) {
-                const target = document.getElementById('page-' + slug);
-                if (!target) return;
-
-                document.querySelectorAll('.wiki-page').forEach(function(p) {
-                    p.classList.remove('active');
-                });
-                target.classList.add('active');
-
-                const previousSlug = wikiState.currentPage;
-                wikiState.currentPage = slug;
-
-                if (addToHistory && previousSlug !== slug) {
-                    wikiState.history.push(slug);
-                    wikiState.forwardStack = [];
-                }
-
-                history.replaceState({slug: slug}, '', '#' + slug);
-                updateBreadcrumb(slug);
-                updateNavButtons();
-                updateActiveSidebar(slug);
-            }
-
-            function wikiBack() {
-                if (wikiState.history.length > 1) {
-                    wikiState.forwardStack.push(wikiState.history.pop());
-                    showPage(wikiState.history[wikiState.history.length - 1], false);
-                }
-            }
-
-            function wikiForward() {
-                if (wikiState.forwardStack.length > 0) {
-                    wikiState.history.push(wikiState.forwardStack.pop());
-                    showPage(wikiState.history[wikiState.history.length - 1], false);
-                }
-            }
-
-            function updateBreadcrumb(slug) {
-                const page = wikiPages.find(function(p) { return p.slug === slug; });
-                const bc = document.getElementById('wiki-breadcrumb');
-                const homeSlug = wikiPages.length > 0 ? wikiPages[0].slug : 'central';
-                bc.innerHTML = '<a href="javascript:void(0)" data-page="' + homeSlug + '" style="cursor: pointer; color: #475569; text-decoration: none; font-weight: 500;">Home</a>' + (page && page.slug !== homeSlug ? ' > ' + page.title : '');
-            }
-
-            function updateNavButtons() {
-                document.getElementById('wiki-back').disabled = wikiState.history.length <= 1;
-                document.getElementById('wiki-forward').disabled = wikiState.forwardStack.length === 0;
-            }
-
-            function updateActiveSidebar(slug) {
-                const list = document.getElementById('wiki-page-list');
-                list.querySelectorAll('a').forEach(function(a) {
-                    if (a.getAttribute('data-page') === slug) {
-                        a.classList.add('active');
-                    } else {
-                        a.classList.remove('active');
-                    }
-                });
-            }
-
-            function wikiNavigateTo(slug) {
-                showPage(slug);
-            }
-
-            initWiki();
-        `;
     }
 
     private getImageRestorationScript(): string {

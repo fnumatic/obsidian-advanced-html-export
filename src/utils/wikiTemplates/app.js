@@ -1,0 +1,350 @@
+// Wikifoo App Logic
+// Uses Preact Signals for reactive state management
+
+import { signal, computed, effect } from './signals.js';
+import { el, els, scrollToTop, scrollToId, setTheme, getTheme, toggleTheme } from './helpers.js';
+
+let scrollSpyObserver = null;
+
+// State
+const state = {
+    currentPage: signal('{{CENTRAL_SLUG}}'),
+    pageHistory: signal([]),
+    forwardStack: signal([]),
+    sidebarCollapsed: signal(false),
+    tocCollapsed: signal(true),
+    searchQuery: signal(''),
+    currentTheme: signal('{{DEFAULT_THEME}}'),
+    notes: {{WIKI_PAGES}}
+};
+
+// Computed values
+const computedState = {
+    canGoBack: computed(() => state.pageHistory.value.length > 0),
+    canGoForward: computed(() => state.forwardStack.value.length > 0),
+    filteredNotes: computed(() => {
+        const query = state.searchQuery.value.toLowerCase();
+        if (!query) return state.notes;
+        return state.notes.filter(n =>
+            n.title.toLowerCase().includes(query) ||
+            n.slug.toLowerCase().includes(query)
+        );
+    })
+};
+
+// Initialize
+function initWiki() {
+    initTheme();
+    renderSidebar();
+    generateTOC();
+    setupEffects();
+    setupEventHandlers();
+    setupScrollSpy();
+    {{IMAGE_RESTORATION}}
+}
+
+function initTheme() {
+    const savedTheme = document.documentElement.getAttribute('data-theme');
+    setTheme(savedTheme || state.currentTheme.value);
+    updateThemeIcon();
+}
+
+function updateThemeIcon() {
+    const sun = el('#theme-icon-sun');
+    const moon = el('#theme-icon-moon');
+    const isDark = getTheme() === 'dark';
+    if (sun) sun.style.display = isDark ? 'block' : 'none';
+    if (moon) moon.style.display = isDark ? 'none' : 'block';
+}
+
+function renderSidebar() {
+    const list = el('#wiki-page-list');
+    if (!list) return;
+
+    const notes = computedState.filteredNotes.value;
+    list.innerHTML = notes.map(note => ''
+        + '<li>'
+        + '<a href="javascript:void(0)" data-page="' + note.slug + '">'
+        + note.title
+        + '</a>'
+        + '</li>'
+    ).join('');
+}
+
+function generateTOC() {
+    const tocBody = el('#wiki-inline-toc-body');
+    if (!tocBody) return;
+
+    const activePage = el('.wiki-page.active');
+    if (!activePage) return;
+
+    const headings = activePage.querySelectorAll('h2, h3');
+    if (!headings || headings.length === 0) return;
+
+    let tocHTML = '<ul id="page-toc-list">';
+
+    headings.forEach(heading => {
+        const level = heading.tagName.toLowerCase();
+        const headingText = heading.textContent || '';
+        const text = headingText.trim();
+        const id = heading.id;
+
+        if (!id) return;
+
+        tocHTML += '<li><a href="#' + id + '" class="' + level + '" data-target="' + id + '">' + text + '</a></li>';
+    });
+
+    tocHTML += '</ul>';
+
+    if (tocBody) {
+        tocBody.innerHTML = tocHTML;
+
+        const tocLinks = tocBody.querySelectorAll('a');
+        tocLinks.forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                const href = a.getAttribute('href');
+                if (href) {
+                    const id = href.substring(1);
+                    scrollToId(id);
+                }
+            });
+        });
+    }
+}
+
+function toggleTOC() {
+    const toc = el('#wiki-inline-toc');
+    const layout = el('#wiki-body-layout');
+    const toggleBtn = el('#toc-toggle');
+    if (!toc || !layout || !toggleBtn) return;
+
+    state.tocCollapsed.value = !state.tocCollapsed.value;
+    const isCollapsed = state.tocCollapsed.value;
+
+    if (isCollapsed) {
+        toc.classList.add('collapsed');
+        layout.classList.add('toc-collapsed');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+    } else {
+        toc.classList.remove('collapsed');
+        layout.classList.remove('toc-collapsed');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+}
+
+function setupScrollSpy() {
+    if (scrollSpyObserver) {
+        scrollSpyObserver.disconnect();
+    }
+
+    const activePage = el('.wiki-page.active');
+    if (!activePage) return;
+
+    const headings = activePage.querySelectorAll('h2, h3');
+    if (!headings || headings.length === 0) return;
+
+    scrollSpyObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.id;
+                const tocBody = el('#wiki-inline-toc-body');
+                if (tocBody) {
+                    tocBody.querySelectorAll('a').forEach(link => {
+                        if (link.classList) {
+                            if (link.dataset.target === id) {
+                                link.classList.add('active');
+                            } else {
+                                link.classList.remove('active');
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }, { root: null, rootMargin: '-15% 0px -75% 0px', threshold: 0 });
+
+    headings.forEach(h => { if (h.id) scrollSpyObserver.observe(h); });
+}
+
+function setupEffects() {
+    effect(() => {
+        const slug = state.currentPage.value;
+        els('.wiki-page').forEach(p => {
+            if (p.classList) {
+                if (p.id === 'page-' + slug) {
+                    p.classList.add('active');
+                } else {
+                    p.classList.remove('active');
+                }
+            }
+        });
+        generateTOC();
+        setupScrollSpy();
+    });
+
+    effect(() => {
+        const bc = el('#wiki-breadcrumb');
+        const currentNote = state.notes.find(n => n.slug === state.currentPage.value);
+        if (bc) {
+            bc.innerHTML = currentNote
+                ? '<a href="javascript:void(0)" data-page="' + currentNote.slug + '">' + currentNote.title + '</a>'
+                : '';
+        }
+    });
+
+    effect(() => {
+        const backBtn = el('#wiki-back');
+        const forwardBtn = el('#wiki-forward');
+        if (backBtn) backBtn.disabled = !computedState.canGoBack.value;
+        if (forwardBtn) forwardBtn.disabled = !computedState.canGoForward.value;
+    });
+
+    effect(() => {
+        const sidebar = el('#wiki-sidebar');
+        const main = el('#wiki-main');
+        const isCollapsed = state.sidebarCollapsed.value;
+
+        if (sidebar) {
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+        }
+        if (main) {
+            if (isCollapsed) {
+                main.classList.add('sidebar-collapsed');
+            } else {
+                main.classList.remove('sidebar-collapsed');
+            }
+        }
+    });
+
+    effect(() => {
+        const slug = state.currentPage.value;
+        els('#wiki-page-list a').forEach(a => {
+            if (a.classList) {
+                if (a.dataset.page === slug) {
+                    a.classList.add('active');
+                } else {
+                    a.classList.remove('active');
+                }
+            }
+        });
+    });
+
+    effect(() => {
+        renderSidebar();
+    });
+}
+
+function setupEventHandlers() {
+    const sidebarToggleBtn = el('#wiki-sidebar-toggle');
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            state.sidebarCollapsed.value = !state.sidebarCollapsed.value;
+        });
+    }
+
+    const tocToggleBtn = el('#toc-toggle');
+    if (tocToggleBtn) {
+        tocToggleBtn.addEventListener('click', toggleTOC);
+    }
+
+    const themeToggleBtn = el('#theme-toggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            toggleTheme();
+            updateThemeIcon();
+        });
+    }
+
+    const backBtn = el('#wiki-back');
+    if (backBtn) {
+        backBtn.addEventListener('click', goBack);
+    }
+
+    const forwardBtn = el('#wiki-forward');
+    if (forwardBtn) {
+        forwardBtn.addEventListener('click', goForward);
+    }
+
+    const searchInput = el('#wiki-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchQuery.value = e.target.value;
+        });
+    }
+
+    const pageList = el('#wiki-page-list');
+    if (pageList) {
+        pageList.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') {
+                e.preventDefault();
+                const page = e.target.dataset.page;
+                if (page) showPage(page);
+            }
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[data-page]');
+        if (link) {
+            e.preventDefault();
+            const page = link.dataset.page;
+            if (page) showPage(page);
+        }
+    });
+
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.slug) {
+            state.currentPage.value = e.state.slug;
+        }
+    });
+}
+
+function showPage(slug, addToHistory = true) {
+    const target = el('#page-' + slug);
+    if (!target) return;
+
+    const previousSlug = state.currentPage.value;
+    state.currentPage.value = slug;
+
+    if (addToHistory && previousSlug !== slug) {
+        state.pageHistory.value = [...state.pageHistory.value, previousSlug];
+        state.forwardStack.value = [];
+    }
+
+    scrollToTop();
+    window.history.replaceState({ slug: slug }, '', '#' + slug);
+}
+
+function goBack() {
+    if (!computedState.canGoBack.value) return;
+
+    const history = [...state.pageHistory.value];
+    const prev = history.pop();
+    if (!prev) return;
+
+    state.pageHistory.value = history;
+    state.forwardStack.value = [state.currentPage.value, ...state.forwardStack.value];
+    state.currentPage.value = prev;
+}
+
+function goForward() {
+    if (!computedState.canGoForward.value) return;
+
+    const [next, ...remaining] = state.forwardStack.value;
+    if (!next) return;
+
+    state.forwardStack.value = remaining;
+    state.pageHistory.value = [...state.pageHistory.value, state.currentPage.value];
+    state.currentPage.value = next;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWiki);
+} else {
+    initWiki();
+}

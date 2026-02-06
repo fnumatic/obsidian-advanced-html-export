@@ -122,7 +122,6 @@ Links to:
     describe('Link Collection Algorithm', () => {
         it('should collect direct links only with depth 1', async () => {
             const resolver = new LinkResolver();
-            const mockFiles = createMockVaultFiles();
 
             const testContent: Record<string, string> = {
                 '01-central-note': '[[02-level1-topic-a]] [[03-level1-topic-b]]',
@@ -160,7 +159,6 @@ Links to:
 
         it('should collect all links with depth 2', async () => {
             const resolver = new LinkResolver();
-            const mockFiles = createMockVaultFiles();
 
             const testContent: Record<string, string> = {
                 '01-central-note': '[[02-level1-topic-a]] [[03-level1-topic-b]]',

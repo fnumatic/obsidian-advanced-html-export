@@ -9,6 +9,9 @@ interface AdvancedHtmlExportSettings {
   enableImageDeduplication: boolean;
   linkDepth: number;
   wikiTitle: string;
+  enableThemeToggle: boolean;
+  enableInlineTOC: boolean;
+  defaultTheme: 'light' | 'dark';
 }
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
@@ -16,7 +19,10 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableLazyLoading: true,
   enableImageDeduplication: true,
   linkDepth: 1,
-  wikiTitle: ''
+  wikiTitle: '',
+  enableThemeToggle: true,
+  enableInlineTOC: true,
+  defaultTheme: 'light'
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -130,6 +136,38 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.wikiTitle)
         .onChange(async (value) => {
           this.plugin.settings.wikiTitle = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Enable Theme Toggle')
+      .setDesc('Show theme toggle button to switch between light and dark mode')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.enableThemeToggle)
+        .onChange(async (value) => {
+          this.plugin.settings.enableThemeToggle = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Enable Inline Table of Contents')
+      .setDesc('Show inline TOC on the right side of the content')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.enableInlineTOC)
+        .onChange(async (value) => {
+          this.plugin.settings.enableInlineTOC = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Default Theme')
+      .setDesc('Default theme for wiki export')
+      .addDropdown(dropdown => dropdown
+        .addOption('light', 'Light')
+        .addOption('dark', 'Dark')
+        .setValue(this.plugin.settings.defaultTheme)
+        .onChange(async (value: 'light' | 'dark') => {
+          this.plugin.settings.defaultTheme = value;
           await this.plugin.saveSettings();
         }));
   }
