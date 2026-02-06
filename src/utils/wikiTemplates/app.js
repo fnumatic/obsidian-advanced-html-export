@@ -1,9 +1,6 @@
 // Wikifoo App Logic
 // Uses Preact Signals for reactive state management
 
-import { signal, computed, effect } from './signals.js';
-import { el, els, scrollToTop, scrollToId, setTheme, getTheme, toggleTheme } from './helpers.js';
-
 let scrollSpyObserver = null;
 
 // State

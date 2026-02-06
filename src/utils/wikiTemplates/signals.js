@@ -3,15 +3,15 @@
  * https://preactjs.com/signals
  */
 
-export function signal(value) {
+function signal(value) {
     return new Signal(value);
 }
 
-export function computed(fn) {
+function computed(fn) {
     return new Computed(fn);
 }
 
-export function effect(fn) {
+function effect(fn) {
     return new Effect(fn);
 }
 

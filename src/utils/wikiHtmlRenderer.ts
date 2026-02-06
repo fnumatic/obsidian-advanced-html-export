@@ -316,26 +316,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                         ` : ''}
                     </div>
                     ` : ''}
-                        <button id="toc-toggle" title="Toggle outline" aria-expanded="false">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="21" y1="10" x2="7" y2="10"/>
-                                <line x1="21" y1="6" x2="3" y2="6"/>
-                                <line x1="21" y1="14" x2="3" y2="14"/>
-                                <line x1="21" y1="18" x2="7" y2="18"/>
-                            </svg>
-                        </button>
-                        <button id="theme-toggle" title="Toggle theme">
-                            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
-                                <circle cx="12" cy="12" r="5"/>
-                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                            </svg>
-                            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-                            </svg>
-                        </button>
-                    </div>
                 </div>
- 
+  
                 ${showInlineTOC ? `
                 <div class="wiki-body-layout toc-collapsed" id="wiki-body-layout">
                     <div class="wiki-article">

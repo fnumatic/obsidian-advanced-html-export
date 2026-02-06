@@ -2,7 +2,7 @@
  * DOM Helpers - jQuery-lite utilities
  */
 
-export function el(selector) {
+function el(selector) {
     try {
         return document.querySelector(selector);
     } catch (e) {
@@ -10,7 +10,7 @@ export function el(selector) {
     }
 }
 
-export function els(selector) {
+function els(selector) {
     try {
         return Array.from(document.querySelectorAll(selector) || []);
     } catch (e) {
@@ -18,23 +18,23 @@ export function els(selector) {
     }
 }
 
-export function scrollToTop() {
+function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-export function scrollToId(id) {
+function scrollToId(id) {
     const element = typeof id === 'string' ? el('#' + id) : id;
     if (element) element.scrollIntoView({ behavior: 'smooth' });
 }
 
-export function setTheme(theme) {
+function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
 }
 
-export function getTheme() {
+function getTheme() {
     return document.documentElement.getAttribute('data-theme') || 'light';
 }
 
-export function toggleTheme() {
+function toggleTheme() {
     setTheme(getTheme() === 'light' ? 'dark' : 'light');
 }
