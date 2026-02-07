@@ -199,7 +199,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     private addHeadingIds(html: string): string {
         const idCounter: Record<string, number> = {};
         
-        return html.replace(/<h([123])>([^<]+)<\/h\1>/g, (_match, level, text) => {
+        return html.replace(/<h([123])[^>]*>([^<]+)<\/h\1>/g, (_match, level, text) => {
             let baseId = text
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
