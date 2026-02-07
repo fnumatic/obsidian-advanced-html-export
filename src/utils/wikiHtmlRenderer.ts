@@ -1,6 +1,7 @@
 import { App, Component, MarkdownRenderer, TFile } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
+import { fillTemplate } from './templateUtils';
 import template from './wikiTemplates/template.html?raw';
 import styles from './wikiTemplates/styles.css?raw';
 import signals from './wikiTemplates/signals.js?raw';
@@ -222,19 +223,20 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const pagesJson = JSON.stringify(this.pageList);
         const imageRestoration = this.settings.enableImageDeduplication ? this.getImageRestorationScript() : '';
 
-        const scripts = signals + '\n' + helpers + '\n' + 
-            appTemplate
-                .replace(/\{\{CENTRAL_SLUG\}\}/g, centralSlug)
-                .replace(/\{\{DEFAULT_THEME\}\}/g, defaultTheme)
-                .replace('{{WIKI_PAGES}}', pagesJson)
-                .replace('{{IMAGE_RESTORATION}}', imageRestoration);
+        const scripts = fillTemplate(appTemplate, {
+            CENTRAL_SLUG: centralSlug,
+            DEFAULT_THEME: defaultTheme,
+            WIKI_PAGES: pagesJson,
+            IMAGE_RESTORATION: imageRestoration
+        });
 
-        return template
-            .replace('{{WIKI_TITLE}}', wikiTitle)
-            .replace('{{DEFAULT_THEME}}', defaultTheme)
-            .replace('{{STYLES}}', styles)
-            .replace('{{CONTENT}}', this.getWikiHtmlStructure(renderedPages))
-            .replace('{{SCRIPTS}}', scripts);
+        return fillTemplate(template, {
+            WIKI_TITLE: wikiTitle,
+            DEFAULT_THEME: defaultTheme,
+            STYLES: styles,
+            CONTENT: this.getWikiHtmlStructure(renderedPages),
+            SCRIPTS: signals + '\n' + helpers + '\n' + scripts
+        });
     }
 
     private getWikiHtmlStructure(renderedPages: Map<string, string>): string {
