@@ -1,6 +1,14 @@
 import { App, Notice, TFile } from 'obsidian';
 import WikiHtmlRenderer, { WikiRenderOptions } from '../utils/wikiHtmlRenderer';
+import { WikiExportOrchestrator, NoteInfo } from '../utils/wikiExportOrchestrator';
+import { ExportPreviewModal } from '../ui/exportPreviewModal';
+import { NoteSelectionModal } from '../ui/noteSelectionModal';
+import { RenderingProgressModal } from '../ui/renderingProgressModal';
 import { downloadBlob, sanitizeFilename } from '../utils/fileUtils';
+import { debugLogger } from '../utils/debugLogger';
+import { CancellationToken, CancellationError } from '../utils/cancellationToken';
+import { PauseController } from '../utils/pauseController';
+import { DetailedWikiRenderer } from '../utils/detailedRenderer';
 
 export class ExportWikiCommand {
     private app: App;
@@ -28,9 +36,10 @@ export class ExportWikiCommand {
     }
 
     async executeWithFile(file: TFile): Promise<void> {
-        try {
-            const progressNotice = new Notice('Collecting linked notes...', 0);
+        const collectingNotice = new Notice('Collecting linked notes...', 0);
 
+        try {
+            // Phase 1: Collect notes (fast - just metadata)
             const options: WikiRenderOptions = {
                 imageQuality: this.plugin.settings.imageQuality,
                 enableLazyLoading: this.plugin.settings.enableLazyLoading,
@@ -40,32 +49,119 @@ export class ExportWikiCommand {
                 wikiTitle: this.plugin.settings.wikiTitle || ''
             };
 
+            const orchestrator = new WikiExportOrchestrator(this.app, this.plugin, options);
+            
+            // Collect notes (this is fast)
+            const collectedNotes = await orchestrator.collectNotes(file);
+            collectingNotice.hide();
+
+            if (collectedNotes.length === 0) {
+                new Notice('No notes found to export.');
+                return;
+            }
+
+            const metrics = orchestrator.getMetrics();
+            if (!metrics) {
+                new Notice('Error calculating metrics.');
+                return;
+            }
+
+            // Phase 2: Show preview modal and let user decide
+            const previewModal = new ExportPreviewModal(this.app, metrics, collectedNotes);
+            const previewResult = await previewModal.openAndAwait();
+
+            if (previewResult.action === 'cancel') {
+                new Notice('Export cancelled.');
+                return;
+            }
+
+            let selectedNotes: NoteInfo[];
+
+            if (previewResult.action === 'selectNotes') {
+                // Phase 3: Show note selection modal
+                const selectionModal = new NoteSelectionModal(this.app, collectedNotes);
+                const selectionResult = await selectionModal.openAndAwait();
+
+                if (!selectionResult || selectionResult.length === 0) {
+                    new Notice('Export cancelled - no notes selected.');
+                    return;
+                }
+
+                selectedNotes = selectionResult;
+            } else {
+                // Export all notes
+                selectedNotes = collectedNotes;
+            }
+
+            // Set selected notes in orchestrator
+            orchestrator.setSelectedNotes(selectedNotes);
+
+            // Phase 4: Render selected notes with detailed progress
+            const token = new CancellationToken();
+            const pauseController = new PauseController();
+            const progressModal = new RenderingProgressModal(this.app, token, pauseController, metrics, selectedNotes);
+            
+            // Open progress modal and start rendering
+            const renderPromise = this.performRendering(orchestrator, selectedNotes, options, token, pauseController, progressModal);
+            const modalResult = await progressModal.openAndAwait();
+            
+            if (!modalResult) {
+                // User cancelled
+                new Notice('Export cancelled by user.');
+                return;
+            }
+
+            const renderedPages = await renderPromise;
+
+            // Generate final HTML
             const wikiRenderer = new WikiHtmlRenderer(this.app, this.plugin, options);
+            const htmlContent = wikiRenderer.generateWikiHtmlWithRenderedPages(
+                file, 
+                renderedPages, 
+                selectedNotes.map(n => ({ slug: n.slug, title: n.title, path: n.path }))
+            );
 
-            const progressCallback = (current: number, total: number) => {
-                progressNotice.setMessage(`Rendering note ${current}/${total}...`);
-            };
-
-            const htmlContent = await wikiRenderer.renderWiki(file, progressCallback);
-
-            const fullHtml = this.createHtmlDocument(htmlContent);
-
-            const blob = new Blob([fullHtml], { type: 'text/html' });
+            // Download
+            const blob = new Blob([htmlContent], { type: 'text/html' });
             const filename = this.generateWikiFilename(file.path);
 
             downloadBlob(blob, filename);
 
-            progressNotice.hide();
             new Notice(`Wiki exported as ${filename}`);
 
+            // Export debug log if in debug mode
+            debugLogger.exportToFile();
+
         } catch (error) {
+            if (error instanceof CancellationError) {
+                new Notice('Export cancelled by user.');
+                return;
+            }
             console.error('Error exporting wiki:', error);
-            new Notice(`Failed to export wiki: ${error instanceof Error ? error.message : String(error)}`);
+            new Notice(`Export failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
-    private createHtmlDocument(content: string): string {
-        return `${content}`;
+    private async performRendering(
+        orchestrator: WikiExportOrchestrator,
+        _selectedNotes: NoteInfo[],
+        options: WikiRenderOptions,
+        token: CancellationToken,
+        pauseController: PauseController,
+        progressModal: RenderingProgressModal
+    ): Promise<Map<string, string>> {
+        // Create detailed renderer
+        const detailedRenderer = new DetailedWikiRenderer(this.app, this.plugin, options);
+        
+        // Start rendering with progress tracking
+        const renderPromise = orchestrator.renderNotesWithProgress(
+            detailedRenderer,
+            token,
+            pauseController,
+            (event) => progressModal.handleEvent(event)
+        );
+
+        return renderPromise;
     }
 
     private generateWikiFilename(filePath: string): string {

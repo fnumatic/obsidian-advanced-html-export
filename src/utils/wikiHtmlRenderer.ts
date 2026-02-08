@@ -2,6 +2,7 @@ import { App, Component, MarkdownRenderer, TFile } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
 import { fillTemplate } from './templateUtils';
+import { debugLogger } from './debugLogger';
 import template from './wikiTemplates/template.html?raw';
 import styles from './wikiTemplates/styles.css?raw';
 import signals from './wikiTemplates/signals.js?raw';
@@ -27,8 +28,8 @@ export interface PageInfo {
 }
 
 export default class WikiHtmlRenderer extends HtmlRenderer {
-    private linkResolver: LinkResolver;
-    private pageList: PageInfo[] = [];
+    protected linkResolver: LinkResolver;
+    protected pageList: PageInfo[] = [];
     private vaultFiles: Map<string, TFile> = new Map();
 
     constructor(app: App, component: Component, options: WikiRenderOptions) {
@@ -151,6 +152,18 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         return null;
     }
 
+    /**
+     * Render a single note file to HTML
+     * This is the new preferred method for rendering from orchestrator
+     */
+    async renderPageFromFile(file: TFile): Promise<string> {
+        debugLogger.logNoteStart(file.path);
+        const content = await this.app.vault.cachedRead(file);
+        const html = await this.renderPage(content);
+        debugLogger.logNoteEnd(file.path);
+        return html;
+    }
+
     async renderPage(markdownContent: string): Promise<string> {
         const { content: resolvedContent } = this.linkResolver.resolveLinks(markdownContent);
 
@@ -167,12 +180,17 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             if (src) {
                 if (this.settings.enableImageDeduplication) {
                     const hash = await this.convertImageToHash(src);
+                    // Log image processing for debug
+                    const isCacheHit = this.imageCache.has(hash);
+                    debugLogger.logImageProcessed(true, isCacheHit);
                     img.setAttribute('data-hash', hash);
                     img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
                     if (this.settings.enableLazyLoading) {
                         img.setAttribute('loading', 'lazy');
                     }
                 } else {
+                    await this.convertImageToBase64String(src);
+                    debugLogger.logImageProcessed(false, false);
                     const base64 = await this.convertImageToBase64String(src);
                     img.setAttribute('src', base64);
                     if (this.settings.enableLazyLoading) {
@@ -196,7 +214,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         return html;
     }
 
-    private addHeadingIds(html: string): string {
+    protected addHeadingIds(html: string): string {
         const idCounter: Record<string, number> = {};
         
         return html.replace(/<h([123])[^>]*>([^<]+)<\/h\1>/g, (_match, level, text) => {
@@ -237,6 +255,47 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             CONTENT: this.getWikiHtmlStructure(renderedPages),
             SCRIPTS: signals + '\n' + helpers + '\n' + scripts
         });
+    }
+
+    /**
+     * Generate wiki HTML from already rendered pages
+     * Used by the orchestrator when notes have been selected
+     */
+    generateWikiHtmlWithRenderedPages(
+        centralFile: TFile, 
+        renderedPages: Map<string, string>,
+        pageList: PageInfo[]
+    ): string {
+        const options = this.settings as WikiRenderOptions;
+        const wikiTitle = options.wikiTitle || centralFile.basename;
+        const defaultTheme = options.defaultTheme || 'light';
+        const centralSlug = pageList.length > 0 ? pageList[0].slug : 'central';
+        const pagesJson = JSON.stringify(pageList);
+        const imageRestoration = this.settings.enableImageDeduplication ? this.getImageRestorationScript() : '';
+
+        const scripts = fillTemplate(appTemplate, {
+            CENTRAL_SLUG: centralSlug,
+            DEFAULT_THEME: defaultTheme,
+            WIKI_PAGES: pagesJson,
+            IMAGE_RESTORATION: imageRestoration
+        });
+
+        // Temporarily set pageList for getWikiHtmlStructure
+        const originalPageList = this.pageList;
+        this.pageList = pageList;
+
+        const html = fillTemplate(template, {
+            WIKI_TITLE: wikiTitle,
+            DEFAULT_THEME: defaultTheme,
+            STYLES: styles,
+            CONTENT: this.getWikiHtmlStructure(renderedPages),
+            SCRIPTS: signals + '\n' + helpers + '\n' + scripts
+        });
+
+        // Restore original pageList
+        this.pageList = originalPageList;
+
+        return html;
     }
 
     private getWikiHtmlStructure(renderedPages: Map<string, string>): string {

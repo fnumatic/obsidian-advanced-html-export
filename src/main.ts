@@ -12,6 +12,7 @@ interface AdvancedHtmlExportSettings {
   enableThemeToggle: boolean;
   enableInlineTOC: boolean;
   defaultTheme: 'light' | 'dark';
+  debugMode: boolean;
 }
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
@@ -22,7 +23,8 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   wikiTitle: '',
   enableThemeToggle: true,
   enableInlineTOC: true,
-  defaultTheme: 'light'
+  defaultTheme: 'light',
+  debugMode: false
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -170,5 +172,25 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
           this.plugin.settings.defaultTheme = value;
           await this.plugin.saveSettings();
         }));
+
+    // Debug section
+    containerEl.createEl('h3', { text: 'Developer Options' });
+
+    new Setting(containerEl)
+      .setName('Debug Mode')
+      .setDesc('Enable detailed performance logging and timing measurements for exports (reload required)')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.debugMode)
+        .onChange(async (value) => {
+          this.plugin.settings.debugMode = value;
+          await this.plugin.saveSettings();
+          // Set global flag for debugLogger
+          (window as any).ADVANCED_HTML_EXPORT_DEBUG = value;
+        }));
   }
+}
+
+// Set initial debug flag on load
+if (typeof window !== 'undefined') {
+  (window as any).ADVANCED_HTML_EXPORT_DEBUG = false;
 }
