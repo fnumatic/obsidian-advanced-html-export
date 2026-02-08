@@ -84,7 +84,18 @@ export class ExportPreviewModal extends Modal {
         `;
         
         const nameEl = noteEl.createSpan();
-        nameEl.textContent = note.title;
+        nameEl.style.cssText = `
+          max-width: 300px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        `;
+        
+        // Truncate to 60 characters
+        const truncatedTitle = note.title.length > 60 
+          ? note.title.slice(0, 60) + '...' 
+          : note.title;
+        nameEl.textContent = truncatedTitle;
         
         const metaEl = noteEl.createSpan();
         metaEl.style.cssText = 'color: var(--text-muted); font-size: 0.85em;';

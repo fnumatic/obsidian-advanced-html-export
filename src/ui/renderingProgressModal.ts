@@ -145,6 +145,9 @@ export class RenderingProgressModal extends Modal {
       font-weight: 600;
       font-size: 1.1em;
       margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     `;
     this.currentNoteTitleEl.textContent = 'Preparing...';
 
@@ -427,7 +430,11 @@ export class RenderingProgressModal extends Modal {
       overallProgress: 0
     };
 
-    this.currentNoteTitleEl.textContent = `Rendering ${index + 1}/${this.metrics.totalNotes}: ${this.currentNote.title}`;
+    // Truncate title to 40 characters
+    const truncatedTitle = this.currentNote.title.length > 40 
+      ? this.currentNote.title.slice(0, 40) + '...' 
+      : this.currentNote.title;
+    this.currentNoteTitleEl.textContent = `Rendering ${index + 1}/${this.metrics.totalNotes}: ${truncatedTitle}`;
 
     // Initialize codeblock progress display
     this.updateDetailProgress(
@@ -476,12 +483,18 @@ export class RenderingProgressModal extends Modal {
     
     const titleEl = leftEl.createSpan();
     titleEl.style.cssText = `
-      max-width: 150px;
+      max-width: 360px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     `;
-    titleEl.textContent = completedNote.title;
+    
+    // Truncate to 60 characters
+    const truncatedTitle = completedNote.title.length > 60 
+      ? completedNote.title.slice(0, 60) + '...' 
+      : completedNote.title;
+    titleEl.textContent = truncatedTitle;
+    titleEl.title = completedNote.title;
 
     const rightEl = noteItem.createDiv();
     rightEl.style.cssText = 'color: var(--text-muted); font-size: 0.85em;';
