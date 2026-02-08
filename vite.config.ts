@@ -3,10 +3,14 @@ import { resolve } from 'path'
 import { builtinModules } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  plugins: [
+    svelte()
+  ],
   resolve: {
     alias: {
       'src': resolve(__dirname, 'src')

@@ -11,14 +11,17 @@
     "noImplicitAny": true,
     "moduleResolution": "bundler",
     "importHelpers": true,
+    "skipLibCheck": true,
     "lib": [
       "dom",
       "es5",
       "scripthost",
       "es2019"
-    ]
+    ],
+    "types": ["svelte"]
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "**/*.svelte"
   ]
 }

@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 const { build } = require('vite')
-const { loadVaultPath, findObsidianVaults } = require('./utils')
+const { loadVaultPath, findObsidianVaults } = require('./utils.cjs')
 
 // Get plugin name from package.json
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
@@ -39,7 +39,7 @@ async function main() {
         {
           name: 'copy-to-vault',
           writeBundle() {
-            const { copyPluginToVault } = require('./utils')
+            const { copyPluginToVault } = require('./utils.cjs')
             copyPluginToVault(vaultPath, pluginName)
           }
         }

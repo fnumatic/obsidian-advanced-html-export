@@ -1,9 +1,9 @@
 import { App, Notice, TFile } from 'obsidian';
 import WikiHtmlRenderer, { WikiRenderOptions } from '../utils/wikiHtmlRenderer';
 import { WikiExportOrchestrator, NoteInfo } from '../utils/wikiExportOrchestrator';
-import { ExportPreviewModal } from '../ui/exportPreviewModal';
-import { NoteSelectionModal } from '../ui/noteSelectionModal';
-import { RenderingProgressModal } from '../ui/renderingProgressModal';
+import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
+import { NoteSelectionModal } from '../ui/modals/NoteSelectionModal';
+import { RenderingProgressModal } from '../ui/modals/RenderingProgressModal';
 import { downloadBlob, sanitizeFilename } from '../utils/fileUtils';
 import { debugLogger } from '../utils/debugLogger';
 import { CancellationToken, CancellationError } from '../utils/cancellationToken';

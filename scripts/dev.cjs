@@ -1,26 +1,15 @@
 #!/usr/bin/env node
 
 const fs = require('fs')
+const path = require('path')
 const { build } = require('vite')
-const { findObsidianVaults, loadVaultPath, saveVaultPath, promptUser, copyPluginToVault } = require('./utils')
+const { findObsidianVaults, loadVaultPath, saveVaultPath, promptUser, copyPluginToVault } = require('./utils.cjs')
 
 // Get plugin name from package.json
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
 const pluginName = packageJson.name
 
 async function main() {
-  console.log('🔨 Building plugin...')
-
-  try {
-    await build({
-      configFile: 'vite.config.ts',
-      mode: 'production'
-    })
-  } catch (error) {
-    console.error('Build error:', error)
-    process.exit(1)
-  }
-
   console.log('🔍 Scanning for Obsidian vaults...')
 
   const vaults = findObsidianVaults()
@@ -36,8 +25,29 @@ async function main() {
   const vaultPath = await promptUser('Select a vault to copy the plugin to:', vaults, formerVault)
   saveVaultPath(vaultPath)
 
-  console.log(`Copying plugin "${pluginName}" to vault: ${vaultPath}`)
-  copyPluginToVault(vaultPath, pluginName)
+  console.log(`Starting dev server with vault: ${vaultPath}`)
+
+  try {
+     await build({
+       configFile: path.join(__dirname, '..', 'vite.config.ts'),
+       mode: 'development',
+       build: {
+         watch: {},
+         sourcemap: 'inline'
+       },
+      plugins: [
+        {
+          name: 'copy-to-vault',
+          writeBundle() {
+            copyPluginToVault(vaultPath, pluginName)
+          }
+        }
+      ]
+    })
+  } catch (error) {
+    console.error('Build error:', error)
+    process.exit(1)
+  }
 }
 
 main().catch(console.error)
