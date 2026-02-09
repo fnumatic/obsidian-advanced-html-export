@@ -46,7 +46,8 @@ export class ExportWikiCommand {
                 enableImageDeduplication: this.plugin.settings.enableImageDeduplication,
                 linkDepth: this.plugin.settings.linkDepth || 1,
                 includeUnlinked: this.plugin.settings.includeUnlinked || false,
-                wikiTitle: this.plugin.settings.wikiTitle || ''
+                wikiTitle: this.plugin.settings.wikiTitle || '',
+                disableSyntaxHighlighting: this.plugin.settings.disableSyntaxHighlighting !== false
             };
 
             const orchestrator = new WikiExportOrchestrator(this.app, this.plugin, options);

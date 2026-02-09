@@ -2,6 +2,7 @@ import { MarkdownRenderer, TFile } from 'obsidian';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
+import { hideLanguageIdentifiers, restoreLanguageIdentifiers } from './codeBlockProcessor';
 
 export type RenderEventType = 
   | 'note_start'
@@ -98,11 +99,21 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       token.throwIfCancelled();
       const { content: resolvedContent } = this.linkResolver.resolveLinks(content);
 
+      // Pre-process: hide language identifiers to prevent syntax highlighting
+      const processedContent = this.settings.disableSyntaxHighlighting !== false
+        ? hideLanguageIdentifiers(resolvedContent)
+        : resolvedContent;
+
       const el = document.body.createDiv();
       
       // Render markdown - this is the heavy operation
       const renderStartTime = performance.now();
-      await MarkdownRenderer.render(this.app, resolvedContent, el, '.', this.component);
+      await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
+      
+      // Post-process: restore language identifiers
+      if (this.settings.disableSyntaxHighlighting !== false) {
+        restoreLanguageIdentifiers(el);
+      }
       
       // Check if rendering took too long
       const renderDuration = performance.now() - renderStartTime;

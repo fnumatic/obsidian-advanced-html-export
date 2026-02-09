@@ -3,6 +3,7 @@ import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
 import { fillTemplate } from './templateUtils';
 import { debugLogger } from './debugLogger';
+import { hideLanguageIdentifiers, restoreLanguageIdentifiers } from './codeBlockProcessor';
 import template from './wikiTemplates/template.html?raw';
 import styles from './wikiTemplates/styles.css?raw';
 import signals from './wikiTemplates/signals.js?raw';
@@ -19,6 +20,7 @@ export interface WikiRenderOptions {
     enableThemeToggle?: boolean;
     enableInlineTOC?: boolean;
     defaultTheme?: 'light' | 'dark';
+    disableSyntaxHighlighting?: boolean;
 }
 
 export interface PageInfo {
@@ -167,8 +169,18 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     async renderPage(markdownContent: string): Promise<string> {
         const { content: resolvedContent } = this.linkResolver.resolveLinks(markdownContent);
 
+        // Pre-process: hide language identifiers to prevent syntax highlighting
+        const processedContent = this.settings.disableSyntaxHighlighting !== false
+            ? hideLanguageIdentifiers(resolvedContent)
+            : resolvedContent;
+
         const el = document.body.createDiv();
-        await MarkdownRenderer.render(this.app, resolvedContent, el, '.', this.component);
+        await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
+
+        // Post-process: restore language identifiers
+        if (this.settings.disableSyntaxHighlighting !== false) {
+            restoreLanguageIdentifiers(el);
+        }
 
         el.querySelectorAll('.copy-code-button').forEach((e) => {
             e.remove();

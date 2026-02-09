@@ -13,6 +13,7 @@ interface AdvancedHtmlExportSettings {
   enableInlineTOC: boolean;
   defaultTheme: 'light' | 'dark';
   debugMode: boolean;
+  disableSyntaxHighlighting: boolean;
 }
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
@@ -24,7 +25,8 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableThemeToggle: true,
   enableInlineTOC: true,
   defaultTheme: 'light',
-  debugMode: false
+  debugMode: false,
+  disableSyntaxHighlighting: true
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -170,6 +172,16 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.defaultTheme)
         .onChange(async (value: 'light' | 'dark') => {
           this.plugin.settings.defaultTheme = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Disable Syntax Highlighting')
+      .setDesc('Export code blocks as plain text without syntax highlighting (faster export, smaller file size)')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.disableSyntaxHighlighting)
+        .onChange(async (value) => {
+          this.plugin.settings.disableSyntaxHighlighting = value;
           await this.plugin.saveSettings();
         }));
 

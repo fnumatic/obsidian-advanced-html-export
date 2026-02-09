@@ -1,5 +1,6 @@
 import { App, arrayBufferToBase64, Component, MarkdownRenderer, TFile } from 'obsidian';
 import { ImageOptimizer } from './imageOptimizer';
+import { hideLanguageIdentifiers, restoreLanguageIdentifiers } from './codeBlockProcessor';
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
 
@@ -7,6 +8,7 @@ interface HtmlRendererSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
+  disableSyntaxHighlighting?: boolean;
 }
 
 export default class HtmlRenderer {
@@ -211,8 +213,18 @@ export default class HtmlRenderer {
    * @returns Promise resolving to HTML string
    */
   async render (markdownContent: string): Promise<string> {
+    // Pre-process: hide language identifiers to prevent syntax highlighting
+    const processedContent = this.settings.disableSyntaxHighlighting !== false
+      ? hideLanguageIdentifiers(markdownContent)
+      : markdownContent;
+      
     const el = document.body.createDiv();
-    await MarkdownRenderer.render(this.app, markdownContent, el, '.', this.component);
+    await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
+
+    // Post-process: restore language identifiers
+    if (this.settings.disableSyntaxHighlighting !== false) {
+      restoreLanguageIdentifiers(el);
+    }
 
     // Remove copy-code buttons if they exist
     el.querySelectorAll('.copy-code-button').forEach(e => {
