@@ -268,65 +268,100 @@
       </div>
     </div>
     
-    <!-- Detailed Progress -->
-    {#if currentNote}
-      <div class="detailed-progress">
-        <!-- Diagrams -->
-        <div class="detail-row">
-          <div class="detail-line1">
-            <span class="detail-icon">📊</span>
-            <span class="detail-label">Diagrams</span>
-            <div class="detail-progress-container">
-              <div class="detail-progress-bar" style="width: {(currentNote.diagrams.total > 0 ? (currentNote.diagrams.processed / currentNote.diagrams.total) * 100 : 0)}%"></div>
+      <!-- Detailed Progress -->
+      <div class="detailed-progress" aria-hidden={!currentNote}>
+        {#if currentNote}
+          <!-- Diagrams -->
+          <div class="detail-row">
+            <div class="detail-line1">
+              <span class="detail-icon">📊</span>
+              <span class="detail-label">Diagrams</span>
+              <div class="detail-progress-container">
+                <div class="detail-progress-bar" style="width: {(currentNote.diagrams.total > 0 ? (currentNote.diagrams.processed / currentNote.diagrams.total) * 100 : 0)}%"></div>
+              </div>
+              <span class="detail-count">{currentNote.diagrams.processed}/{currentNote.diagrams.total}</span>
             </div>
-            <span class="detail-count">{currentNote.diagrams.processed}/{currentNote.diagrams.total}</span>
-          </div>
-          <div class="detail-status">
-            {currentNote.diagrams.total > 0 ? 'Processing...' : 'None'}
-          </div>
-        </div>
-        
-        <!-- Code Blocks -->
-        <div class="detail-row">
-          <div class="detail-line1">
-            <span class="detail-icon">📝</span>
-            <span class="detail-label">Code blocks</span>
-            <div class="detail-progress-container">
-              <div class="detail-progress-bar" style="width: {(currentNote.codeBlocks.total > 0 ? (currentNote.codeBlocks.processed / currentNote.codeBlocks.total) * 100 : 0)}%"></div>
+            <div class="detail-status">
+              {currentNote.diagrams.total > 0 ? 'Processing...' : 'None'}
             </div>
-            <span class="detail-count">{currentNote.codeBlocks.processed}/{currentNote.codeBlocks.total}</span>
           </div>
-          <div class="detail-status">
-            {currentNote.codeBlocks.total > 0 ? 'Processing...' : 'None'}
-          </div>
-        </div>
-        
-        <!-- Images -->
-        <div class="detail-row">
-          <div class="detail-line1">
-            <span class="detail-icon">🖼️</span>
-            <span class="detail-label">Images</span>
-            <div class="detail-progress-container">
-              <div class="detail-progress-bar" style="width: {(currentNote.images.total > 0 ? (currentNote.images.processed / currentNote.images.total) * 100 : 0)}%"></div>
+          
+          <!-- Code Blocks -->
+          <div class="detail-row">
+            <div class="detail-line1">
+              <span class="detail-icon">📝</span>
+              <span class="detail-label">Code blocks</span>
+              <div class="detail-progress-container">
+                <div class="detail-progress-bar" style="width: {(currentNote.codeBlocks.total > 0 ? (currentNote.codeBlocks.processed / currentNote.codeBlocks.total) * 100 : 0)}%"></div>
+              </div>
+              <span class="detail-count">{currentNote.codeBlocks.processed}/{currentNote.codeBlocks.total}</span>
             </div>
-            <span class="detail-count">{currentNote.images.processed}/{currentNote.images.total}</span>
+            <div class="detail-status">
+              {currentNote.codeBlocks.total > 0 ? 'Processing...' : 'None'}
+            </div>
           </div>
-          <div class="detail-status">
-            {#if currentNote.images.currentPhase === 'reading'}
-              Reading: {currentNote.images.currentFileName}
-            {:else if currentNote.images.currentPhase === 'hashing'}
-              Hashing: {currentNote.images.currentFileName}
-            {:else if currentNote.images.currentPhase === 'optimizing'}
-              Optimizing: {currentNote.images.currentFileName}
-            {:else if currentNote.images.total === 0}
-              None
-            {:else}
-              Processing: {currentNote.images.currentFileName}
-            {/if}
+          
+          <!-- Images -->
+          <div class="detail-row">
+            <div class="detail-line1">
+              <span class="detail-icon">🖼️</span>
+              <span class="detail-label">Images</span>
+              <div class="detail-progress-container">
+                <div class="detail-progress-bar" style="width: {(currentNote.images.total > 0 ? (currentNote.images.processed / currentNote.images.total) * 100 : 0)}%"></div>
+              </div>
+              <span class="detail-count">{currentNote.images.processed}/{currentNote.images.total}</span>
+            </div>
+            <div class="detail-status">
+              {#if currentNote.images.currentPhase === 'reading'}
+                Reading: {currentNote.images.currentFileName}
+              {:else if currentNote.images.currentPhase === 'hashing'}
+                Hashing: {currentNote.images.currentFileName}
+              {:else if currentNote.images.currentPhase === 'optimizing'}
+                Optimizing: {currentNote.images.currentFileName}
+              {:else if currentNote.images.total === 0}
+                None
+              {:else}
+                Processing: {currentNote.images.currentFileName}
+              {/if}
+            </div>
           </div>
-        </div>
+        {:else}
+          <!-- Placeholder for "Preparing..." state - maintains same height -->
+          <div class="detail-row">
+            <div class="detail-line1">
+              <span class="detail-icon">📊</span>
+              <span class="detail-label">Diagrams</span>
+              <div class="detail-progress-container placeholder">
+                <div class="detail-progress-bar" style="width: 0%"></div>
+              </div>
+              <span class="detail-count">-/-</span>
+            </div>
+            <div class="detail-status">Waiting...</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-line1">
+              <span class="detail-icon">📝</span>
+              <span class="detail-label">Code blocks</span>
+              <div class="detail-progress-container placeholder">
+                <div class="detail-progress-bar" style="width: 0%"></div>
+              </div>
+              <span class="detail-count">-/-</span>
+            </div>
+            <div class="detail-status">Waiting...</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-line1">
+              <span class="detail-icon">🖼️</span>
+              <span class="detail-label">Images</span>
+              <div class="detail-progress-container placeholder">
+                <div class="detail-progress-bar" style="width: 0%"></div>
+              </div>
+              <span class="detail-count">-/-</span>
+            </div>
+            <div class="detail-status">Waiting...</div>
+          </div>
+        {/if}
       </div>
-    {/if}
     
     <!-- Warning area -->
     {#if warning}
@@ -513,6 +548,15 @@
     height: 100%;
     background: var(--interactive-accent);
     transition: width 0.2s ease;
+  }
+
+  .detail-progress-container.placeholder {
+    background: var(--background-modifier-border);
+    opacity: 0.5;
+  }
+
+  .detail-progress-container.placeholder .detail-progress-bar {
+    background: var(--text-muted);
   }
   
   .detail-count {
