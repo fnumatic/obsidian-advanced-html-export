@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { RenderingProgressProps, CompletedNote, CurrentNoteProgress } from './types';
   import type { RenderEvent } from '../utils/detailedRenderer';
+  import DetailRow from './DetailRow.svelte';
   
   let { 
     metrics, 
@@ -269,98 +270,27 @@
     </div>
     
       <!-- Detailed Progress -->
-      <div class="detailed-progress" aria-hidden={!currentNote}>
-        {#if currentNote}
-          <!-- Diagrams -->
-          <div class="detail-row">
-            <div class="detail-line1">
-              <span class="detail-icon">📊</span>
-              <span class="detail-label">Diagrams</span>
-              <div class="detail-progress-container">
-                <div class="detail-progress-bar" style="width: {(currentNote.diagrams.total > 0 ? (currentNote.diagrams.processed / currentNote.diagrams.total) * 100 : 0)}%"></div>
-              </div>
-              <span class="detail-count">{currentNote.diagrams.processed}/{currentNote.diagrams.total}</span>
-            </div>
-            <div class="detail-status">
-              {currentNote.diagrams.total > 0 ? 'Processing...' : 'None'}
-            </div>
-          </div>
-          
-          <!-- Code Blocks -->
-          <div class="detail-row">
-            <div class="detail-line1">
-              <span class="detail-icon">📝</span>
-              <span class="detail-label">Code blocks</span>
-              <div class="detail-progress-container">
-                <div class="detail-progress-bar" style="width: {(currentNote.codeBlocks.total > 0 ? (currentNote.codeBlocks.processed / currentNote.codeBlocks.total) * 100 : 0)}%"></div>
-              </div>
-              <span class="detail-count">{currentNote.codeBlocks.processed}/{currentNote.codeBlocks.total}</span>
-            </div>
-            <div class="detail-status">
-              {currentNote.codeBlocks.total > 0 ? 'Processing...' : 'None'}
-            </div>
-          </div>
-          
-          <!-- Images -->
-          <div class="detail-row">
-            <div class="detail-line1">
-              <span class="detail-icon">🖼️</span>
-              <span class="detail-label">Images</span>
-              <div class="detail-progress-container">
-                <div class="detail-progress-bar" style="width: {(currentNote.images.total > 0 ? (currentNote.images.processed / currentNote.images.total) * 100 : 0)}%"></div>
-              </div>
-              <span class="detail-count">{currentNote.images.processed}/{currentNote.images.total}</span>
-            </div>
-            <div class="detail-status">
-              {#if currentNote.images.currentPhase === 'reading'}
-                Reading: {currentNote.images.currentFileName}
-              {:else if currentNote.images.currentPhase === 'hashing'}
-                Hashing: {currentNote.images.currentFileName}
-              {:else if currentNote.images.currentPhase === 'optimizing'}
-                Optimizing: {currentNote.images.currentFileName}
-              {:else if currentNote.images.total === 0}
-                None
-              {:else}
-                Processing: {currentNote.images.currentFileName}
-              {/if}
-            </div>
-          </div>
-        {:else}
-          <!-- Placeholder for "Preparing..." state - maintains same height -->
-          <div class="detail-row">
-            <div class="detail-line1">
-              <span class="detail-icon">📊</span>
-              <span class="detail-label">Diagrams</span>
-              <div class="detail-progress-container placeholder">
-                <div class="detail-progress-bar" style="width: 0%"></div>
-              </div>
-              <span class="detail-count">-/-</span>
-            </div>
-            <div class="detail-status">Waiting...</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-line1">
-              <span class="detail-icon">📝</span>
-              <span class="detail-label">Code blocks</span>
-              <div class="detail-progress-container placeholder">
-                <div class="detail-progress-bar" style="width: 0%"></div>
-              </div>
-              <span class="detail-count">-/-</span>
-            </div>
-            <div class="detail-status">Waiting...</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-line1">
-              <span class="detail-icon">🖼️</span>
-              <span class="detail-label">Images</span>
-              <div class="detail-progress-container placeholder">
-                <div class="detail-progress-bar" style="width: 0%"></div>
-              </div>
-              <span class="detail-count">-/-</span>
-            </div>
-            <div class="detail-status">Waiting...</div>
-          </div>
-        {/if}
+      <div class="detailed-progress">
+        <DetailRow 
+          icon="📊" 
+          label="Diagrams" 
+          progress={currentNote?.diagrams}
+          isPlaceholder={!currentNote}
+        />
+        <DetailRow 
+          icon="📝" 
+          label="Code blocks" 
+          progress={currentNote?.codeBlocks}
+          isPlaceholder={!currentNote}
+        />
+        <DetailRow 
+          icon="🖼️" 
+          label="Images" 
+          progress={currentNote?.images}
+          currentPhase={currentNote?.images.currentPhase}
+          currentFileName={currentNote?.images.currentFileName}
+          isPlaceholder={!currentNote}
+        />
       </div>
     
     <!-- Warning area -->
@@ -512,63 +442,6 @@
     flex-direction: column;
     gap: 6px;
     margin-top: 8px;
-  }
-  
-  .detail-row {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 0.85em;
-  }
-  
-  .detail-line1 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  .detail-icon {
-    font-size: 1em;
-  }
-  
-  .detail-label {
-    white-space: nowrap;
-  }
-  
-  .detail-progress-container {
-    flex: 1;
-    height: 6px;
-    background: var(--background-modifier-border);
-    border-radius: 3px;
-    overflow: hidden;
-    min-width: 60px;
-  }
-  
-  .detail-progress-bar {
-    height: 100%;
-    background: var(--interactive-accent);
-    transition: width 0.2s ease;
-  }
-
-  .detail-progress-container.placeholder {
-    background: var(--background-modifier-border);
-    opacity: 0.5;
-  }
-
-  .detail-progress-container.placeholder .detail-progress-bar {
-    background: var(--text-muted);
-  }
-  
-  .detail-count {
-    color: var(--text-muted);
-    white-space: nowrap;
-  }
-  
-  .detail-status {
-    font-size: 0.8em;
-    color: var(--text-muted);
-    height: 14px;
-    padding-left: 22px;
   }
   
   .warning-area {
