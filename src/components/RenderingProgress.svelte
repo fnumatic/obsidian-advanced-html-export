@@ -419,6 +419,7 @@
     border-radius: 9px;
     overflow: hidden;
     position: relative;
+    align-items: start;
   }
   
   .progress-bar {
