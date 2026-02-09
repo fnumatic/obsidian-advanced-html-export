@@ -14,13 +14,15 @@ export default defineConfig({
   resolve: {
     alias: {
       'src': resolve(__dirname, 'src')
-    }
+    },
+    // Force browser resolution for Svelte
+    conditions: ['browser', 'default']
   },
   build: {
     lib: {
       entry: resolve(__dirname, 'src/main.ts'),
       formats: ['cjs'],
-      fileName: 'main',
+      fileName: () => 'main.js',
       cssFileName: 'styles'
     },
     rollupOptions: {

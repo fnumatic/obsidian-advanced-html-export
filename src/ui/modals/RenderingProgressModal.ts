@@ -14,8 +14,7 @@ export class RenderingProgressModal extends Modal {
   private pauseController: PauseController;
   private metrics: ExportMetrics;
   private resolvePromise: ((result: boolean) => void) | null = null;
-  private component: ReturnType<typeof mount> & { handleEvent?: (event: RenderEvent) => void } | null = null;
-  private componentInstance: RenderingProgress | null = null;
+  private component: ReturnType<typeof mount> | null = null;
 
   constructor(
     app: App,
@@ -47,7 +46,7 @@ export class RenderingProgressModal extends Modal {
     // Create container for Svelte component
     const container = contentEl.createDiv();
     
-    // Mount Svelte component with bind:this to get instance reference
+    // Mount Svelte component
     this.component = mount(RenderingProgress, {
       target: container,
       props: {
@@ -62,18 +61,14 @@ export class RenderingProgressModal extends Modal {
         }
       }
     });
-
-    // Store reference to access handleEvent method
-    // Note: In Svelte 5, we need to use a different approach since bind:this isn't available in mount
-    // We'll use the component instance directly through the mount return value
-    // Actually, mount returns the component instance in Svelte 5!
-    this.componentInstance = this.component as unknown as RenderingProgress;
   }
 
   // Public method called by exportWiki to forward events
   handleEvent(event: RenderEvent): void {
-    if (this.componentInstance && 'handleEvent' in this.componentInstance) {
-      (this.componentInstance as unknown as { handleEvent: (event: RenderEvent) => void }).handleEvent(event);
+    // Access the component's handleEvent method through the mounted instance
+    const comp = this.component as unknown as { handleEvent?: (event: RenderEvent) => void };
+    if (comp && comp.handleEvent) {
+      comp.handleEvent(event);
     }
   }
 
@@ -98,7 +93,6 @@ export class RenderingProgressModal extends Modal {
     if (this.component) {
       unmount(this.component);
       this.component = null;
-      this.componentInstance = null;
     }
 
     const { contentEl } = this;
