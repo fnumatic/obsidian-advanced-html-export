@@ -425,16 +425,21 @@
     height: 100%;
     background: linear-gradient(90deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
     transition: width 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border-top-left-radius: 9px;
+    border-bottom-left-radius: 9px;
+    position: relative;
+    align-items: start;
   }
   
   .progress-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     color: white;
     font-size: 0.85em;
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    white-space: nowrap;
   }
   
   .detailed-progress {
