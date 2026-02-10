@@ -2,7 +2,7 @@ import { MarkdownRenderer, TFile } from 'obsidian';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
-import { hideLanguageIdentifiers, restoreLanguageIdentifiers } from './codeBlockProcessor';
+import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 
 export type RenderEventType = 
   | 'note_start'
@@ -100,8 +100,9 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       const { content: resolvedContent } = this.linkResolver.resolveLinks(content);
 
       // Pre-process: hide language identifiers to prevent syntax highlighting
+      const languages = parseLanguagesString(this.settings.syntaxHighlightLanguages || '');
       const processedContent = this.settings.disableSyntaxHighlighting !== false
-        ? hideLanguageIdentifiers(resolvedContent)
+        ? hideLanguageIdentifiers(resolvedContent, languages)
         : resolvedContent;
 
       const el = document.body.createDiv();

@@ -14,7 +14,10 @@ interface AdvancedHtmlExportSettings {
   defaultTheme: 'light' | 'dark';
   debugMode: boolean;
   disableSyntaxHighlighting: boolean;
+  syntaxHighlightLanguages: string;
 }
+
+const DEFAULT_LANGUAGES = 'javascript,typescript,jsx,tsx,html,xml,css,scss,sass,c,cpp,c++,h,hpp,c#,csharp,cs,java,rust,go,ruby,swift,kotlin,scala,objective-c,objectivec,objc,python,py,perl,php,lua,raku,bash,sh,shell,powershell,ps1,cmd,batch,awk,tcl,json,jsonc,json5,yaml,yml,ini,toml,sql,pgsql,postgresql,mysql,sqlite,haskell,ocaml,fsharp,erlang,elixir,clojure,dart,flutter,groovy,gradle,maven,dockerfile,docker,cmake,makefile,markdown,md,latex,tex,asciidoc,adoc,protobuf,proto,thrift,graphql,diff,patch,vim,nginx,apache,apacheconf,lighttpd,terraform,hcl,ansible,puppet,r,julia,matlab,octave,vb,vbnet,vba,vbscript,basic,pascal,delphi,lazarus,fpc';
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   imageQuality: 'medium',
@@ -26,7 +29,8 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableInlineTOC: true,
   defaultTheme: 'light',
   debugMode: false,
-  disableSyntaxHighlighting: true
+  disableSyntaxHighlighting: true,
+  syntaxHighlightLanguages: DEFAULT_LANGUAGES
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -182,6 +186,17 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.disableSyntaxHighlighting)
         .onChange(async (value) => {
           this.plugin.settings.disableSyntaxHighlighting = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Languages for Syntax Highlighting')
+      .setDesc('Comma-separated list of language identifiers to process. Custom blocks (mermaid, plantuml, etc.) are NOT affected.')
+      .addText(text => text
+        .setPlaceholder('javascript, typescript, python, ...')
+        .setValue(this.plugin.settings.syntaxHighlightLanguages)
+        .onChange(async (value) => {
+          this.plugin.settings.syntaxHighlightLanguages = value;
           await this.plugin.saveSettings();
         }));
 

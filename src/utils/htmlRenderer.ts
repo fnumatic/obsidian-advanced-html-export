@@ -1,6 +1,6 @@
 import { App, arrayBufferToBase64, Component, MarkdownRenderer, TFile } from 'obsidian';
 import { ImageOptimizer } from './imageOptimizer';
-import { hideLanguageIdentifiers, restoreLanguageIdentifiers } from './codeBlockProcessor';
+import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
 
@@ -9,6 +9,7 @@ interface HtmlRendererSettings {
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
   disableSyntaxHighlighting?: boolean;
+  syntaxHighlightLanguages?: string;
 }
 
 export default class HtmlRenderer {
@@ -214,8 +215,9 @@ export default class HtmlRenderer {
    */
   async render (markdownContent: string): Promise<string> {
     // Pre-process: hide language identifiers to prevent syntax highlighting
+    const languages = parseLanguagesString(this.settings.syntaxHighlightLanguages || '');
     const processedContent = this.settings.disableSyntaxHighlighting !== false
-      ? hideLanguageIdentifiers(markdownContent)
+      ? hideLanguageIdentifiers(markdownContent, languages)
       : markdownContent;
       
     const el = document.body.createDiv();

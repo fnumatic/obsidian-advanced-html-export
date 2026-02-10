@@ -1,12 +1,76 @@
 const LANG_PREFIX = '__lang_';
 const LANG_SUFFIX = '__';
 
+export const DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES = new Set([
+  'javascript', 'typescript', 'jsx', 'tsx', 'html', 'xml', 'css', 'scss', 'sass',
+  'c', 'cpp', 'c++', 'h', 'hpp', 'c#', 'csharp', 'cs', 'java', 'rust', 'go',
+  'ruby', 'swift', 'kotlin', 'scala', 'objective-c', 'objectivec', 'objc',
+  'python', 'py', 'perl', 'php', 'lua', 'raku', 'bash', 'sh', 'shell',
+  'powershell', 'ps1', 'cmd', 'batch', 'awk', 'tcl',
+  'json', 'jsonc', 'json5', 'yaml', 'yml', 'ini', 'toml',
+  'sql', 'pgsql', 'postgresql', 'mysql', 'sqlite',
+  'haskell', 'ocaml', 'fsharp', 'erlang', 'elixir', 'clojure',
+  'dart', 'flutter', 'groovy', 'gradle', 'maven',
+  'dockerfile', 'docker', 'cmake', 'makefile',
+  'markdown', 'md', 'latex', 'tex', 'asciidoc', 'adoc',
+  'protobuf', 'proto', 'thrift', 'graphql',
+  'diff', 'patch', 'vim', 'bash', 'powershell',
+  'ini', 'cfg', 'conf', 'config', 'env', 'dotenv',
+  'nginx', 'apache', 'apacheconf', 'lighttpd',
+  'terraform', 'hcl', 'ansible', 'puppet',
+  'r', 'julia', 'matlab', 'octave',
+  'scala', 'kotlin', 'groovy', 'gradle', 'ant',
+  'xml', 'xsl', 'xslt', 'html', 'htm', 'xhtml',
+  'scss', 'less', 'stylus', 'postcss',
+  'coffeescript', 'livescript', 'typescript',
+  'actionscript', 'flash', 'flex',
+  'pascal', 'delphi', 'lazarus', 'fpc',
+  'basic', 'vb', 'vbnet', 'vba', 'vbscript',
+  'actionscript', 'ecmascript', 'extend',
+  'd', 'dlang', 'dylan', '的女',
+  'fortran', 'f77', 'f90', 'f95', 'f03', 'f08',
+  'prolog', 'clips', 'clipper', 'foxpro',
+  'scheme', 'racket', 'lisp', 'commonlisp', 'cl',
+  'smalltalk', 'pharo', 'squeak',
+  'ada', 'modula2', 'modula3', 'oberon',
+  'algol', 'algol68', 'algol60',
+  'applescript', 'osascript', 'hy',
+  'io', 'moo', 'murphi', 'promela',
+  'cmake', 'make', 'qmake', 'qmakefile',
+  'x86asm', 'armasm', 'mipsasm', 'nasm', 'fasm',
+  'tex', 'latex', 'context', 'bibtex',
+  'restructuredtext', 'rst', 'text', 'plain',
+  'tap', '单元测试', 'tap',
+  'tap', 'tap',
+]);
+
 /**
  * Ersetzt Sprach-Klassen in Markdown vor dem Rendering
  * ```json → ```__lang_json__
+ * Nur Sprachen aus der Whitelist werden ersetzt (mermaid, plantuml, etc. bleiben unberührt)
  */
-export function hideLanguageIdentifiers(markdown: string): string {
-  return markdown.replace(/```(\w+)/g, `\`\`\`${LANG_PREFIX}$1${LANG_SUFFIX}`);
+export function hideLanguageIdentifiers(markdown: string, languages?: Set<string>): string {
+  const langSet = languages || DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES;
+
+  return markdown.replace(/```(\w+)(\s*)/g, (match, lang, trailingSpace) => {
+    const normalizedLang = lang.toLowerCase();
+    if (langSet.has(normalizedLang)) {
+      return `\`\`\`${LANG_PREFIX}${lang}${LANG_SUFFIX}${trailingSpace}`;
+    }
+    return match;
+  });
+}
+
+/**
+ * Hilfsfunktion: Parsed eine kommagetrennte Liste von Sprachen in ein Set
+ */
+export function parseLanguagesString(languagesStr: string): Set<string> {
+  return new Set(
+    languagesStr
+      .split(',')
+      .map(l => l.trim().toLowerCase())
+      .filter(l => l.length > 0)
+  );
 }
 
 /**

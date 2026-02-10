@@ -3,7 +3,7 @@ import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
 import { fillTemplate } from './templateUtils';
 import { debugLogger } from './debugLogger';
-import { hideLanguageIdentifiers, restoreLanguageIdentifiers } from './codeBlockProcessor';
+import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 import template from './wikiTemplates/template.html?raw';
 import styles from './wikiTemplates/styles.css?raw';
 import signals from './wikiTemplates/signals.js?raw';
@@ -170,8 +170,9 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const { content: resolvedContent } = this.linkResolver.resolveLinks(markdownContent);
 
         // Pre-process: hide language identifiers to prevent syntax highlighting
+        const languages = parseLanguagesString(this.settings.syntaxHighlightLanguages || '');
         const processedContent = this.settings.disableSyntaxHighlighting !== false
-            ? hideLanguageIdentifiers(resolvedContent)
+            ? hideLanguageIdentifiers(resolvedContent, languages)
             : resolvedContent;
 
         const el = document.body.createDiv();
