@@ -44,6 +44,39 @@ Export a network of linked notes as a single HTML file with single-page applicat
 3. All linked notes are collected and exported
 4. Open the HTML file - navigate between pages using the sidebar or links
 
+## Embedding Excalidraw into your Notes and Exporting
+
+### Prerequisites
+
+Ensure you have the [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin) installed and enabled.
+
+### Configuration
+
+To include Excalidraw diagrams in your exported HTML, configure the following settings in the Excalidraw plugin:
+
+1. **Open Excalidraw Settings**
+   - Go to `Settings → Community Plugins → Excalidraw`
+
+2. **Enable SVG Export**
+   - Find the **"Export"** section
+   - Enable **"Export as native SVG"**
+   - This ensures diagrams are embedded as actual SVG markup rather than temporary blob URLs
+
+### Usage
+
+Once configured, embed Excalidraw diagrams in your notes using wiki-links:
+
+```markdown
+![[my-diagram.excalidraw]]
+```
+
+The diagrams will be automatically converted to embedded SVG when exporting to HTML.
+
+### Troubleshooting
+
+**Problem:** Excalidraw diagrams appear as empty placeholders or don't render  
+**Solution:** Verify "Export as native SVG" is enabled in Excalidraw settings
+
 ## Installation
 
 ### Via BRAT Plugin (Recommended)

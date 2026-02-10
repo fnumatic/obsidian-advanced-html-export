@@ -1,5 +1,5 @@
 import { App, Notice, TFile } from 'obsidian';
-import WikiHtmlRenderer, { WikiRenderOptions } from '../utils/wikiHtmlRenderer';
+import { WikiRenderOptions } from '../utils/wikiHtmlRenderer';
 import { WikiExportOrchestrator, NoteInfo } from '../utils/wikiExportOrchestrator';
 import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
 import { NoteSelectionModal } from '../ui/modals/NoteSelectionModal';
@@ -112,13 +112,13 @@ export class ExportWikiCommand {
                 return;
             }
 
-            const renderedPages = await renderPromise;
+            const { renderedPages, renderer: detailedRenderer } = await renderPromise;
 
-            // Generate final HTML
-            const wikiRenderer = new WikiHtmlRenderer(this.app, this.plugin, options);
-            const htmlContent = wikiRenderer.generateWikiHtmlWithRenderedPages(
-                file, 
-                renderedPages, 
+            // Generate final HTML using the same renderer that processed the images
+            // This ensures the imageCache is available for the restoration script
+            const htmlContent = detailedRenderer.generateWikiHtmlWithRenderedPages(
+                file,
+                renderedPages,
                 selectedNotes.map(n => ({ slug: n.slug, title: n.title, path: n.path }))
             );
 
@@ -150,19 +150,19 @@ export class ExportWikiCommand {
         token: CancellationToken,
         pauseController: PauseController,
         progressModal: RenderingProgressModal
-    ): Promise<Map<string, string>> {
+    ): Promise<{ renderedPages: Map<string, string>; renderer: DetailedWikiRenderer }> {
         // Create detailed renderer
         const detailedRenderer = new DetailedWikiRenderer(this.app, this.plugin, options);
         
         // Start rendering with progress tracking
-        const renderPromise = orchestrator.renderNotesWithProgress(
+        const renderedPages = await orchestrator.renderNotesWithProgress(
             detailedRenderer,
             token,
             pauseController,
             (event) => progressModal.handleEvent(event)
         );
 
-        return renderPromise;
+        return { renderedPages, renderer: detailedRenderer };
     }
 
     private generateWikiFilename(filePath: string): string {

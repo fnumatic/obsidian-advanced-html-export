@@ -60,9 +60,15 @@ export default class HtmlRenderer {
         const mimeMatch = imagePath.match(/^data:([^;]+)/);
         mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
       } catch (error) {
-        console.warn(`Failed to parse data URL [${imagePath}]:`, error);
+        console.warn(`Failed to parse data URL [${imagePath.substring(0, 100)}]:`, error);
         return '';
       }
+    } else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      // External URL - skip for now
+      return '';
+    } else if (imagePath.startsWith('blob:')) {
+      // Blob URLs (e.g., from Excalidraw) - cannot be processed as they are temporary browser URLs
+      return '';
     } else {
       // Existing logic for app:// URLs
       const vault = this.app.vault;
@@ -87,7 +93,6 @@ export default class HtmlRenderer {
         console.warn(`Could not find image [${imagePath}]. Skipping.`);
         return '';
       }
-
       buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
       mimeType = ImageOptimizer.getMimeType(file.extension);
     }

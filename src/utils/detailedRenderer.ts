@@ -106,11 +106,11 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
         : resolvedContent;
 
       const el = document.body.createDiv();
-      
+
       // Render markdown - this is the heavy operation
       const renderStartTime = performance.now();
       await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
-      
+
       // Post-process: restore language identifiers
       if (this.settings.disableSyntaxHighlighting !== false) {
         restoreLanguageIdentifiers(el);
@@ -143,11 +143,13 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       for (let i = 0; i < imgElements.length; i++) {
         token.throwIfCancelled();
-        
+
         const img = imgElements[i];
         const src = img.src;
-        
-        if (!src) continue;
+
+        if (!src) {
+          continue;
+        }
 
         const fileName = this.extractFileNameFromSrc(src);
 
@@ -155,7 +157,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
           type: 'image_start',
           timestamp: Date.now(),
           notePath: file.path,
-          details: { 
+          details: {
             index: i,
             total: totalImages,
             fileName: fileName
@@ -184,7 +186,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
           });
 
           const hash = await this.convertImageToHash(src);
-          
+
           this.emit({
             type: 'image_phase',
             timestamp: Date.now(),
@@ -194,7 +196,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
           img.setAttribute('data-hash', hash);
           img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
-          
+
           if (this.settings.enableLazyLoading) {
             img.setAttribute('loading', 'lazy');
           }
@@ -258,6 +260,8 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       token.throwIfCancelled();
       let html = el.innerHTML;
       html = this.addHeadingIds(html);
+
+      // Note: Restoration script is added globally in generateWikiHtml, not per-page
 
       const noteDuration = performance.now() - this.currentNoteStartTime;
 

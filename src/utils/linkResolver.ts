@@ -2,7 +2,7 @@ export interface LinkInfo {
     original: string;
     target: string;
     alias: string;
-    type: 'wiki' | 'markdown';
+    type: 'wiki' | 'markdown' | 'image-embed';
 }
 
 export class LinkResolver {
@@ -31,19 +31,23 @@ export class LinkResolver {
     extractLinks(content: string): LinkInfo[] {
         const links: LinkInfo[] = [];
 
-        const wikiLinkRegex = /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
+        // Match wiki links: both [[...]] and ![[...]]
+        const wikiLinkRegex = /!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
         let match;
 
         while ((match = wikiLinkRegex.exec(content)) !== null) {
             const fullMatch = match[0];
             const target = match[1].trim();
             const alias = match[2] ? match[2].trim() : target;
+            
+            // Check if this is an image embed (starts with ![[)
+            const isImageEmbed = fullMatch.startsWith('![');
 
             links.push({
                 original: fullMatch,
                 target: this.slugify(target),
                 alias: alias,
-                type: 'wiki'
+                type: isImageEmbed ? 'image-embed' : 'wiki'
             });
         }
 
@@ -106,8 +110,16 @@ export class LinkResolver {
         let resolvedContent = content;
 
         for (const link of links) {
-            const replacement = `<a href="javascript:void(0)" data-page="${link.target}" style="cursor: pointer;">${link.alias}</a>`;
-            resolvedContent = resolvedContent.replace(link.original, replacement);
+            if (link.type === 'image-embed') {
+                // Keep image embeds unchanged - Obsidian's MarkdownRenderer will handle them
+                // This includes: ![[image.png]], ![[excalidraw]], ![[image.png|300]], etc.
+                continue;
+            } else if (link.type === 'wiki') {
+                // Convert wiki links to anchor tags
+                const replacement = `<a href="javascript:void(0)" data-page="${link.target}" style="cursor: pointer;">${link.alias}</a>`;
+                resolvedContent = resolvedContent.replace(link.original, replacement);
+            }
+            // markdown links are handled separately in extractLinks
         }
 
         return {

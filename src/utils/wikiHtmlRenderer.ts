@@ -85,7 +85,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                 chunk.map(async (file) => {
                     const slug = this.linkResolver.slugify(file.basename);
                     const content = await this.app.vault.cachedRead(file);
-                    const html = await this.renderPage(content);
+                    const html = await this.renderPageFromContent(content);
                     return [slug, html] as [string, string];
                 })
             );
@@ -156,17 +156,26 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
 
     /**
      * Render a single note file to HTML
+     * This is the method called by the orchestrator
+     */
+    async renderPage(file: TFile): Promise<string> {
+        console.log(`[DEBUG wikiHtmlRenderer] renderPage(file) called with file: ${file.path}`);
+        return this.renderPageFromFile(file);
+    }
+
+    /**
+     * Render a single note file to HTML
      * This is the new preferred method for rendering from orchestrator
      */
     async renderPageFromFile(file: TFile): Promise<string> {
         debugLogger.logNoteStart(file.path);
         const content = await this.app.vault.cachedRead(file);
-        const html = await this.renderPage(content);
+        const html = await this.renderPageFromContent(content);
         debugLogger.logNoteEnd(file.path);
         return html;
     }
 
-    async renderPage(markdownContent: string): Promise<string> {
+    async renderPageFromContent(markdownContent: string): Promise<string> {
         const { content: resolvedContent } = this.linkResolver.resolveLinks(markdownContent);
 
         // Pre-process: hide language identifiers to prevent syntax highlighting
@@ -188,11 +197,14 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         });
 
         const imgElements = el.querySelectorAll('img');
+
         const imagePromises = Array.from(imgElements).map(async (img) => {
             const src = img.src;
             if (src) {
                 if (this.settings.enableImageDeduplication) {
+                    console.log(`[DEBUG wikiHtmlRenderer] Deduplication enabled, calling convertImageToHash`);
                     const hash = await this.convertImageToHash(src);
+                    console.log(`[DEBUG wikiHtmlRenderer] Got hash: ${hash ? hash.substring(0, 30) + '...' : 'EMPTY'}`);
                     // Log image processing for debug
                     const isCacheHit = this.imageCache.has(hash);
                     debugLogger.logImageProcessed(true, isCacheHit);
@@ -223,6 +235,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
 
         let html = el.innerHTML;
         html = this.addHeadingIds(html);
+
+        // Note: Restoration script is added globally in generateWikiHtml, not per-page
 
         return html;
     }
@@ -427,7 +441,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         }).join('\n');
     }
 
-    private getImageRestorationScript(): string {
+    protected getImageRestorationScript(): string {
         const imagesObject: Record<string, string> = {};
         for (const [hash, base64] of this.imageCache) {
             imagesObject[hash] = base64;
