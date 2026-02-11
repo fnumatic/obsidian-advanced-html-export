@@ -75,8 +75,8 @@
 
 <div data-tags="ns-container" class="flex flex-col max-h-[80vh]">
   <header data-tags="ns-header" class="flex justify-between items-center mb-4">
-    <h2 class="m-0 text-base font-semibold">Select Notes</h2>
-    <span class="text-sm text-obsidian-muted bg-obsidian-alt px-3 py-1 rounded-full">
+    <h2 class="m-0 text-obsidian font-semibold">Select Notes</h2>
+    <span class="text-obsidian-sm text-obsidian-muted bg-obsidian-alt px-3 py-1 rounded-full">
       {selectedCount}/{notes.length} selected
     </span>
   </header>
@@ -115,15 +115,15 @@
           />
 
           <div class="flex-1 min-w-0">
-            <div class="font-medium whitespace-nowrap overflow-hidden text-ellipsis text-sm">
+            <div class="font-medium whitespace-nowrap overflow-hidden text-ellipsis text-obsidian-sm">
               {note.title}
             </div>
-            <div class="text-xs text-obsidian-muted whitespace-nowrap overflow-hidden text-ellipsis">
+            <div class="text-obsidian-xs text-obsidian-muted whitespace-nowrap overflow-hidden text-ellipsis">
               {note.path}
             </div>
           </div>
 
-          <div class="flex gap-3 text-sm text-obsidian-muted whitespace-nowrap">
+          <div class="flex gap-3 text-obsidian-sm text-obsidian-muted whitespace-nowrap">
             {#if note.estimatedDiagrams > 0}
               <span title="{note.estimatedDiagrams} diagrams"><Icon name="chart-bar" size="1em" />{note.estimatedDiagrams}</span>
             {/if}
@@ -135,23 +135,23 @@
   </main>
 
   {#if showWarning}
-    <div data-tags="ns-warning" class="my-3 p-2 rounded text-center text-sm" style="background-color: var(--background-modifier-error); color: var(--text-error);">
+    <div data-tags="ns-warning" class="my-3 p-2 rounded text-center text-obsidian-sm" style="background-color: var(--background-modifier-error); color: var(--text-error);">
       Please select at least one note.
     </div>
   {/if}
 
   <section data-tags="ns-summary" class="mt-4 p-3 bg-obsidian-alt rounded grid grid-cols-3 gap-3 text-center">
     <div class="flex flex-col gap-1">
-      <div class="text-xl font-semibold">{selectedCount}</div>
-      <div class="text-xs text-obsidian-muted">Selected</div>
+      <div class="text-obsidian font-semibold">{selectedCount}</div>
+      <div class="text-obsidian-xs text-obsidian-muted">Selected</div>
     </div>
     <div class="flex flex-col gap-1">
-      <div class="text-xl font-semibold">~{totalDiagrams}</div>
-      <div class="text-xs text-obsidian-muted">Diagrams</div>
+      <div class="text-obsidian font-semibold">~{totalDiagrams}</div>
+      <div class="text-obsidian-xs text-obsidian-muted">Diagrams</div>
     </div>
     <div class="flex flex-col gap-1">
-      <div class="text-xl font-semibold">~{estimatedMinutes} min</div>
-      <div class="text-xs text-obsidian-muted">Estimated Time</div>
+      <div class="text-obsidian font-semibold">~{estimatedMinutes} min</div>
+      <div class="text-obsidian-xs text-obsidian-muted">Estimated Time</div>
     </div>
   </section>
 

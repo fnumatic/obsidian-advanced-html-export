@@ -39,9 +39,9 @@
   });
 </script>
 
-<div data-tags="dr-container" class="flex flex-col gap-0.5 text-sm">
+<div data-tags="dr-container" class="flex flex-col gap-0.5 text-obsidian-sm">
   <div data-tags="dr-main" class="flex items-center gap-2">
-    <span data-tags="dr-icon" class="text-base w-5 text-center"><Icon name={icon} /></span>
+    <span data-tags="dr-icon" class="w-5 text-center text-obsidian"><Icon name={icon} /></span>
     <span data-tags="dr-label" class="whitespace-nowrap text-obsidian-muted">{label}</span>
     <div class="flex-1">
       <ProgressBar progress={percent} size="small" class="opacity-40 bg-opacity-50" />
@@ -50,7 +50,7 @@
       {processed}/{total}
     </span>
   </div>
-  <div data-tags="dr-status" class="text-xs text-obsidian-muted pl-7 min-h-4">
+  <div data-tags="dr-status" class="text-obsidian-xs text-obsidian-muted pl-7 min-h-4">
     {status}
   </div>
 </div>

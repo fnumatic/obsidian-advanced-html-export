@@ -10,11 +10,11 @@
 </script>
 
 <div data-tags="ep-container" class="p-0">
-  <header data-tags="ep-header" class="mt-0 mb-5 text-lg font-semibold">
+  <header data-tags="ep-header" class="mt-0 mb-5 text-obsidian font-semibold">
     Export Preview
   </header>
 
-  <section data-tags="ep-summary" class="bg-obsidian-alt p-4 rounded-lg mb-5 text-center text-base">
+  <section data-tags="ep-summary" class="bg-obsidian-alt p-4 rounded-lg mb-5 text-center text-obsidian">
     <Icon name="document" size="1.25em" />
     <span class="font-semibold">{metrics.totalNotes}</span>
     <span class="text-obsidian-muted mr-3 ml-1">notes</span>
@@ -30,17 +30,17 @@
 
   {#if notes.length > 0}
     <section data-tags="ep-notes" class="mt-5">
-      <h3 class="mt-5 mb-3 text-base font-semibold">Notes</h3>
+      <h3 class="mt-5 mb-3 text-obsidian font-semibold">Notes</h3>
       <div class="max-h-[300px] overflow-y-auto border border-obsidian rounded-md p-2">
         {#each notes as note, index}
           <div
-            class="py-1.5 px-2 border-b border-obsidian-border text-sm flex justify-between items-center"
+            class="py-1.5 px-2 border-b border-obsidian-border text-obsidian-xs flex justify-between items-center"
             class:border-none={index === notes.length - 1}
           >
             <span class="max-w-[300px] whitespace-nowrap overflow-hidden text-ellipsis" title={note.title}>
               {truncateTitle(note.title)}
             </span>
-            <span class="text-obsidian-muted text-sm">
+            <span class="text-obsidian-muted text-obsidian-sm">
               <Icon name="chart-bar" size="1em" />{note.estimatedDiagrams} · <Icon name="link" size="1em" />{note.linkCount}
             </span>
           </div>

@@ -291,24 +291,24 @@
 </script>
 
 <div data-tags="rp-container" class="p-0">
-  <header data-tags="rp-header" class="mt-0 mb-4 text-base font-semibold">
+  <header data-tags="rp-header" class="mt-0 mb-4 text-obsidian font-semibold">
     Rendering Wiki Export
   </header>
 
   <details data-tags="rp-completed" open={completedOpen} class="mb-3">
-    <summary class="font-semibold text-base cursor-pointer py-2">
+    <summary class="font-semibold text-obsidian cursor-pointer py-2">
       Completed Notes ({completedNotes.length})
     </summary>
     <div class="min-h-[114px] max-h-[114px] overflow-y-auto border border-obsidian rounded p-1.5 mt-2">
       {#each completedNotes as note}
-        <div class="py-0.5 px-1 flex justify-between items-center text-sm">
+        <div class="py-0.5 px-1 flex justify-between items-center text-obsidian-sm">
           <div class="flex items-center gap-1 overflow-hidden">
             <span class="text-obsidian-muted">✓</span>
             <span class="max-w-[360px] whitespace-nowrap overflow-hidden text-ellipsis" title={note.title}>
               {truncateTitle(note.title, 60)}
             </span>
           </div>
-           <span class="text-obsidian-muted text-sm whitespace-nowrap">
+           <span class="text-obsidian-muted text-obsidian-sm whitespace-nowrap">
              {(note.duration / 1000).toFixed(1)}s · <Icon name="chart-bar" size="1em" />{note.totalDiagrams} <Icon name="document" size="1em" />{note.totalCodeBlocks} <Icon name="image" size="1em" />{note.totalImages}
            </span>
         </div>
@@ -317,7 +317,7 @@
   </details>
 
   <section data-tags="rp-current" class="mt-3 p-2.5 bg-obsidian-alt rounded">
-    <div class="font-semibold text-base mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
+    <div class="font-semibold text-obsidian mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
       {#if isCompleted}
         ✅ Rendering complete!
       {:else if currentNote}
@@ -356,30 +356,30 @@
     </div>
 
     {#if warning}
-      <div class="mt-2 p-1.5 rounded text-sm warning-bg">
+      <div class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg">
         {warning}
       </div>
     {/if}
   </section>
 
-  <div data-tags="rp-time-stats" class="mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-sm">
+  <div data-tags="rp-time-stats" class="mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-obsidian-sm">
     <div class="flex flex-col items-center gap-1">
       <span class="font-semibold">{formatDuration(elapsedTime)}</span>
-      <span class="text-xs text-obsidian-muted"><Icon name="timer" size="1em" /> Elapsed</span>
+      <span class="text-obsidian-xs text-obsidian-muted"><Icon name="timer" size="1em" /> Elapsed</span>
     </div>
     <div class="flex flex-col items-center gap-1">
       <span class="font-semibold">{remainingTime ? `~${formatDuration(remainingTime)}` : 'Calculating...'}</span>
-      <span class="text-xs text-obsidian-muted"><Icon name="hourglass" size="1em" /> Remaining</span>
+      <span class="text-obsidian-xs text-obsidian-muted"><Icon name="hourglass" size="1em" /> Remaining</span>
     </div>
     <div class="flex flex-col items-center gap-1">
       <span class="font-semibold">{speed}</span>
-      <span class="text-xs text-obsidian-muted"><Icon name="lightning" size="1em" /> Speed</span>
+      <span class="text-obsidian-xs text-obsidian-muted"><Icon name="lightning" size="1em" /> Speed</span>
     </div>
   </div>
 
   <footer data-tags="rp-footer" class="mt-4 flex justify-between items-center gap-3">
     <div
-      class="font-semibold text-sm"
+      class="font-semibold text-obsidian-sm"
       class:visible={isPaused}
       class:invisible={!isPaused}
     >

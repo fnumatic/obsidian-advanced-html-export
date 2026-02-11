@@ -13,17 +13,17 @@
   }
 </script>
 
-<div data-tags="ts-container" class="grid grid-cols-3 gap-4 p-3 bg-obsidian-alt rounded-lg mt-3 text-sm">
+<div data-tags="ts-container" class="grid grid-cols-3 gap-4 p-3 bg-obsidian-alt rounded-lg mt-3 text-obsidian-sm">
   <div data-tags="ts-stat" class="flex flex-col items-center gap-1">
-    <span class="font-semibold text-base">{formatDuration(elapsed)}</span>
-    <span class="text-xs text-obsidian-muted">⏱️ Elapsed</span>
+    <span class="font-semibold text-obsidian">{formatDuration(elapsed)}</span>
+    <span class="text-obsidian-xs text-obsidian-muted">⏱️ Elapsed</span>
   </div>
   <div data-tags="ts-stat" class="flex flex-col items-center gap-1">
-    <span class="font-semibold text-base">{remaining ? `~${formatDuration(remaining)}` : 'Calculating...'}</span>
-    <span class="text-xs text-obsidian-muted">⏳ Remaining</span>
+    <span class="font-semibold text-obsidian">{remaining ? `~${formatDuration(remaining)}` : 'Calculating...'}</span>
+    <span class="text-obsidian-xs text-obsidian-muted">⏳ Remaining</span>
   </div>
   <div data-tags="ts-stat" class="flex flex-col items-center gap-1">
-    <span class="font-semibold text-base">{speed}</span>
-    <span class="text-xs text-obsidian-muted">⚡ Speed</span>
+    <span class="font-semibold text-obsidian">{speed}</span>
+    <span class="text-obsidian-xs text-obsidian-muted">⚡ Speed</span>
   </div>
 </div>

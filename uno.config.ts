@@ -49,5 +49,9 @@ export default defineConfig({
     'obsidian-btn-danger': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--text-error)] text-white',
     'obsidian-modal': 'bg-[var(--background-primary)] border-[var(--background-modifier-border)] rounded-lg shadow-xl p-4',
     'obsidian-input': 'w-full px-3 py-1.5 rounded outline-none bg-[var(--background-primary)] border-[var(--background-modifier-border)] text-[var(--text-normal)]',
+    // Fixed pixel font sizes (no zoom scaling)
+    'text-obsidian': 'text-14px',
+    'text-obsidian-sm': 'text-12px',
+    'text-obsidian-xs': 'text-11px',
   }
 })

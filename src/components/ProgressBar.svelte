@@ -31,7 +31,7 @@
   {#if size === 'normal' && showText}
     <span
       data-tags="pb-text"
-      class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white"
+      class="absolute inset-0 flex items-center justify-center text-obsidian-xs font-semibold text-white"
       style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);"
     >
       {Math.round(progress)}%
