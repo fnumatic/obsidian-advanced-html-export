@@ -2,6 +2,7 @@
   import type { RenderingProgressProps, CompletedNote, CurrentNoteProgress } from './types';
   import type { RenderEvent } from '../utils/detailedRenderer';
   import DetailRow from './DetailRow.svelte';
+  import ProgressBar from './ProgressBar.svelte';
 
   let {
     metrics,
@@ -254,15 +255,7 @@
       {/if}
     </div>
 
-    <div class="relative w-full h-4.5 bg-obsidian rounded overflow-hidden">
-      <div
-        class="absolute h-full transition-all duration-300 rounded-l progress-gradient"
-      >
-        <span class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white" style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
-          {overallProgress()}%
-        </span>
-      </div>
-    </div>
+    <ProgressBar progress={overallProgress()} />
 
     <div class="flex flex-col gap-1.5 mt-2">
       <DetailRow
