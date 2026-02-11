@@ -2,7 +2,7 @@
   import ProgressBar from './ProgressBar.svelte';
   import Icon from './Icon.svelte';
 
-  type IconName = 'chart-bar' | 'document' | 'image' | 'file' | 'settings' | 'renew' | 'link';
+  type IconName = 'chart-bar' | 'document' | 'image' | 'file' | 'settings' | 'renew' | 'link' | 'code-block';
 
   interface Progress {
     total: number;

@@ -266,7 +266,7 @@
         isPlaceholder={!currentNote}
       />
       <DetailRow
-        icon="document"
+        icon="code-block"
         label="Code blocks"
         progress={currentNote?.codeBlocks}
         isPlaceholder={!currentNote}
@@ -291,15 +291,15 @@
   <div data-tags="rp-time-stats" class="mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-sm">
     <div class="flex flex-col items-center gap-1">
       <span class="font-semibold">{formatDuration(elapsedTime)}</span>
-      <span class="text-xs text-obsidian-muted">⏱️ Elapsed</span>
+      <span class="text-xs text-obsidian-muted"><Icon name="timer" size="1em" /> Elapsed</span>
     </div>
     <div class="flex flex-col items-center gap-1">
       <span class="font-semibold">{remainingTime ? `~${formatDuration(remainingTime)}` : 'Calculating...'}</span>
-      <span class="text-xs text-obsidian-muted">⏳ Remaining</span>
+      <span class="text-xs text-obsidian-muted"><Icon name="hourglass" size="1em" /> Remaining</span>
     </div>
     <div class="flex flex-col items-center gap-1">
       <span class="font-semibold">{speed}</span>
-      <span class="text-xs text-obsidian-muted">⚡ Speed</span>
+      <span class="text-xs text-obsidian-muted"><Icon name="lightning" size="1em" /> Speed</span>
     </div>
   </div>
 
@@ -309,7 +309,7 @@
       class:visible={isPaused}
       class:invisible={!isPaused}
     >
-      ⏸️ PAUSED
+      <Icon name="pause" size="1em" /> PAUSED
     </div>
     <div class="flex gap-3 ml-auto">
       <button
@@ -317,7 +317,11 @@
         onclick={handlePauseToggle}
         disabled={isCompleted || isCancelled}
       >
-        {isPaused ? '▶️ Resume' : '⏸️ Pause'}
+        {#if isPaused}
+          <Icon name="play" size="1em" /> Resume
+        {:else}
+          <Icon name="pause" size="1em" /> Pause
+        {/if}
       </button>
       <button
         class="obsidian-btn-danger"

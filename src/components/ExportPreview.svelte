@@ -15,7 +15,7 @@
   </header>
 
   <section data-tags="ep-summary" class="bg-obsidian-alt p-4 rounded-lg mb-5 text-center text-base">
-    <Icon name="file" size="1.25em" />
+    <Icon name="document" size="1.25em" />
     <span class="font-semibold">{metrics.totalNotes}</span>
     <span class="text-obsidian-muted mr-3 ml-1">notes</span>
     <span class="text-obsidian-muted mx-3">·</span>
@@ -23,7 +23,7 @@
     <span class="font-semibold">{metrics.estimatedDiagrams}</span>
     <span class="text-obsidian-muted mr-3 ml-1">diagrams</span>
     <span class="text-obsidian-muted mx-3">·</span>
-    <Icon name="document" size="1.25em" />
+    <Icon name="code-block" size="1.25em" />
     <span class="font-semibold">{metrics.totalCodeBlocks}</span>
     <span class="text-obsidian-muted ml-1">code blocks</span>
   </section>

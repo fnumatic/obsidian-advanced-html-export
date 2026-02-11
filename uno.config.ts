@@ -14,13 +14,18 @@ export default defineConfig({
       }
     }),
   ],
-  safelist: [
+   safelist: [
     'i-carbon-chart-bar',
+    'i-carbon-code-block',
     'i-carbon-document',
+    'i-carbon-hourglass',
     'i-carbon-image',
-    'i-carbon-file',
+    'i-carbon-lightning',
     'i-carbon-link',
-  ],
+    'i-carbon-pause',
+    'i-carbon-play',
+    'i-carbon-timer',
+   ],
   rules: [
     // Backgrounds using Obsidian CSS variables
     [/^bg-obsidian$/, () => ({ 'background-color': 'var(--background-primary)' })],
