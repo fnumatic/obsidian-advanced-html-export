@@ -86,3 +86,12 @@ body .advanced-html-export-modal {
 .invisible {
     visibility: hidden;
 }
+
+/* Note list item styling */
+.note-list-item {
+    font-size: 11px;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

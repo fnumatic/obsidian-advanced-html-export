@@ -54,7 +54,7 @@ shortcuts: {
     'text-obsidian-sm': 'text-12px',
     'text-obsidian-xs': 'text-11px',
     // Document list item styling
-    'note-list-item': 'py-1 px-2 flex justify-between items-center',
+    'note-list-item': 'py-1 px-2 flex justify-between items-center text-obsidian-xs',
     'note-list-item-left': 'py-1 px-2 flex items-center',
      // Stats columns for double-digit alignment (number left/right-aligned, icon right)
       'note-list-stats': 'flex gap-1',
