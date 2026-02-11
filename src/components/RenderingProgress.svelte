@@ -310,6 +310,10 @@
           <span class="text-obsidian-muted shrink-0 whitespace-nowrap">
             <div class="note-list-stats">
               <span class="note-list-stat">
+                <span class="note-list-stat-number">{(note.duration / 1000).toFixed(1)}</span>
+                <Icon name="lightning"/>
+              </span>
+              <span class="note-list-stat">
                 <span class="note-list-stat-number">{note.totalDiagrams}</span>
                 <Icon name="chart-bar"/>
               </span>
