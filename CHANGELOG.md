@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.6.2](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.0...0.6.2) (2026-02-11)
+
 # [0.6.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.3.0...0.6.0) (2026-02-11)
 
 
