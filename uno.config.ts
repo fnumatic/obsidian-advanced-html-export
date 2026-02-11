@@ -4,8 +4,7 @@ export default defineConfig({
   presets: [
     presetWind4(),
     presetIcons({
-      scale: 1.2,
-      cdn: 'https://esm.sh/'
+      scale: 1.2
     }),
   ],
   rules: [
