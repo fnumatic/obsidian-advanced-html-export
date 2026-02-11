@@ -162,7 +162,6 @@
   }
 
   function handleNoteStart(event: RenderEvent) {
-    console.log('[DEBUG] note_start event:', event);
     const index = completedNotes.length;
     currentNote = {
       title: event.noteTitle || 'Unknown',
@@ -174,7 +173,6 @@
       images: { total: (event.details?.totalImages as number) || 0, processed: 0 },
       overallProgress: 0
     };
-    console.log('[DEBUG] currentNote set to:', currentNote);
   }
 
   function handleNoteComplete(event: RenderEvent) {
@@ -212,10 +210,8 @@
     updates: Partial<{ total: number; processed: number; currentFileName?: string; currentPhase?: string }>
   ) {
     if (!currentNote) {
-      console.log('[DEBUG] updateProgress called but currentNote is null');
       return;
     }
-    console.log(`[DEBUG] updateProgress for ${type}:`, updates, 'current:', currentNote[type]);
     currentNote = {
       ...currentNote,
       [type]: {
@@ -223,11 +219,9 @@
         ...updates
       }
     };
-    console.log(`[DEBUG] ${type} after update:`, currentNote[type]);
   }
 
   function handleImageStart(event: RenderEvent) {
-    console.log('[DEBUG] image_start event:', event);
     updateProgress('images', {
       total: (event.details?.total as number) || 0,
       currentFileName: (event.details?.fileName as string) || ''
@@ -235,14 +229,12 @@
   }
 
   function handleImagePhase(event: RenderEvent) {
-    console.log('[DEBUG] image_phase event:', event);
     updateProgress('images', {
       currentPhase: (event.details?.phase as string) || ''
     });
   }
 
   function handleImageComplete() {
-    console.log('[DEBUG] image_complete event');
     if (!currentNote) return;
     updateProgress('images', {
       processed: currentNote.images.processed + 1
@@ -250,14 +242,12 @@
   }
 
   function handleDiagramStart(event: RenderEvent) {
-    console.log('[DEBUG] diagram_start event:', event);
     updateProgress('diagrams', {
       total: (event.details?.totalDiagrams as number) || 0
     });
   }
 
   function handleDiagramComplete() {
-    console.log('[DEBUG] diagram_complete event');
     if (!currentNote) return;
     updateProgress('diagrams', {
       processed: currentNote.diagrams.processed + 1
@@ -265,14 +255,12 @@
   }
 
   function handleCodeBlockStart(event: RenderEvent) {
-    console.log('[DEBUG] codeblock_start event:', event);
     updateProgress('codeBlocks', {
       total: (event.details?.totalCodeBlocks as number) || 0
     });
   }
 
   function handleCodeBlockComplete() {
-    console.log('[DEBUG] codeblock_complete event');
     if (!currentNote) return;
     updateProgress('codeBlocks', {
       processed: currentNote.codeBlocks.processed + 1

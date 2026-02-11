@@ -159,7 +159,6 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
      * This is the method called by the orchestrator
      */
     async renderPage(file: TFile): Promise<string> {
-        console.log(`[DEBUG wikiHtmlRenderer] renderPage(file) called with file: ${file.path}`);
         return this.renderPageFromFile(file);
     }
 
@@ -202,9 +201,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             const src = img.src;
             if (src) {
                 if (this.settings.enableImageDeduplication) {
-                    console.log(`[DEBUG wikiHtmlRenderer] Deduplication enabled, calling convertImageToHash`);
                     const hash = await this.convertImageToHash(src);
-                    console.log(`[DEBUG wikiHtmlRenderer] Got hash: ${hash ? hash.substring(0, 30) + '...' : 'EMPTY'}`);
                     // Log image processing for debug
                     const isCacheHit = this.imageCache.has(hash);
                     debugLogger.logImageProcessed(true, isCacheHit);

@@ -91,11 +91,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     }
 
     // Emit note_start with correct totals
-    console.log('[DetailedRenderer] Emitting note_start for:', file.basename, {
-      totalDiagrams: analysis.diagramCount,
-      totalCodeBlocks: analysis.codeBlockCount,
-      totalImages: analysis.imageCount
-    });
     this.emit({
       type: 'note_start',
       timestamp: Date.now(),
@@ -144,7 +139,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       }
 
       // Emit diagram_complete for each diagram (MarkdownRenderer processes them internally)
-      console.log('[DetailedRenderer] Emitting', analysis.diagramCount, 'diagram_complete events');
       for (let i = 0; i < analysis.diagramCount; i++) {
         this.emit({
           type: 'diagram_complete',
@@ -154,7 +148,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       }
 
       // Emit codeblock_complete for each code block (MarkdownRenderer processes them internally)
-      console.log('[DetailedRenderer] Emitting', analysis.codeBlockCount, 'codeblock_complete events');
       for (let i = 0; i < analysis.codeBlockCount; i++) {
         this.emit({
           type: 'codeblock_complete',
