@@ -3,6 +3,7 @@
   import type { RenderEvent } from '../utils/detailedRenderer';
   import DetailRow from './DetailRow.svelte';
   import ProgressBar from './ProgressBar.svelte';
+  import Icon from './Icon.svelte';
 
   let {
     metrics,
@@ -236,9 +237,9 @@
               {truncateTitle(note.title, 60)}
             </span>
           </div>
-          <span class="text-obsidian-muted text-sm whitespace-nowrap">
-            {(note.duration / 1000).toFixed(1)}s · {note.totalDiagrams}📊 {note.totalCodeBlocks}📝 {note.totalImages}🖼️
-          </span>
+           <span class="text-obsidian-muted text-sm whitespace-nowrap">
+             {(note.duration / 1000).toFixed(1)}s · <Icon name="chart-bar" size="1em" />{note.totalDiagrams} <Icon name="document" size="1em" />{note.totalCodeBlocks} <Icon name="image" size="1em" />{note.totalImages}
+           </span>
         </div>
       {/each}
     </div>
@@ -259,19 +260,19 @@
 
     <div class="flex flex-col gap-1.5 mt-2">
       <DetailRow
-        icon="📊"
+        icon="chart-bar"
         label="Diagrams"
         progress={currentNote?.diagrams}
         isPlaceholder={!currentNote}
       />
       <DetailRow
-        icon="📝"
+        icon="document"
         label="Code blocks"
         progress={currentNote?.codeBlocks}
         isPlaceholder={!currentNote}
       />
       <DetailRow
-        icon="🖼️"
+        icon="image"
         label="Images"
         progress={currentNote?.images}
         currentPhase={currentNote?.images.currentPhase}

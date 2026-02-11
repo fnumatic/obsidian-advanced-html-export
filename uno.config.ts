@@ -4,8 +4,22 @@ export default defineConfig({
   presets: [
     presetWind4(),
     presetIcons({
-      scale: 1.2
+      scale: 1.2,
+      collections: {
+        carbon: () => import('@iconify-json/carbon').then(i => i.icons)
+      },
+      extraProperties: {
+        'display': 'inline-block',
+        'vertical-align': 'middle'
+      }
     }),
+  ],
+  safelist: [
+    'i-carbon-chart-bar',
+    'i-carbon-document',
+    'i-carbon-image',
+    'i-carbon-file',
+    'i-carbon-link',
   ],
   rules: [
     // Backgrounds using Obsidian CSS variables

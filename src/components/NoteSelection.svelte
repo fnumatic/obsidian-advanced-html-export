@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { NoteSelectionProps } from './types';
+  import Icon from './Icon.svelte';
 
   let { notes, onConfirm, onCancel }: NoteSelectionProps = $props();
 
@@ -124,9 +125,9 @@
 
           <div class="flex gap-3 text-sm text-obsidian-muted whitespace-nowrap">
             {#if note.estimatedDiagrams > 0}
-              <span title="{note.estimatedDiagrams} diagrams">📊 {note.estimatedDiagrams}</span>
+              <span title="{note.estimatedDiagrams} diagrams"><Icon name="chart-bar" size="1em" />{note.estimatedDiagrams}</span>
             {/if}
-            <span title="{note.linkCount} links">🔗 {note.linkCount}</span>
+            <span title="{note.linkCount} links"><Icon name="link" size="1em" />{note.linkCount}</span>
           </div>
         </div>
       {/if}

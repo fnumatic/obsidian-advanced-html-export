@@ -1,6 +1,8 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
+
   let { note }: { note: { title: string; duration: number; totalDiagrams: number; totalCodeBlocks: number; totalImages: number } } = $props();
-  
+
   function truncate(str: string, len: number): string {
     return str.length > len ? str.slice(0, len) + '...' : str;
   }
@@ -12,8 +14,10 @@
     <span class="title" title={note.title}>{truncate(note.title, 50)}</span>
   </div>
   <div class="note-meta">
-    {(note.duration / 1000).toFixed(1)}s · 
-    {note.totalDiagrams}📊 {note.totalCodeBlocks}📝 {note.totalImages}🖼️
+    {(note.duration / 1000).toFixed(1)}s ·
+    <Icon name="chart-bar" size="0.875em" />{note.totalDiagrams}
+    <Icon name="document" size="0.875em" />{note.totalCodeBlocks}
+    <Icon name="image" size="0.875em" />{note.totalImages}
   </div>
 </div>
 
@@ -26,33 +30,36 @@
     font-size: 0.8125rem;
     border-bottom: 1px solid var(--background-modifier-border);
   }
-  
+
   .note-item:last-child {
     border-bottom: none;
   }
-  
+
   .note-info {
     display: flex;
     align-items: center;
     gap: 6px;
     overflow: hidden;
   }
-  
+
   .check {
     color: var(--text-success);
     flex-shrink: 0;
   }
-  
+
   .title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   .note-meta {
     color: var(--text-muted);
     white-space: nowrap;
     flex-shrink: 0;
     font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 2px;
   }
 </style>

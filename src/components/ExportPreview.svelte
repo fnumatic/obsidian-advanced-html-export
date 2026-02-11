@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ExportPreviewProps } from './types';
+  import Icon from './Icon.svelte';
 
   let { metrics, notes, onAction }: ExportPreviewProps = $props();
 
@@ -14,15 +15,15 @@
   </header>
 
   <section data-tags="ep-summary" class="bg-obsidian-alt p-4 rounded-lg mb-5 text-center text-base">
-    <span class="text-xl mr-1">📄</span>
+    <Icon name="file" size="1.25em" />
     <span class="font-semibold">{metrics.totalNotes}</span>
     <span class="text-obsidian-muted mr-3 ml-1">notes</span>
     <span class="text-obsidian-muted mx-3">·</span>
-    <span class="text-xl mr-1">📊</span>
+    <Icon name="chart-bar" size="1.25em" />
     <span class="font-semibold">{metrics.estimatedDiagrams}</span>
     <span class="text-obsidian-muted mr-3 ml-1">diagrams</span>
     <span class="text-obsidian-muted mx-3">·</span>
-    <span class="text-xl mr-1">📝</span>
+    <Icon name="document" size="1.25em" />
     <span class="font-semibold">{metrics.totalCodeBlocks}</span>
     <span class="text-obsidian-muted ml-1">code blocks</span>
   </section>
@@ -40,7 +41,7 @@
               {truncateTitle(note.title)}
             </span>
             <span class="text-obsidian-muted text-sm">
-              {note.estimatedDiagrams} 📊 · {note.linkCount} 🔗
+              <Icon name="chart-bar" size="1em" />{note.estimatedDiagrams} · <Icon name="link" size="1em" />{note.linkCount}
             </span>
           </div>
         {/each}

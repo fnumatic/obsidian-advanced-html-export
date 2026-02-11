@@ -1,5 +1,8 @@
 <script lang="ts">
   import ProgressBar from './ProgressBar.svelte';
+  import Icon from './Icon.svelte';
+
+  type IconName = 'chart-bar' | 'document' | 'image' | 'file' | 'settings' | 'renew' | 'link';
 
   interface Progress {
     total: number;
@@ -16,7 +19,7 @@
     currentFileName,
     isPlaceholder = false
   }: {
-    icon: string;
+    icon: IconName;
     label: string;
     progress: Progress | null | undefined;
     currentPhase?: string;
@@ -45,7 +48,7 @@
 
 <div data-tags="dr-container" class="flex flex-col gap-0.5 text-sm">
   <div data-tags="dr-main" class="flex items-center gap-2">
-    <span data-tags="dr-icon" class="text-base w-5 text-center">{icon}</span>
+    <span data-tags="dr-icon" class="text-base w-5 text-center"><Icon name={icon} /></span>
     <span data-tags="dr-label" class="whitespace-nowrap text-obsidian-muted">{label}</span>
     <div class="flex-1">
       <ProgressBar progress={percent} size="small" />
