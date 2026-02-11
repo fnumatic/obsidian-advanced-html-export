@@ -61,7 +61,7 @@
     </section>
   {/if}
 
-  <footer data-tags="ep-footer" class="flex justify-end gap-3 mt-6 pt-4 border-t border-obsidian-border">
+  <footer data-tags="ep-footer" class="flex justify-end gap-3 mt-6 pt-4 border-t border-dimmed">
     <button class="obsidian-btn mod-cta" onclick={() => onAction('cancel')}>
       Cancel
     </button>

@@ -94,7 +94,7 @@
     />
   </aside>
 
-  <section data-tags="ns-actions" class="flex gap-2 pb-3 mb-3 border-b border-obsidian-border">
+  <section data-tags="ns-actions" class="flex gap-2 pb-3 mb-3 border-b border-dimmed">
     <button class="obsidian-btn" onclick={selectAll}>Select All</button>
     <button class="obsidian-btn" onclick={selectNone}>Select None</button>
     <button class="obsidian-btn" onclick={selectWithDiagrams}>With Diagrams Only</button>
@@ -145,7 +145,7 @@
     </div>
   </section>
 
-  <footer data-tags="ns-footer" class="flex justify-end gap-3 mt-5 pt-4 border-t border-obsidian-border">
+  <footer data-tags="ns-footer" class="flex justify-end gap-3 mt-5 pt-4 border-t border-dimmed">
     <button class="obsidian-btn" onclick={handleBack}>Cancel</button>
     <button class="obsidian-btn-primary mod-cta" onclick={handleConfirm}>Export</button>
   </footer>

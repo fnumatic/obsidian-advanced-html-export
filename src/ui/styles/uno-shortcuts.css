@@ -87,6 +87,11 @@ body .advanced-html-export-modal {
     visibility: hidden;
 }
 
+/* Dimmed border for subtle separators */
+.border-dimmed {
+    border-color: color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
+}
+
 /* Note list item styling */
 .note-list-item {
     font-size: 11px;
