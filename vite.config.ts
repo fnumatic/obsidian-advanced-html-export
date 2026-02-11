@@ -4,18 +4,23 @@ import { builtinModules } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import UnoCSS from '@unocss/vite'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const isVitest = Boolean(process.env.VITEST)
 
 export default defineConfig({
   plugins: [
+    UnoCSS({
+      configFile: resolve(__dirname, 'uno.config.ts')
+    }),
     svelte()
   ],
   resolve: {
     alias: {
-      'src': resolve(__dirname, 'src')
+      'src': resolve(__dirname, 'src'),
+      ...(isVitest ? { 'virtual:uno.css': resolve(__dirname, 'src/__mocks__/virtual-uno.css') } : {})
     },
-    // Force browser resolution for Svelte
     conditions: ['browser', 'default']
   },
   build: {
@@ -25,6 +30,7 @@ export default defineConfig({
       fileName: () => 'main.js',
       cssFileName: 'styles'
     },
+    minify: 'esbuild',
     rollupOptions: {
       external: [
         'obsidian',
@@ -59,8 +65,5 @@ export default defineConfig({
     target: 'node14',
     sourcemap: false,
     emptyOutDir: true
-  },
-  css: {
-    // This will handle any CSS imports in the TypeScript files
   }
 })

@@ -1,0 +1,80 @@
+/* UnoCSS Shortcuts for Obsidian Plugin UI */
+
+/* Base button style */
+.obsidian-btn {
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.obsidian-btn:hover {
+    background-color: rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+/* Primary button - for main actions */
+.obsidian-btn-primary {
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.obsidian-btn-primary:hover {
+    opacity: 0.9;
+}
+
+/* Danger button - for cancel/delete */
+.obsidian-btn-danger {
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    background-color: #ef4444;
+    color: white;
+}
+
+.obsidian-btn-danger:hover {
+    opacity: 0.9;
+}
+
+/* Modal container */
+.obsidian-modal {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    padding: 1rem;
+}
+
+/* Input fields */
+.obsidian-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--background-modifier-border);
+    outline: none;
+    background-color: var(--background-primary-alt);
+    color: var(--text-normal);
+}
+
+.obsidian-input:focus {
+    border-color: var(--interactive-accent);
+}
+
+/* Visibility helpers for Svelte */
+.visible {
+    visibility: visible;
+}
+
+.invisible {
+    visibility: hidden;
+}

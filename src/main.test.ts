@@ -1,5 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import TestPlugin from './main';
+import { beforeAll, describe, it, expect, vi } from 'vitest';
+
+let TestPlugin: any;
+
+vi.mock('virtual:uno.css', () => ({}));
 
 // Mock PluginSettingTab
 vi.mock('obsidian', async () => {
@@ -11,6 +14,11 @@ vi.mock('obsidian', async () => {
 });
 
 describe('TestPlugin', () => {
+  beforeAll(async () => {
+    const mod = await import('./main');
+    TestPlugin = mod.default;
+  });
+
   it('should be instantiable', () => {
     const plugin = new TestPlugin({} as any, {} as any);
     expect(plugin).toBeInstanceOf(TestPlugin);

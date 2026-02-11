@@ -1,47 +1,24 @@
 <script lang="ts">
-  let { progress, size = 'normal' }: { progress: number, size?: 'normal' | 'small' } = $props();
+  let { progress, size = 'normal' }: { progress: number; size?: 'normal' | 'small' } = $props();
 </script>
 
-<div class="progress-container" data-size={size}>
-  <div class="progress-fill" style="width: {progress}%"></div>
+<div
+  data-tags="pb-container"
+  class="relative overflow-hidden rounded-full bg-obsidian"
+  class:h-5={size === 'normal'}
+  class:h-1.5={size === 'small'}
+  class:flex={size === 'small'}
+  class:flex-1={size === 'small'}
+  class:min-w-15={size === 'small'}
+>
+  <div
+    data-tags="pb-fill"
+    class="h-full rounded-full transition-all duration-300"
+    style="width: {progress}%; background: var(--interactive-accent);"
+  ></div>
   {#if size === 'normal'}
-    <span class="progress-text">{Math.round(progress)}%</span>
+    <span data-tags="pb-text" class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white" style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+      {Math.round(progress)}%
+    </span>
   {/if}
 </div>
-
-<style>
-  .progress-container {
-    background: var(--background-modifier-border);
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-  }
-  
-  .progress-container[data-size="normal"] {
-    height: 20px;
-  }
-  
-  .progress-container[data-size="small"] {
-    height: 6px;
-    flex: 1;
-    min-width: 60px;
-  }
-  
-  .progress-fill {
-    height: 100%;
-    background: var(--interactive-accent);
-    transition: width 0.3s ease;
-    border-radius: 999px;
-  }
-  
-  .progress-text {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-  }
-</style>

@@ -1,0 +1,37 @@
+/* Obsidian Theme Tokens - Generated for UnoCSS */
+:root {
+  --obsidian-bg: var(--background-primary, #ffffff);
+  --obsidian-bg-alt: var(--background-modifier-form-field, #f0f0f0);
+  --obsidian-fg: var(--text-normal, #1e1e1e);
+  --obsidian-muted: var(--text-muted, #888888);
+  --obsidian-border: var(--background-modifier-border, #e0e0e0);
+  --obsidian-accent: var(--accent-color, #7c3aed);
+  --obsidian-hover: var(--interactive-hover, rgba(124, 58, 237, 0.1));
+  --obsidian-error: var(--text-error, #ef4444);
+  --obsidian-warning: var(--text-warning, #f59e0b);
+  --obsidian-success: var(--text-success, #22c55e);
+}
+
+.bg-obsidian { background-color: var(--obsidian-bg); }
+.bg-obsidian-alt { background-color: var(--obsidian-bg-alt); }
+.text-obsidian { color: var(--obsidian-fg); }
+.text-obsidian-muted { color: var(--obsidian-muted); }
+.text-obsidian-error { color: var(--obsidian-error); }
+.text-obsidian-warning { color: var(--obsidian-warning); }
+.text-obsidian-success { color: var(--obsidian-success); }
+.border-obsidian { border-color: var(--obsidian-border); }
+.border-obsidian-border-hover { border-color: var(--background-modifier-border-hover); }
+.border-obsidian-hover { border-color: var(--obsidian-hover); }
+
+.progress-gradient {
+  background: linear-gradient(90deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
+}
+
+.warning-bg {
+  background-color: var(--background-modifier-error);
+  color: var(--text-error);
+}
+
+.warning-text {
+  color: var(--text-warning);
+}
