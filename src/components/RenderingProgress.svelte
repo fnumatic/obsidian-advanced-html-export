@@ -375,11 +375,9 @@
       />
     </div>
 
-    {#if warning}
-      <div class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg">
-        {warning}
-      </div>
-    {/if}
+    <div class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg h-[28px]" class:invisible={!warning}>
+      {warning || ' '}
+    </div>
   </section>
 
   <div data-tags="rp-time-stats" class="mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-obsidian-sm">
