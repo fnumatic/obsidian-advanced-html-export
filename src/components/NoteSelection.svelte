@@ -63,6 +63,10 @@
     );
   }
 
+  function handleBack() {
+    onCancel();
+  }
+
   function handleConfirm() {
     if (selectedNotes.size === 0) {
       showWarning = true;
@@ -142,7 +146,7 @@
   </section>
 
   <footer data-tags="ns-footer" class="flex justify-end gap-3 mt-5 pt-4 border-t border-obsidian-border">
-    <button class="obsidian-btn" onclick={onCancel}>Cancel</button>
+    <button class="obsidian-btn" onclick={handleBack}>Cancel</button>
     <button class="obsidian-btn-primary mod-cta" onclick={handleConfirm}>Export</button>
   </footer>
 </div>

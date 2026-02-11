@@ -83,12 +83,29 @@ export class ExportWikiCommand {
                 const selectionModal = new NoteSelectionModal(this.app, collectedNotes);
                 const selectionResult = await selectionModal.openAndAwait();
 
-                if (!selectionResult || selectionResult.length === 0) {
-                    new Notice('Export cancelled - no notes selected.');
-                    return;
-                }
+                if (selectionResult) {
+                    selectedNotes = selectionResult;
+                } else {
+                    // User clicked "Cancel" → Back to Preview
+                    const retryResult = await previewModal.openAndAwait();
 
-                selectedNotes = selectionResult;
+                    if (retryResult.action === 'cancel') {
+                        new Notice('Export cancelled.');
+                        return;
+                    }
+
+                    if (retryResult.action === 'exportAll') {
+                        selectedNotes = collectedNotes;
+                    } else {
+                        // retryResult.action === 'selectNotes' - user wants to select again
+                        const finalSelection = await selectionModal.openAndAwait();
+                        if (!finalSelection) {
+                            new Notice('Export cancelled.');
+                            return;
+                        }
+                        selectedNotes = finalSelection;
+                    }
+                }
             } else {
                 // Export all notes
                 selectedNotes = collectedNotes;
