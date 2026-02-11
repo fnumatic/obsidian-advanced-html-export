@@ -73,7 +73,7 @@
   }
 </script>
 
-<div data-tags="ns-container" class="flex flex-col max-h-[80vh]">
+<div data-tags="ns-container" class="flex flex-col">
   <header data-tags="ns-header" class="flex justify-between items-center mb-4">
     <h2 class="m-0 text-obsidian font-semibold">Select Notes</h2>
     <span class="text-obsidian-sm text-obsidian-muted bg-obsidian-alt px-3 py-1 rounded-full">

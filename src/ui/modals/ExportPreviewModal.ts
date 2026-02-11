@@ -36,6 +36,9 @@ export class ExportPreviewModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
+    // Add scoped class for modal dimension overrides
+    this.modalEl.addClass('advanced-html-export-modal');
+
     // Mount Svelte component
     this.component = mount(ExportPreview, {
       target: contentEl,

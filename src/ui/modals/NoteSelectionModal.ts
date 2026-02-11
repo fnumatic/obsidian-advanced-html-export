@@ -27,6 +27,9 @@ export class NoteSelectionModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
+    // Add scoped class for modal dimension overrides
+    this.modalEl.addClass('advanced-html-export-modal');
+
     // Mount Svelte component
     this.component = mount(NoteSelection, {
       target: contentEl,

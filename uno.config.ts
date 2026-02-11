@@ -47,7 +47,7 @@ shortcuts: {
     'obsidian-btn': 'px-3 py-1.5 rounded cursor-pointer transition-colors',
     'obsidian-btn-primary': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--interactive-accent)] text-[var(--text-on-accent)]',
     'obsidian-btn-danger': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--text-error)] text-white',
-    'obsidian-modal': 'bg-[var(--background-primary)] border-[var(--background-modifier-border)] rounded-lg shadow-xl p-4',
+    'obsidian-modal': 'bg-[var(--background-primary)] border-[var(--background-modifier-border)] rounded-lg shadow-xl p-4 h-[620px] w-[700px] max-h-[90vh] max-w-[90vw]',
     'obsidian-input': 'w-full px-3 py-1.5 rounded outline-none bg-[var(--background-primary)] border-[var(--background-modifier-border)] text-[var(--text-normal)]',
     // Fixed pixel font sizes (no zoom scaling)
     'text-obsidian': 'text-14px',

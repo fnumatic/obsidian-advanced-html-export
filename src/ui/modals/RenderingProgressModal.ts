@@ -39,7 +39,10 @@ export class RenderingProgressModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    
+
+    // Add scoped class for modal dimension overrides
+    this.modalEl.addClass('advanced-html-export-modal');
+
     // Prevent closing by clicking outside
     this.modalEl.style.pointerEvents = 'auto';
 
