@@ -25,6 +25,14 @@ export interface NoteInfo {
   estimatedDiagrams: number;
   codeBlockCount: number;
   linkCount: number;
+  analysis?: {
+    diagramCount: number;
+    codeBlockCount: number;
+    imageCount: number;
+    diagrams: Array<{ type: string; content: string }>;
+    codeBlocks: Array<{ language: string; content: string }>;
+    images: Array<{ src: string; fileName: string }>;
+  };
 }
 
 export interface ExportMetrics {
@@ -132,6 +140,14 @@ export class WikiExportOrchestrator {
             estimatedDiagrams: analysis.diagramCount,
             codeBlockCount: analysis.codeBlockCount,
             linkCount: analysis.linkCount,
+            analysis: {
+              diagramCount: analysis.diagramCount,
+              codeBlockCount: analysis.codeBlockCount,
+              imageCount: analysis.images.length,
+              diagrams: analysis.diagrams,
+              codeBlocks: analysis.codeBlocks,
+              images: analysis.images
+            }
           };
         })
       );
@@ -164,7 +180,7 @@ export class WikiExportOrchestrator {
    * Phase 3: Render selected notes
    */
   async renderNotes(
-    renderer: { renderPage: (file: TFile) => Promise<string> },
+    renderer: { renderPage: (file: TFile, token?: CancellationToken, pauseController?: PauseController, noteInfo?: NoteInfo) => Promise<string> },
     onProgress?: (current: number, total: number, notePath: string) => void
   ): Promise<Map<string, string>> {
     if (this.selectedNotes.length === 0) {
@@ -188,7 +204,7 @@ export class WikiExportOrchestrator {
           chunk.map(async (noteInfo) => {
             debugLogger.logNoteStart(noteInfo.path);
             
-            const html = await renderer.renderPage(noteInfo.file);
+            const html = await renderer.renderPage(noteInfo.file, undefined, undefined, noteInfo);
             
             debugLogger.logNoteEnd(noteInfo.path);
             return { slug: noteInfo.slug, html };
@@ -296,9 +312,24 @@ export class WikiExportOrchestrator {
   /**
    * Analyze note content to estimate complexity
    */
-  private analyzeNoteContent(content: string): { diagramCount: number; codeBlockCount: number; linkCount: number } {
+  private analyzeNoteContent(content: string): { 
+    diagramCount: number; 
+    codeBlockCount: number; 
+    linkCount: number;
+    diagrams: Array<{ type: string; content: string }>;
+    codeBlocks: Array<{ language: string; content: string }>;
+    images: Array<{ src: string; fileName: string }>;
+  } {
     // Count image references
     const imageMatches = content.match(/!\[.*?\]\(.*?\)/g) || [];
+    const images = imageMatches.map(match => {
+      const srcMatch = match.match(/!\[.*?\]\((.*?)\)/);
+      const src = srcMatch ? srcMatch[1] : '';
+      return {
+        src,
+        fileName: src.split('/').pop() || src
+      };
+    });
     
     // Count mermaid diagrams
     const mermaidMatches = content.match(/```mermaid[\s\S]*?```/g) || [];
@@ -312,13 +343,31 @@ export class WikiExportOrchestrator {
     const diagramBlocks = mermaidMatches.length + plantumlMatches.length + graphMatches.length;
     const codeBlockCount = allCodeBlocks.length - diagramBlocks;
     
+    // Build diagrams array
+    const diagrams = [
+      ...mermaidMatches.map(content => ({ type: 'mermaid', content })),
+      ...plantumlMatches.map(content => ({ type: 'plantuml', content })),
+      ...graphMatches.map(content => ({ type: 'graph', content }))
+    ];
+    
+    // Build codeBlocks array
+    const codeBlocks = allCodeBlocks
+      .filter(block => !block.startsWith('```mermaid') && !block.startsWith('```plantuml') && !block.startsWith('```graph'))
+      .map(block => {
+        const match = block.match(/```(\w+)/);
+        return {
+          language: match ? match[1] : 'text',
+          content: block
+        };
+      });
+    
     // Count wikilinks
     const linkMatches = content.match(/\[\[.*?\]\]/g) || [];
 
     const diagramCount = imageMatches.length + diagramBlocks;
     const linkCount = linkMatches.length;
 
-    return { diagramCount, codeBlockCount, linkCount };
+    return { diagramCount, codeBlockCount, linkCount, diagrams, codeBlocks, images };
   }
 
   /**

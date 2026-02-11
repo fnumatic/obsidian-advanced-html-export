@@ -3,14 +3,15 @@
     progress: number;
     size?: 'normal' | 'small' | 'inline';
     showText?: boolean;
+    class?: string;
   }
 
-  let { progress, size = 'normal', showText = true }: ProgressBarProps = $props();
+  let { progress, size = 'normal', showText = true, class: className = '' }: ProgressBarProps = $props();
 </script>
 
 <div
   data-tags="pb-container"
-  class="overflow-hidden bg-obsidian"
+  class="overflow-hidden bg-obsidian {className}"
   class:rounded-full={size === 'normal' || size === 'inline'}
   class:rounded={size === 'small'}
   class:h-4={size === 'normal'}
@@ -20,8 +21,11 @@
 >
   <div
     data-tags="pb-fill"
-    class="h-full rounded-full transition-all duration-300 progress-gradient"
+    class="h-full rounded-full progress-gradient"
     class:rounded-l={size === 'normal' || size === 'inline'}
+    class:transition-all={progress > 0 && progress < 100}
+    class:duration-300={progress > 0 && progress < 100}
+    class:opacity-0={progress === 0}
     style="width: {Math.min(Math.max(progress, 0), 100)}%;"
   ></div>
   {#if size === 'normal' && showText}

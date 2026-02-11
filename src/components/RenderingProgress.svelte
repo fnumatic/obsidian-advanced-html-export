@@ -134,6 +134,18 @@
       case 'note_error':
         handleNoteError(event);
         break;
+      case 'diagram_start':
+        handleDiagramStart(event);
+        break;
+      case 'diagram_complete':
+        handleDiagramComplete();
+        break;
+      case 'codeblock_start':
+        handleCodeBlockStart(event);
+        break;
+      case 'codeblock_complete':
+        handleCodeBlockComplete();
+        break;
       case 'image_start':
         handleImageStart(event);
         break;
@@ -150,6 +162,7 @@
   }
 
   function handleNoteStart(event: RenderEvent) {
+    console.log('[DEBUG] note_start event:', event);
     const index = completedNotes.length;
     currentNote = {
       title: event.noteTitle || 'Unknown',
@@ -161,6 +174,7 @@
       images: { total: (event.details?.totalImages as number) || 0, processed: 0 },
       overallProgress: 0
     };
+    console.log('[DEBUG] currentNote set to:', currentNote);
   }
 
   function handleNoteComplete(event: RenderEvent) {
@@ -191,20 +205,77 @@
     warning = `Error rendering ${event.noteTitle}: ${event.details?.error}`;
   }
 
+  // Helper function for immutable progress updates
+  function updateProgress(
+    type: 'diagrams' | 'codeBlocks' | 'images',
+    updates: Partial<{ total: number; processed: number; currentFileName?: string; currentPhase?: string }>
+  ) {
+    if (!currentNote) {
+      console.log('[DEBUG] updateProgress called but currentNote is null');
+      return;
+    }
+    console.log(`[DEBUG] updateProgress for ${type}:`, updates, 'current:', currentNote[type]);
+    currentNote = {
+      ...currentNote,
+      [type]: {
+        ...currentNote[type],
+        ...updates
+      }
+    };
+    console.log(`[DEBUG] ${type} after update:`, currentNote[type]);
+  }
+
   function handleImageStart(event: RenderEvent) {
-    if (!currentNote) return;
-    currentNote.images.total = (event.details?.total as number) || 0;
-    currentNote.images.currentFileName = (event.details?.fileName as string) || '';
+    console.log('[DEBUG] image_start event:', event);
+    updateProgress('images', {
+      total: (event.details?.total as number) || 0,
+      currentFileName: (event.details?.fileName as string) || ''
+    });
   }
 
   function handleImagePhase(event: RenderEvent) {
-    if (!currentNote) return;
-    currentNote.images.currentPhase = (event.details?.phase as string) || '';
+    console.log('[DEBUG] image_phase event:', event);
+    updateProgress('images', {
+      currentPhase: (event.details?.phase as string) || ''
+    });
   }
 
   function handleImageComplete() {
+    console.log('[DEBUG] image_complete event');
     if (!currentNote) return;
-    currentNote.images.processed++;
+    updateProgress('images', {
+      processed: currentNote.images.processed + 1
+    });
+  }
+
+  function handleDiagramStart(event: RenderEvent) {
+    console.log('[DEBUG] diagram_start event:', event);
+    updateProgress('diagrams', {
+      total: (event.details?.totalDiagrams as number) || 0
+    });
+  }
+
+  function handleDiagramComplete() {
+    console.log('[DEBUG] diagram_complete event');
+    if (!currentNote) return;
+    updateProgress('diagrams', {
+      processed: currentNote.diagrams.processed + 1
+    });
+  }
+
+  function handleCodeBlockStart(event: RenderEvent) {
+    console.log('[DEBUG] codeblock_start event:', event);
+    updateProgress('codeBlocks', {
+      total: (event.details?.totalCodeBlocks as number) || 0
+    });
+  }
+
+  function handleCodeBlockComplete() {
+    console.log('[DEBUG] codeblock_complete event');
+    if (!currentNote) return;
+    updateProgress('codeBlocks', {
+      processed: currentNote.codeBlocks.processed + 1
+    });
   }
 
   function handleWarning(event: RenderEvent) {
@@ -262,19 +333,22 @@
       <DetailRow
         icon="chart-bar"
         label="Diagrams"
-        progress={currentNote?.diagrams}
+        processed={currentNote?.diagrams.processed ?? 0}
+        total={currentNote?.diagrams.total ?? 0}
         isPlaceholder={!currentNote}
       />
       <DetailRow
         icon="code-block"
         label="Code blocks"
-        progress={currentNote?.codeBlocks}
+        processed={currentNote?.codeBlocks.processed ?? 0}
+        total={currentNote?.codeBlocks.total ?? 0}
         isPlaceholder={!currentNote}
       />
       <DetailRow
         icon="image"
         label="Images"
-        progress={currentNote?.images}
+        processed={currentNote?.images.processed ?? 0}
+        total={currentNote?.images.total ?? 0}
         currentPhase={currentNote?.images.currentPhase}
         currentFileName={currentNote?.images.currentFileName}
         isPlaceholder={!currentNote}

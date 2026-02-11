@@ -4,36 +4,29 @@
 
   type IconName = 'chart-bar' | 'document' | 'image' | 'file' | 'settings' | 'renew' | 'link' | 'code-block';
 
-  interface Progress {
-    total: number;
-    processed: number;
-    currentPhase?: string;
-    currentFileName?: string;
-  }
-
   let {
     icon,
     label,
-    progress,
+    processed = 0,
+    total = 0,
     currentPhase,
     currentFileName,
     isPlaceholder = false
   }: {
     icon: IconName;
     label: string;
-    progress: Progress | null | undefined;
+    processed?: number;
+    total?: number;
     currentPhase?: string;
     currentFileName?: string;
     isPlaceholder?: boolean;
   } = $props();
 
-  let percent = $derived(progress && progress.total > 0
-    ? (progress.processed / progress.total) * 100
-    : 0);
+  let percent = $derived(total > 0 ? (processed / total) * 100 : 0);
 
   let status = $derived.by(() => {
     if (isPlaceholder) return 'Waiting...';
-    if (!progress || progress.total === 0) return 'None';
+    if (total === 0) return 'None';
     if (currentPhase) {
       const phaseNames: Record<string, string> = {
         'reading': `Reading: ${currentFileName}`,
@@ -51,10 +44,10 @@
     <span data-tags="dr-icon" class="text-base w-5 text-center"><Icon name={icon} /></span>
     <span data-tags="dr-label" class="whitespace-nowrap text-obsidian-muted">{label}</span>
     <div class="flex-1">
-      <ProgressBar progress={percent} size="small" />
+      <ProgressBar progress={percent} size="small" class="opacity-40 bg-opacity-50" />
     </div>
     <span data-tags="dr-progress" class="whitespace-nowrap text-obsidian-muted tabular-nums min-w-[50px] text-right">
-      {isPlaceholder ? '-/-' : `${progress?.processed ?? 0}/${progress?.total ?? 0}`}
+      {processed}/{total}
     </span>
   </div>
   <div data-tags="dr-status" class="text-xs text-obsidian-muted pl-7 min-h-4">

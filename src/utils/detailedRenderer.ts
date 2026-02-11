@@ -55,7 +55,8 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
   async renderPageWithProgress(
     file: TFile,
     token: CancellationToken,
-    pauseController?: PauseController
+    pauseController?: PauseController,
+    noteInfo?: { analysis?: { diagramCount: number; codeBlockCount: number; imageCount: number; diagrams: Array<{ type: string; content: string }>; codeBlocks: Array<{ language: string; content: string }>; images: Array<{ src: string; fileName: string }>; } }
   ): Promise<string> {
     // Wait if paused (between notes)
     if (pauseController) {
@@ -66,23 +67,47 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
     token.throwIfCancelled();
 
+    // Phase 1: Reading file
+    token.throwIfCancelled();
+    const content = await this.app.vault.cachedRead(file);
+    await this.yieldToUI();
+
+    // Phase 2: Parsing content (use pre-analyzed data if available)
+    token.throwIfCancelled();
+    let analysis: NoteAnalysis;
+    if (noteInfo?.analysis) {
+      analysis = {
+        diagramCount: noteInfo.analysis.diagramCount,
+        codeBlockCount: noteInfo.analysis.codeBlockCount,
+        imageCount: noteInfo.analysis.imageCount,
+        diagrams: noteInfo.analysis.diagrams,
+        codeBlocks: noteInfo.analysis.codeBlocks,
+        images: noteInfo.analysis.images
+      };
+    } else {
+      analysis = this.analyzeContent(content);
+    }
+
+    // Emit note_start with correct totals
+    console.log('[DetailedRenderer] Emitting note_start for:', file.basename, {
+      totalDiagrams: analysis.diagramCount,
+      totalCodeBlocks: analysis.codeBlockCount,
+      totalImages: analysis.imageCount
+    });
     this.emit({
       type: 'note_start',
       timestamp: Date.now(),
       notePath: file.path,
       noteTitle: file.basename,
-      details: { startTime: this.currentNoteStartTime }
+      details: { 
+        startTime: this.currentNoteStartTime,
+        totalDiagrams: analysis.diagramCount,
+        totalCodeBlocks: analysis.codeBlockCount,
+        totalImages: analysis.imageCount
+      }
     });
 
     try {
-      // Phase 1: Reading file
-      token.throwIfCancelled();
-      const content = await this.app.vault.cachedRead(file);
-      await this.yieldToUI();
-
-      // Phase 2: Parsing content
-      token.throwIfCancelled();
-      const analysis = this.analyzeContent(content);
       
       this.emit({
         type: 'diagram_start',
@@ -114,6 +139,26 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       // Post-process: restore language identifiers
       if (this.settings.disableSyntaxHighlighting !== false) {
         restoreLanguageIdentifiers(el);
+      }
+
+      // Emit diagram_complete for each diagram (MarkdownRenderer processes them internally)
+      console.log('[DetailedRenderer] Emitting', analysis.diagramCount, 'diagram_complete events');
+      for (let i = 0; i < analysis.diagramCount; i++) {
+        this.emit({
+          type: 'diagram_complete',
+          timestamp: Date.now(),
+          notePath: file.path
+        });
+      }
+
+      // Emit codeblock_complete for each code block (MarkdownRenderer processes them internally)
+      console.log('[DetailedRenderer] Emitting', analysis.codeBlockCount, 'codeblock_complete events');
+      for (let i = 0; i < analysis.codeBlockCount; i++) {
+        this.emit({
+          type: 'codeblock_complete',
+          timestamp: Date.now(),
+          notePath: file.path
+        });
       }
       
       // Check if rendering took too long
