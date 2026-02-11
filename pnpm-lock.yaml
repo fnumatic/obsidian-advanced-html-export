@@ -35,6 +35,9 @@ importers:
       '@types/node':
         specifier: ^24.10.10
         version: 24.10.10
+      '@unocss/extractor-svelte':
+        specifier: ^66.6.0
+        version: 66.6.0
       '@unocss/preset-icons':
         specifier: ^66.6.0
         version: 66.6.0
@@ -753,6 +756,9 @@ packages:
 
   '@unocss/extractor-arbitrary-variants@66.6.0':
     resolution: {integrity: sha512-AsCmpbre4hQb+cKOf3gHUeYlF7guR/aCKZvw53VBk12qY5wNF7LdfIx4zWc5LFVCoRxIZlU2C7L4/Tt7AkiFMA==}
+
+  '@unocss/extractor-svelte@66.6.0':
+    resolution: {integrity: sha512-JQaBTe8dTCMUzPMuv41SHw5SXHHEwpUEHU98Jdrwt3mgNleahsgPeX7mGdyKfAg5DkEaH6903lGg88KemKsdxw==}
 
   '@unocss/inspector@66.6.0':
     resolution: {integrity: sha512-BvdY8ah+OTmzFMb+z8RZkaF15+PWRFt9S2bOARkkRBubybX9EE1rxM07l74kO5Dj16++CS4nO15XFq39pPoBvg==}
@@ -2521,6 +2527,8 @@ snapshots:
   '@unocss/extractor-arbitrary-variants@66.6.0':
     dependencies:
       '@unocss/core': 66.6.0
+
+  '@unocss/extractor-svelte@66.6.0': {}
 
   '@unocss/inspector@66.6.0':
     dependencies:

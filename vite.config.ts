@@ -4,7 +4,9 @@ import { builtinModules } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import extractorSvelte from '@unocss/extractor-svelte'
 import UnoCSS from '@unocss/vite'
+import UnoCSSConfig from './uno.config'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const isVitest = Boolean(process.env.VITEST)
@@ -12,9 +14,14 @@ const isVitest = Boolean(process.env.VITEST)
 export default defineConfig({
   plugins: [
     UnoCSS({
-      configFile: resolve(__dirname, 'uno.config.ts')
+      ...UnoCSSConfig,
+      extractors: [extractorSvelte()],
     }),
-    svelte()
+    svelte({
+      compilerOptions: {
+        runes: true
+      }
+    }),
   ],
   resolve: {
     alias: {
