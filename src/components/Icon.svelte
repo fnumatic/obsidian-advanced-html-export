@@ -2,9 +2,12 @@
   interface Props {
     name: string;
     size?: string;
+    class?: string;
   }
 
-  let { name, size = "1em" }: Props = $props();
+  let { name, size = undefined, class: className = "" }: Props = $props();
+
+  const style = size ? `font-size: ${size}` : undefined;
 </script>
 
-<span class="i-carbon-{name}" style="font-size: {size}" aria-hidden="true"></span>
+<span class="i-carbon-{name}{className ? ' ' + className : ''}" aria-hidden="true" style={style}></span>

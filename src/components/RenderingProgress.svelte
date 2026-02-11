@@ -186,7 +186,8 @@
       duration: (event.details?.duration as number) || 0,
       totalDiagrams: (event.details?.totalDiagrams as number) || 0,
       totalCodeBlocks: (event.details?.totalCodeBlocks as number) || 0,
-      totalImages: (event.details?.totalImages as number) || 0
+      totalImages: (event.details?.totalImages as number) || 0,
+      linkCount: (event.details?.linkCount as number) || 0
     };
 
     completedNotes = [...completedNotes, completed];
@@ -307,7 +308,24 @@
             {truncateTitle(note.title, 60)}
           </span>
           <span class="text-obsidian-muted shrink-0 whitespace-nowrap">
-            {(note.duration / 1000).toFixed(1)}s · <Icon name="chart-bar" size="1em" />{note.totalDiagrams} · <Icon name="document" size="1em" />{note.totalCodeBlocks} · <Icon name="image" size="1em" />{note.totalImages}
+            <div class="note-list-stats">
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.totalDiagrams}</span>
+                <Icon name="chart-bar"/>
+              </span>
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.totalCodeBlocks}</span>
+                <Icon name="code-block"/>
+              </span>
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.totalImages}</span>
+                <Icon name="image"/>
+              </span>
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.linkCount}</span>
+                <Icon name="document"/>
+              </span>
+            </div>
           </span>
         </div>
       {/each}

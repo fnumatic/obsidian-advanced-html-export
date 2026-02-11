@@ -56,5 +56,9 @@ shortcuts: {
     // Document list item styling
     'note-list-item': 'py-1 px-2 flex justify-between items-center',
     'note-list-item-left': 'py-1 px-2 flex items-center',
+     // Stats columns for double-digit alignment (number left/right-aligned, icon right)
+      'note-list-stats': 'flex gap-1',
+      'note-list-stat': 'flex items-center gap-0.5',
+      'note-list-stat-number': 'text-right tabular-nums min-w-[2ch] w-[2ch]',
   }
 })

@@ -31,6 +31,7 @@ export interface NoteAnalysis {
   diagramCount: number;
   codeBlockCount: number;
   imageCount: number;
+  linkCount: number;
   diagrams: Array<{ type: string; content: string }>;
   codeBlocks: Array<{ language: string; content: string }>;
   images: Array<{ src: string; fileName: string }>;
@@ -56,7 +57,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     file: TFile,
     token: CancellationToken,
     pauseController?: PauseController,
-    noteInfo?: { analysis?: { diagramCount: number; codeBlockCount: number; imageCount: number; diagrams: Array<{ type: string; content: string }>; codeBlocks: Array<{ language: string; content: string }>; images: Array<{ src: string; fileName: string }>; } }
+    noteInfo?: { analysis?: { diagramCount: number; codeBlockCount: number; imageCount: number; linkCount: number; diagrams: Array<{ type: string; content: string }>; codeBlocks: Array<{ language: string; content: string }>; images: Array<{ src: string; fileName: string }>; } }
   ): Promise<string> {
     // Wait if paused (between notes)
     if (pauseController) {
@@ -80,6 +81,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
         diagramCount: noteInfo.analysis.diagramCount,
         codeBlockCount: noteInfo.analysis.codeBlockCount,
         imageCount: noteInfo.analysis.imageCount,
+        linkCount: noteInfo.analysis.linkCount,
         diagrams: noteInfo.analysis.diagrams,
         codeBlocks: noteInfo.analysis.codeBlocks,
         images: noteInfo.analysis.images
@@ -318,7 +320,8 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
           duration: noteDuration,
           totalImages: totalImages,
           totalDiagrams: analysis.diagramCount,
-          totalCodeBlocks: analysis.codeBlockCount
+          totalCodeBlocks: analysis.codeBlockCount,
+          linkCount: analysis.linkCount
         }
       });
 
@@ -385,10 +388,19 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       diagramCount: diagramBlocks,
       codeBlockCount,
       imageCount: imageMatches.length,
+      linkCount: this.countLinks(content),
       diagrams,
       codeBlocks,
       images
     };
+  }
+
+  private countLinks(content: string): number {
+    // Count wiki links [[...]]
+    const wikiLinks = content.match(/\[\[[^\]]+\]\]/g) || [];
+    // Count markdown links [...]
+    const markdownLinks = content.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
+    return wikiLinks.length + markdownLinks.length;
   }
 
   private extractFileNameFromSrc(src: string): string {

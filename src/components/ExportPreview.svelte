@@ -34,12 +34,27 @@
       <div class="max-h-[300px] overflow-y-auto border border-obsidian rounded-md p-2">
         {#each notes as note}
           <div class="note-list-item">
-            <span class="max-w-[300px] whitespace-nowrap overflow-hidden text-ellipsis" title={note.title}>
+            <span class="flex-1 max-w-[300px] whitespace-nowrap overflow-hidden text-ellipsis" title={note.title}>
               {truncateTitle(note.title)}
             </span>
-            <span class="text-obsidian-muted">
-              <Icon name="chart-bar" size="1em" />{note.estimatedDiagrams} · <Icon name="link" size="1em" />{note.linkCount}
-            </span>
+            <div class="note-list-stats">
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.estimatedDiagrams}</span>
+                <Icon name="chart-bar"/>
+              </span>
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.codeBlockCount || 0}</span>
+                <Icon name="code-block"/>
+              </span>
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.analysis?.imageCount || 0}</span>
+                <Icon name="image"/>
+              </span>
+              <span class="note-list-stat">
+                <span class="note-list-stat-number">{note.linkCount}</span>
+                <Icon name="document"/>
+              </span>
+            </div>
           </div>
         {/each}
       </div>

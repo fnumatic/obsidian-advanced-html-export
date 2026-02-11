@@ -28,6 +28,7 @@ export interface CompletedNote {
   totalDiagrams: number;
   totalCodeBlocks: number;
   totalImages: number;
+  linkCount: number;
 }
 
 export interface CurrentNoteProgress {
