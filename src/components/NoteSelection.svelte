@@ -99,36 +99,22 @@
   <main data-tags="ns-list" class="max-h-[400px] overflow-y-auto border-obsidian rounded p-2 flex-1">
     {#each sortedNotes as note}
       {#if filteredNotes.includes(note)}
-        <div
-          class="flex items-center gap-3 py-2.5 px-3 border-b border-obsidian-border-hover cursor-pointer transition-colors"
-          class:border-none={sortedNotes.indexOf(note) === sortedNotes.length - 1}
-          onclick={() => toggleNote(note.path)}
-          role="button"
-          tabindex="0"
-          onkeydown={(e) => e.key === 'Enter' && toggleNote(note.path)}
-        >
-          <input
-            type="checkbox"
-            checked={selectedNotes.has(note.path)}
-            onclick={(e) => { e.stopPropagation(); toggleNote(note.path); }}
-            class="w-4 h-4 cursor-pointer"
-          />
-
+        <div class="note-list-item cursor-pointer" onclick={() => toggleNote(note.path)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleNote(note.path)}>
+          <input type="checkbox" checked={selectedNotes.has(note.path)} onclick={(e) => { e.stopPropagation(); toggleNote(note.path); }} class="w-4 h-4 cursor-pointer" />
           <div class="flex-1 min-w-0">
-            <div class="font-medium whitespace-nowrap overflow-hidden text-ellipsis text-obsidian-sm">
+            <div class="whitespace-nowrap overflow-hidden text-ellipsis">
               {note.title}
             </div>
-            <div class="text-obsidian-xs text-obsidian-muted whitespace-nowrap overflow-hidden text-ellipsis">
+            <div class="text-obsidian-muted whitespace-nowrap overflow-hidden text-ellipsis">
               {note.path}
             </div>
           </div>
-
-          <div class="flex gap-3 text-obsidian-sm text-obsidian-muted whitespace-nowrap">
+          <span class="text-obsidian-muted">
             {#if note.estimatedDiagrams > 0}
-              <span title="{note.estimatedDiagrams} diagrams"><Icon name="chart-bar" size="1em" />{note.estimatedDiagrams}</span>
+              <Icon name="chart-bar" size="1em" />{note.estimatedDiagrams}
             {/if}
-            <span title="{note.linkCount} links"><Icon name="link" size="1em" />{note.linkCount}</span>
-          </div>
+            <Icon name="link" size="1em" />{note.linkCount}
+          </span>
         </div>
       {/if}
     {/each}

@@ -43,7 +43,7 @@ export default defineConfig({
     [/^hover:bg-obsidian-hover$/, () => ({ 'background-color': 'var(--interactive-hover)' })],
     [/^hover:text-obsidian-accent$/, () => ({ color: 'var(--interactive-accent)' })],
   ],
-  shortcuts: {
+shortcuts: {
     'obsidian-btn': 'px-3 py-1.5 rounded cursor-pointer transition-colors',
     'obsidian-btn-primary': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--interactive-accent)] text-[var(--text-on-accent)]',
     'obsidian-btn-danger': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--text-error)] text-white',
@@ -53,5 +53,8 @@ export default defineConfig({
     'text-obsidian': 'text-14px',
     'text-obsidian-sm': 'text-12px',
     'text-obsidian-xs': 'text-11px',
+    // Document list item styling
+    'note-list-item': 'py-1 px-2 flex justify-between items-center',
+    'note-list-item-left': 'py-1 px-2 flex items-center',
   }
 })

@@ -295,22 +295,20 @@
     Rendering Wiki Export
   </header>
 
-  <details data-tags="rp-completed" open={completedOpen} class="mb-3">
+<details data-tags="rp-completed" open={completedOpen} class="mb-3">
     <summary class="font-semibold text-obsidian cursor-pointer py-2">
       Completed Notes ({completedNotes.length})
     </summary>
     <div class="min-h-[114px] max-h-[114px] overflow-y-auto border border-obsidian rounded p-1.5 mt-2">
       {#each completedNotes as note}
-        <div class="py-0.5 px-1 flex justify-between items-center text-obsidian-sm">
-          <div class="flex items-center gap-1 overflow-hidden">
-            <span class="text-obsidian-muted">✓</span>
-            <span class="max-w-[360px] whitespace-nowrap overflow-hidden text-ellipsis" title={note.title}>
-              {truncateTitle(note.title, 60)}
-            </span>
-          </div>
-           <span class="text-obsidian-muted text-obsidian-sm whitespace-nowrap">
-             {(note.duration / 1000).toFixed(1)}s · <Icon name="chart-bar" size="1em" />{note.totalDiagrams} <Icon name="document" size="1em" />{note.totalCodeBlocks} <Icon name="image" size="1em" />{note.totalImages}
-           </span>
+        <div class="note-list-item">
+          <span class="text-obsidian-muted shrink-0">✓</span>
+          <span class="flex-1 ml-2 mr-4 max-w-[calc(100%-160px)] whitespace-nowrap overflow-hidden text-ellipsis text-left">
+            {truncateTitle(note.title, 60)}
+          </span>
+          <span class="text-obsidian-muted shrink-0 whitespace-nowrap">
+            {(note.duration / 1000).toFixed(1)}s · <Icon name="chart-bar" size="1em" />{note.totalDiagrams} · <Icon name="document" size="1em" />{note.totalCodeBlocks} · <Icon name="image" size="1em" />{note.totalImages}
+          </span>
         </div>
       {/each}
     </div>

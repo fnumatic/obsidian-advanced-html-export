@@ -32,15 +32,12 @@
     <section data-tags="ep-notes" class="mt-5">
       <h3 class="mt-5 mb-3 text-obsidian font-semibold">Notes</h3>
       <div class="max-h-[300px] overflow-y-auto border border-obsidian rounded-md p-2">
-        {#each notes as note, index}
-          <div
-            class="py-1.5 px-2 border-b border-obsidian-border text-obsidian-xs flex justify-between items-center"
-            class:border-none={index === notes.length - 1}
-          >
+        {#each notes as note}
+          <div class="note-list-item">
             <span class="max-w-[300px] whitespace-nowrap overflow-hidden text-ellipsis" title={note.title}>
               {truncateTitle(note.title)}
             </span>
-            <span class="text-obsidian-muted text-obsidian-sm">
+            <span class="text-obsidian-muted">
               <Icon name="chart-bar" size="1em" />{note.estimatedDiagrams} · <Icon name="link" size="1em" />{note.linkCount}
             </span>
           </div>
