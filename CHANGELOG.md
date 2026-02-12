@@ -2,6 +2,17 @@
 
 ## [0.6.2](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.0...0.6.2) (2026-02-11)
 
+
+### Bug Fixes
+
+* **changelog:** remove duplicate version entries ([143f746](https://github.com/fnumatic/obsidian-advanced-html-export/commit/143f746076600ec4ab16215e36830699e17a0f0a))
+
+
+### Refactor
+
+* **refactor:** remove debug console.log statements ([381be0c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/381be0c0fc4bf7e6743eb76d4a9f16ddb0a3a8e4))
+
+
 # [0.6.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.3.0...0.6.0) (2026-02-11)
 
 
