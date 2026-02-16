@@ -69,8 +69,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             path: file.path
         }));
 
-        const progressCallback = onProgress || ((current: number, total: number) => {
-            console.log(`Rendering page ${current}/${total}`);
+        const progressCallback = onProgress || ((_current: number, _total: number) => {
+            // Silent progress callback
         });
 
         const renderedPages: Map<string, string> = new Map();

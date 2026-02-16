@@ -46,8 +46,6 @@ class DebugLogger {
       startTime: performance.now(),
       details,
     };
-
-    console.log(`[DebugLogger] Starting phase: ${phase}`, details || '');
   }
 
   endPhase(): void {
@@ -61,17 +59,12 @@ class DebugLogger {
 
     this.logs.push({ ...this.currentPhase });
 
-    console.log(
-      `[DebugLogger] Completed phase: ${this.currentPhase.phase} (${duration.toFixed(2)}ms)`
-    );
-
     this.currentPhase = null;
   }
 
   logNoteStart(path: string): void {
     if (!this.isDebugMode()) return;
     this.noteTimings.set(path, performance.now());
-    console.log(`[DebugLogger] Starting note: ${path}`);
   }
 
   logNoteEnd(path: string): void {
@@ -80,7 +73,6 @@ class DebugLogger {
     if (startTime) {
       const duration = performance.now() - startTime;
       this.noteTimings.set(path, duration);
-      console.log(`[DebugLogger] Completed note: ${path} (${duration.toFixed(2)}ms)`);
     }
   }
 
@@ -137,7 +129,6 @@ class DebugLogger {
     a.click();
 
     URL.revokeObjectURL(url);
-    console.log(`[DebugLogger] Exported debug log to ${filename}`);
   }
 
   reset(): void {
@@ -150,26 +141,7 @@ class DebugLogger {
   printSummary(): void {
     if (!this.isDebugMode()) return;
 
-    const metrics = this.getMetrics();
-    console.log('\n=== DEBUG SUMMARY ===');
-    console.log(`Total Duration: ${(metrics.totalDuration / 1000).toFixed(2)}s`);
-    console.log(`Notes Processed: ${metrics.notesProcessed}`);
-    console.log(`Average Time per Note: ${metrics.averageTimePerNote.toFixed(2)}ms`);
-    console.log(`Images Processed: ${metrics.imagesProcessed}`);
-    console.log(`Images Deduplicated: ${metrics.imagesDeduplicated}`);
-    console.log(`Cache Hit Rate: ${metrics.imageCacheHitRate.toFixed(1)}%`);
-    console.log('\nSlowest Notes:');
-    metrics.slowestNotes.forEach((note, i) => {
-      console.log(`  ${i + 1}. ${note.path}: ${note.duration.toFixed(2)}ms`);
-    });
-    console.log('\nPhase Breakdown:');
-    metrics.phases.forEach((phase) => {
-      console.log(`  ${phase.phase}: ${phase.duration?.toFixed(2)}ms`);
-      if (phase.details) {
-        console.log(`    Details:`, phase.details);
-      }
-    });
-    console.log('=====================\n');
+    // Debug output collected via getMetrics() - silent in production
   }
 }
 

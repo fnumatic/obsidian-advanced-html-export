@@ -40,8 +40,6 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
   settings: AdvancedHtmlExportSettings;
 
   onload = async () => {
-    console.log("Advanced HTML Export Plugin: Version 0.0.4 initialized");
-
     await this.loadSettings();
 
     // Add export single file command
@@ -69,7 +67,6 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
   };
 
   onunload = () => {
-    console.log("unloading advanced html export plugin");
   };
 
   async loadSettings() {

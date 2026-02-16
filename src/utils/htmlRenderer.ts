@@ -44,7 +44,7 @@ export default class HtmlRenderer {
         }
       }
     } catch (error) {
-      console.warn('Failed to initialize image files:', error);
+      // Silent fail - image files map will be empty
     }
 
     return imageFiles;
@@ -85,7 +85,6 @@ export default class HtmlRenderer {
         const mimeMatch = imagePath.match(/^data:([^;]+)/);
         mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
       } catch (error) {
-        console.warn(`Failed to parse data URL [${imagePath.substring(0, 100)}]:`, error);
         return '';
       }
     } else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
@@ -112,7 +111,6 @@ export default class HtmlRenderer {
       }
 
       if (file === undefined) {
-        console.warn(`Could not find image [${imagePath}]. Skipping.`);
         return '';
       }
       buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
@@ -141,7 +139,6 @@ export default class HtmlRenderer {
       const optimizedMimeType = ImageOptimizer.getMimeType('webp');
       optimizedBase64 = `data:${optimizedMimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
     } catch (error) {
-      console.warn(`Failed to optimize image, using original:`, error);
       // Fallback to original image
       optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
     }
@@ -168,7 +165,6 @@ export default class HtmlRenderer {
         const mimeMatch = imagePath.match(/^data:([^;]+)/);
         mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
       } catch (error) {
-        console.warn(`Failed to parse data URL [${imagePath}]:`, error);
         return '';
       }
     } else {
@@ -189,7 +185,6 @@ export default class HtmlRenderer {
       }
 
       if (file === undefined) {
-        console.warn(`Could not find image [${imagePath}]. Skipping.`);
         return '';
       }
 
@@ -219,7 +214,6 @@ export default class HtmlRenderer {
       const optimizedMimeType = ImageOptimizer.getMimeType('webp');
       optimizedBase64 = `data:${optimizedMimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
     } catch (error) {
-      console.warn(`Failed to optimize image, using original:`, error);
       // Fallback to original image
       optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
     }
