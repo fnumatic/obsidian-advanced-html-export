@@ -53,6 +53,12 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     return new Promise(resolve => setTimeout(resolve, 0));
   }
 
+  /**
+   * Renders a single note page with progress tracking
+   * @security Uses innerHTML to read rendered output from Obsidian's MarkdownRenderer.
+   * This is safe as we only read the output, not insert user input.
+   * See: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines#security
+   */
   async renderPageWithProgress(
     file: TFile,
     token: CancellationToken,

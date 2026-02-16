@@ -230,8 +230,11 @@ export default class HtmlRenderer {
    * Renders markdown content to HTML with embedded images
    * @param markdownContent The markdown content to render
    * @returns Promise resolving to HTML string
+   * @security Uses innerHTML to read rendered output from Obsidian's MarkdownRenderer.
+   * This is safe as we only read the output, not insert user input.
+   * See: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines#security
    */
-  async render (markdownContent: string): Promise<string> {
+  async render(markdownContent: string): Promise<string> {
     // Pre-process: hide language identifiers to prevent syntax highlighting
     const languages = parseLanguagesString(this.settings.syntaxHighlightLanguages || '');
     const processedContent = this.settings.disableSyntaxHighlighting !== false

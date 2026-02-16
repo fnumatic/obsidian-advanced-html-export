@@ -58,6 +58,12 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         this.linkResolver.setVaultFiles(fileMap);
     }
 
+    /**
+     * Renders wiki export with linked notes
+     * @security Uses innerHTML to read rendered output from Obsidian's MarkdownRenderer.
+     * This is safe as we only read the output, not insert user input.
+     * See: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines#security
+     */
     async renderWiki(centralFile: TFile, onProgress?: (current: number, total: number) => void): Promise<string> {
         const options = this.settings as WikiRenderOptions;
 
