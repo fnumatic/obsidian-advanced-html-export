@@ -1,10 +1,9 @@
 {
-  "id": "obsidian-advanced-html-export",
+  "id": "advanced-html-export",
   "name": "Advanced HTML Export",
   "author": "fnumatic",
-  "description": "Export Obsidian notes as self-contained HTML files with advanced features",
+  "description": "Export notes as self-contained HTML files with advanced features.",
   "minAppVersion": "1.9.0",
   "version": "0.6.3",
-  "repo": "fnumatic/obsidian-advanced-html-export",
-  "css": "obsidian-advanced-html-export.css"
+  "isDesktopOnly": true
 }
