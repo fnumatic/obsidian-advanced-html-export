@@ -2,6 +2,10 @@
 
 Export Obsidian notes as self-contained HTML files with advanced features for sharing and archiving.
 
+## Pitch
+
+Turn your entire wiki into a single HTML file. Export one note or your whole network of linked notes — either way, you get one portable, self-contained file that's easy to share, archive, or send to anyone. No broken links, no missing assets, no hassle.
+
 ## What is this plugin for
 
 The Advanced HTML Export plugin allows you to export individual Obsidian notes as self-contained HTML files. Key features include:
