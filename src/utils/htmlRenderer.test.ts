@@ -58,11 +58,17 @@ describe('HtmlRenderer', () => {
     vi.clearAllMocks();
 
     // Setup mock app
+    const mockFiles = [
+      { name: 'test.png', extension: 'png', path: 'test.png', stat: { mtime: 1234567890 } },
+      { name: 'test.jpg', extension: 'jpg', path: 'test.jpg', stat: { mtime: 1234567890 } },
+      { name: 'test1.png', extension: 'png', path: 'test1.png', stat: { mtime: 1234567890 } },
+      { name: 'test2.png', extension: 'png', path: 'test2.png', stat: { mtime: 1234567891 } }
+    ];
     mockApp = {
       vault: {
-        getFiles: vi.fn(),
+        getFiles: vi.fn().mockReturnValue(mockFiles),
         adapter: {
-          readBinary: vi.fn()
+          readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(8))
         }
       }
     };

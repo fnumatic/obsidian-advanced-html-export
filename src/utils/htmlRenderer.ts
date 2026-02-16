@@ -17,12 +17,37 @@ export default class HtmlRenderer {
   protected component: Component;
   protected settings: HtmlRendererSettings;
   protected imageCache: Map<string, string>;
+  protected imageFiles: Map<string, TFile>;
 
   constructor(app: App, component: Component, settings: HtmlRendererSettings, sharedImageCache?: Map<string, string>) {
     this.app = app;
     this.component = component;
     this.settings = settings;
     this.imageCache = sharedImageCache || new Map();
+    this.imageFiles = this.initializeImageFiles();
+  }
+
+  private initializeImageFiles(): Map<string, TFile> {
+    const imageFiles = new Map<string, TFile>();
+
+    try {
+      const vault = this.app.vault;
+      const files = vault.getFiles();
+
+      if (!files) {
+        return imageFiles;
+      }
+
+      for (const file of files) {
+        if (IMAGE_EXTENSIONS.includes(file.extension.toLowerCase())) {
+          imageFiles.set(file.name, file);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to initialize image files:', error);
+    }
+
+    return imageFiles;
   }
 
   /**
@@ -70,10 +95,7 @@ export default class HtmlRenderer {
       // Blob URLs (e.g., from Excalidraw) - cannot be processed as they are temporary browser URLs
       return '';
     } else {
-      // Existing logic for app:// URLs
-      const vault = this.app.vault;
-      const images = vault.getFiles().filter(file => IMAGE_EXTENSIONS.includes(file.extension.toLowerCase()));
-
+      // Existing logic for app:// URLs - use cached image files map
       const pathParts = imagePath.split('/');
       const fileNameWithTimestamp = pathParts[pathParts.length - 1];
       const paramParts = fileNameWithTimestamp?.split('?');
@@ -82,10 +104,10 @@ export default class HtmlRenderer {
 
       let file: TFile | undefined;
 
-      for (const image of images) {
-        if (fileName !== undefined && timestamp !== undefined && image.name === decodeURIComponent(fileName) && image.stat.mtime === parseInt(timestamp)) {
-          file = image;
-          break;
+      if (fileName !== undefined && timestamp !== undefined) {
+        file = this.imageFiles.get(decodeURIComponent(fileName));
+        if (file && file.stat.mtime !== parseInt(timestamp)) {
+          file = undefined;
         }
       }
 
@@ -93,7 +115,7 @@ export default class HtmlRenderer {
         console.warn(`Could not find image [${imagePath}]. Skipping.`);
         return '';
       }
-      buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
+      buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
       mimeType = ImageOptimizer.getMimeType(file.extension);
     }
 
@@ -150,10 +172,7 @@ export default class HtmlRenderer {
         return '';
       }
     } else {
-      // Existing logic for app:// URLs
-      const vault = this.app.vault;
-      const images = vault.getFiles().filter(file => IMAGE_EXTENSIONS.includes(file.extension.toLowerCase()));
-
+      // Existing logic for app:// URLs - use cached image files map
       const pathParts = imagePath.split('/');
       const fileNameWithTimestamp = pathParts[pathParts.length - 1];
       const paramParts = fileNameWithTimestamp?.split('?');
@@ -162,10 +181,10 @@ export default class HtmlRenderer {
 
       let file: TFile | undefined;
 
-      for (const image of images) {
-        if (fileName !== undefined && timestamp !== undefined && image.name === decodeURIComponent(fileName) && image.stat.mtime === parseInt(timestamp)) {
-          file = image;
-          break;
+      if (fileName !== undefined && timestamp !== undefined) {
+        file = this.imageFiles.get(decodeURIComponent(fileName));
+        if (file && file.stat.mtime !== parseInt(timestamp)) {
+          file = undefined;
         }
       }
 
@@ -174,7 +193,7 @@ export default class HtmlRenderer {
         return '';
       }
 
-      buffer = await vault.adapter.readBinary(decodeURIComponent(file.path));
+      buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
       mimeType = ImageOptimizer.getMimeType(file.extension);
     }
 
