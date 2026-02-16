@@ -1,6 +1,6 @@
 {
   "name": "obsidian-advanced-html-export",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Export Obsidian notes as self-contained HTML files with advanced features",
   "main": "main.js",
   "license": "MIT",

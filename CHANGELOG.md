@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.3](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.2...0.6.3) (2026-02-16)
+
+
+### Bug Fixes
+
+* **changelog:** correct 0.6.2 entries to match actual commits ([46da2ec](https://github.com/fnumatic/obsidian-advanced-html-export/commit/46da2ec0a488664eb64de79fd2e23c8662b1c672))
+
+
+### Performance Improvements
+
+* **htmlRenderer:** optimize image file lookup with cached map ([9855ea5](https://github.com/fnumatic/obsidian-advanced-html-export/commit/9855ea5bf342a7bc32126a1f6a84d19e29e5009e))
+
 ## [0.6.2](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.0...0.6.2) (2026-02-11)
 
 
