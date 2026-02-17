@@ -6,11 +6,18 @@ import "./ui/styles/obsidian-tokens.css";
 import { ExportSingleFileCommand } from "./commands/exportSingleFile";
 import { ExportWikiCommand } from "./commands/exportWiki";
 
+declare global {
+  interface Window {
+    ADVANCED_HTML_EXPORT_DEBUG: boolean;
+  }
+}
+
 interface AdvancedHtmlExportSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
   linkDepth: number;
+  includeUnlinked: boolean;
   wikiTitle: string;
   enableThemeToggle: boolean;
   enableInlineTOC: boolean;
@@ -27,6 +34,7 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableLazyLoading: true,
   enableImageDeduplication: true,
   linkDepth: 1,
+  includeUnlinked: false,
   wikiTitle: '',
   enableThemeToggle: true,
   enableInlineTOC: true,
@@ -212,12 +220,12 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
           this.plugin.settings.debugMode = value;
           await this.plugin.saveSettings();
           // Set global flag for debugLogger
-          (window as any).ADVANCED_HTML_EXPORT_DEBUG = value;
+          window.ADVANCED_HTML_EXPORT_DEBUG = value;
         }));
   }
 }
 
 // Set initial debug flag on load
 if (typeof window !== 'undefined') {
-  (window as any).ADVANCED_HTML_EXPORT_DEBUG = false;
+  window.ADVANCED_HTML_EXPORT_DEBUG = false;
 }

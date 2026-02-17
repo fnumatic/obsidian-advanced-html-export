@@ -7,7 +7,7 @@ vi.mock('obsidian', async () => {
   return {
     ...actual,
     MarkdownRenderer: {
-      render: vi.fn(async (_app: any, _content: string, el: any, _pathStr: string, _component: any) => {
+      render: vi.fn(async (_app: unknown, _content: string, el: HTMLElement, _pathStr: string, _component: unknown) => {
         el.innerHTML = `<div class="markdown-body">${_content}</div>`;
       })
     },

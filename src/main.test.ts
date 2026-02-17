@@ -1,6 +1,8 @@
 import { beforeAll, describe, it, expect, vi } from 'vitest';
+import type { App, PluginManifest } from 'obsidian';
+import type AdvancedHtmlExportPlugin from './main';
 
-let TestPlugin: any;
+let TestPlugin: typeof AdvancedHtmlExportPlugin;
 
 vi.mock('virtual:uno.css', () => ({}));
 
@@ -20,12 +22,12 @@ describe('TestPlugin', () => {
   });
 
   it('should be instantiable', () => {
-    const plugin = new TestPlugin({} as any, {} as any);
+    const plugin = new TestPlugin({} as unknown as App, {} as unknown as PluginManifest);
     expect(plugin).toBeInstanceOf(TestPlugin);
   });
 
   it('should have onload method', () => {
-    const plugin = new TestPlugin({} as any, {} as any);
+    const plugin = new TestPlugin({} as unknown as App, {} as unknown as PluginManifest);
     expect(typeof plugin.onload).toBe('function');
   });
 });

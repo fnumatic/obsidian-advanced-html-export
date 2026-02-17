@@ -1,4 +1,5 @@
 import { App, Notice, TFile } from 'obsidian';
+import type AdvancedHtmlExportPlugin from '../main';
 import { WikiRenderOptions } from '../utils/wikiHtmlRenderer';
 import { WikiExportOrchestrator, NoteInfo } from '../utils/wikiExportOrchestrator';
 import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
@@ -12,9 +13,9 @@ import { DetailedWikiRenderer } from '../utils/detailedRenderer';
 
 export class ExportWikiCommand {
     private app: App;
-    private plugin: any;
+    private plugin: AdvancedHtmlExportPlugin;
 
-    constructor(app: App, plugin: any) {
+    constructor(app: App, plugin: AdvancedHtmlExportPlugin) {
         this.app = app;
         this.plugin = plugin;
     }

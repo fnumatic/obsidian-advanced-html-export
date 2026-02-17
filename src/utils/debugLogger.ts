@@ -30,7 +30,7 @@ class DebugLogger {
 
   private isDebugMode(): boolean {
     return process.env.NODE_ENV === 'development' || 
-           (typeof window !== 'undefined' && (window as any).ADVANCED_HTML_EXPORT_DEBUG === true);
+           (typeof window !== 'undefined' && window.ADVANCED_HTML_EXPORT_DEBUG === true);
   }
 
   startPhase(phase: string, details?: Record<string, unknown>): void {

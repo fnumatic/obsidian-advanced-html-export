@@ -1,4 +1,5 @@
 import { App, Notice, TFile } from 'obsidian';
+import type AdvancedHtmlExportPlugin from '../main';
 import HtmlRenderer from '../utils/htmlRenderer';
 import { downloadBlob, generateSafeFilename } from '../utils/fileUtils';
 
@@ -7,9 +8,9 @@ import { downloadBlob, generateSafeFilename } from '../utils/fileUtils';
  */
 export class ExportSingleFileCommand {
   private app: App;
-  private plugin: any; // Plugin instance for component
+  private plugin: AdvancedHtmlExportPlugin;
 
-  constructor(app: App, plugin: any) {
+  constructor(app: App, plugin: AdvancedHtmlExportPlugin) {
     this.app = app;
     this.plugin = plugin;
   }

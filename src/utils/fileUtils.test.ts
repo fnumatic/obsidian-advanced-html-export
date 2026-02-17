@@ -39,7 +39,7 @@ describe('fileUtils', () => {
         click: mockClick
       };
 
-      mockDocument.createElement.mockReturnValue(mockLink as any);
+      mockDocument.createElement.mockReturnValue(mockLink as unknown as HTMLAnchorElement);
 
       downloadBlob(mockBlob, 'test.txt');
 
