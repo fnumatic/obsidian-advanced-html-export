@@ -40,11 +40,8 @@ export class RenderingProgressModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    // Add scoped class for modal dimension overrides
+    // Add scoped class for modal dimension overrides (includes pointer-events: auto)
     this.modalEl.addClass('advanced-html-export-modal');
-
-    // Prevent closing by clicking outside
-    this.modalEl.style.pointerEvents = 'auto';
 
     // Create container for Svelte component
     const container = contentEl.createDiv();

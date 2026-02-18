@@ -98,7 +98,9 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Advanced HTML export settings' });
+    new Setting(containerEl)
+      .setName('Advanced HTML export settings')
+      .setHeading();
 
     new Setting(containerEl)
       .setName('Image quality')
@@ -209,7 +211,9 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     // Debug section
-    containerEl.createEl('h3', { text: 'Developer Options' });
+    new Setting(containerEl)
+      .setName('Developer options')
+      .setHeading();
 
     new Setting(containerEl)
       .setName('Debug Mode')

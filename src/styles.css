@@ -2,3 +2,8 @@
     margin-top: 0px;
     margin-bottom: 0px;
 }
+
+/* Modal styles */
+.advanced-html-export-modal {
+    pointer-events: auto;
+}
