@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.5](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.4...0.6.5) (2026-02-18)
+
+
+### Bug Fixes
+
+* apply sentence case to UI text and fix unawaited promises ([cc96441](https://github.com/fnumatic/obsidian-advanced-html-export/commit/cc96441d89a45814fc29604de2ceef9d6e1efe61))
+* resolve remaining ESLint issues for Obsidian review ([6ba705a](https://github.com/fnumatic/obsidian-advanced-html-export/commit/6ba705ad437c557f876e4d8dce1648f87e4ff355))
+* resolve TypeScript 'any' type errors for Obsidian plugin review ([3bb8b2e](https://github.com/fnumatic/obsidian-advanced-html-export/commit/3bb8b2eff2bc3a9b81074c0a48970b2d13d1e731))
+* use setHeading() and move CSS to stylesheet ([9f18c29](https://github.com/fnumatic/obsidian-advanced-html-export/commit/9f18c29c1116008fa61123d6d89cf0186391e371))
+
 ## [0.6.4](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.3...0.6.4) (2026-02-16)
 
 ## [0.6.3](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.2...0.6.3) (2026-02-16)
