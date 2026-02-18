@@ -54,7 +54,7 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
     const exportCommand = new ExportSingleFileCommand(this.app, this);
     this.addCommand({
       id: 'export-current-file-as-html',
-      name: 'Export Current File as HTML',
+      name: 'Export current file as HTML',
       callback: () => {
         exportCommand.execute();
       }
@@ -64,7 +64,7 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
     const exportWikiCommand = new ExportWikiCommand(this.app, this);
     this.addCommand({
       id: 'export-wiki-as-html',
-      name: 'Export Wiki as HTML',
+      name: 'Export wiki as HTML',
       callback: () => {
         exportWikiCommand.execute();
       }
@@ -98,10 +98,10 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Advanced HTML Export Settings' });
+    containerEl.createEl('h2', { text: 'Advanced HTML export settings' });
 
     new Setting(containerEl)
-      .setName('Image Quality')
+      .setName('Image quality')
       .setDesc('Quality level for image optimization (higher quality = larger file size)')
       .addDropdown(dropdown => dropdown
         .addOption('high', 'High (90%)')
@@ -114,7 +114,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Enable Lazy Loading')
+      .setName('Enable lazy loading')
       .setDesc('Defer loading of images that are not immediately visible')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.enableLazyLoading)
@@ -124,7 +124,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Enable Image Deduplication')
+      .setName('Enable image deduplication')
       .setDesc('Reduce file size by embedding identical images only once using JavaScript (recommended)')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.enableImageDeduplication)
@@ -134,7 +134,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Wiki Link Depth')
+      .setName('Wiki link depth')
       .setDesc('How many levels of links to include in wiki export (1 = direct links only)')
       .addSlider(slider => slider
         .setLimits(1, 10, 1)
@@ -145,7 +145,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Wiki Title')
+      .setName('Wiki title')
       .setDesc('Custom title for wiki export (leave empty to use note title)')
       .addText(text => text
         .setPlaceholder('My Wiki')
@@ -156,7 +156,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Enable Theme Toggle')
+      .setName('Enable theme toggle')
       .setDesc('Show theme toggle button to switch between light and dark mode')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.enableThemeToggle)
@@ -166,7 +166,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Enable Inline Table of Contents')
+      .setName('Enable inline table of contents')
       .setDesc('Show inline TOC on the right side of the content')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.enableInlineTOC)
@@ -176,7 +176,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Default Theme')
+      .setName('Default theme')
       .setDesc('Default theme for wiki export')
       .addDropdown(dropdown => dropdown
         .addOption('light', 'Light')
@@ -188,7 +188,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Disable Syntax Highlighting')
+      .setName('Disable syntax highlighting')
       .setDesc('Export code blocks as plain text without syntax highlighting (faster export, smaller file size)')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.disableSyntaxHighlighting)
@@ -198,7 +198,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Languages for Syntax Highlighting')
+      .setName('Languages for syntax highlighting')
       .setDesc('Comma-separated list of language identifiers to process. Custom blocks (mermaid, plantuml, etc.) are NOT affected.')
       .addText(text => text
         .setPlaceholder('javascript, typescript, python, ...')

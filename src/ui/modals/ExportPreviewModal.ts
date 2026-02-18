@@ -63,7 +63,7 @@ export class ExportPreviewModal extends Modal {
   onClose(): void {
     // Unmount Svelte component
     if (this.component) {
-      unmount(this.component);
+      void unmount(this.component);
       this.component = null;
     }
 
