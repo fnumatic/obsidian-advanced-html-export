@@ -35,7 +35,7 @@ export class PauseController {
   }
 
   async waitIfPaused(): Promise<void> {
-    if (this._isPaused && this._resumePromise) {
+    if (this._isPaused && this._resumePromise !== null) {
       await this._resumePromise;
     }
   }

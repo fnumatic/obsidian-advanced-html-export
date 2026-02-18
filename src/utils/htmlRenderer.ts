@@ -197,7 +197,7 @@ export default class HtmlRenderer {
 
     // Check cache first
     if (this.imageCache.has(imageHash)) {
-      return this.imageCache.get(imageHash)!;
+      return this.imageCache.get(imageHash) as string;
     }
 
     let optimizedBase64: string;
