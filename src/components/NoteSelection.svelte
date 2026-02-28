@@ -79,7 +79,7 @@
 
 <div data-tags="ns-container" class="flex flex-col">
   <header data-tags="ns-header" class="flex justify-between items-center mb-4">
-    <h2 class="m-0 text-obsidian font-semibold">Select Notes</h2>
+    <h2 class="m-0 text-obsidian font-semibold">Select notes</h2>
     <span class="text-obsidian-sm text-obsidian-muted bg-obsidian-alt px-3 py-1 rounded-full">
       {selectedCount}/{notes.length} selected
     </span>
@@ -95,9 +95,9 @@
   </aside>
 
   <section data-tags="ns-actions" class="flex gap-2 pb-3 mb-3 border-b border-dimmed">
-    <button class="obsidian-btn" onclick={selectAll}>Select All</button>
-    <button class="obsidian-btn" onclick={selectNone}>Select None</button>
-    <button class="obsidian-btn" onclick={selectWithDiagrams}>With Diagrams Only</button>
+    <button class="obsidian-btn" onclick={selectAll}>Select all</button>
+    <button class="obsidian-btn" onclick={selectNone}>Select none</button>
+    <button class="obsidian-btn" onclick={selectWithDiagrams}>With diagrams only</button>
   </section>
 
   <main data-tags="ns-list" class="max-h-[400px] overflow-y-auto border-obsidian rounded p-2 flex-1">
@@ -141,7 +141,7 @@
     </div>
     <div class="flex flex-col gap-1">
       <div class="text-obsidian font-semibold">~{estimatedMinutes} min</div>
-      <div class="text-obsidian-xs text-obsidian-muted">Estimated Time</div>
+      <div class="text-obsidian-xs text-obsidian-muted">Estimated time</div>
     </div>
   </section>
 

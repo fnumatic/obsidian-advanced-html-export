@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import type { App, Component } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 
 // Mock ImageOptimizer
@@ -49,24 +50,27 @@ vi.mock('obsidian', () => ({
 }));
 
 describe('HtmlRenderer', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockApp: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockComponent: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let renderer: any;
+  let mockApp: {
+    vault: {
+      getFiles: ReturnType<typeof vi.fn>;
+      adapter: {
+        readBinary: ReturnType<typeof vi.fn>;
+      };
+    };
+  };
+  let mockComponent: Record<string, unknown>;
+  let renderer: HtmlRenderer;
 
   beforeEach(() => {
-    // Reset mocks
     vi.clearAllMocks();
 
-    // Setup mock app
     const mockFiles = [
       { name: 'test.png', extension: 'png', path: 'test.png', stat: { mtime: 1234567890 } },
       { name: 'test.jpg', extension: 'jpg', path: 'test.jpg', stat: { mtime: 1234567890 } },
       { name: 'test1.png', extension: 'png', path: 'test1.png', stat: { mtime: 1234567890 } },
       { name: 'test2.png', extension: 'png', path: 'test2.png', stat: { mtime: 1234567891 } }
     ];
+
     mockApp = {
       vault: {
         getFiles: vi.fn().mockReturnValue(mockFiles),
@@ -74,13 +78,11 @@ describe('HtmlRenderer', () => {
           readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(8))
         }
       }
-    };
+    } as unknown as { vault: { getFiles: ReturnType<typeof vi.fn>; adapter: { readBinary: ReturnType<typeof vi.fn> } } };
 
-    // Setup mock component
     mockComponent = {};
 
-    // Create renderer instance
-    renderer = new HtmlRenderer(mockApp, mockComponent, { imageQuality: 'medium', enableLazyLoading: true, enableImageDeduplication: true });
+    renderer = new HtmlRenderer(mockApp as unknown as App, mockComponent as unknown as Component, { imageQuality: 'medium', enableLazyLoading: true, enableImageDeduplication: true });
   });
 
   describe('render', () => {
@@ -140,7 +142,7 @@ describe('HtmlRenderer', () => {
     });
 
     it('should render with deduplication disabled', async () => {
-      const rendererNoDedup = new HtmlRenderer(mockApp, mockComponent, {
+      const rendererNoDedup = new HtmlRenderer(mockApp as unknown as App, mockComponent as unknown as Component, {
         imageQuality: 'medium',
         enableLazyLoading: true,
         enableImageDeduplication: false
@@ -223,7 +225,7 @@ describe('HtmlRenderer', () => {
       mockApp.vault.getFiles.mockReturnValue([mockFile]);
       mockApp.vault.adapter.readBinary.mockResolvedValue(new ArrayBuffer(8));
 
-      const result = await (renderer).convertImageToBase64String('app://test.png?1234567890');
+      const result = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://test.png?1234567890');
 
       expect(mockApp.vault.getFiles).toHaveBeenCalled();
       expect(mockApp.vault.adapter.readBinary).toHaveBeenCalledWith('test.png');
@@ -246,7 +248,7 @@ describe('HtmlRenderer', () => {
       const { ImageOptimizer } = await import('./imageOptimizer');
       vi.mocked(ImageOptimizer.optimizeImage).mockRejectedValue(new Error('WebP not supported'));
 
-      const result = await (renderer).convertImageToBase64String('app://test.jpg?1234567890');
+      const result = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://test.jpg?1234567890');
 
       expect(result).toContain('data:image/jpeg;base64,');
     });
@@ -254,7 +256,7 @@ describe('HtmlRenderer', () => {
     it('should return empty string for missing images', async () => {
       mockApp.vault.getFiles.mockReturnValue([]);
 
-      const result = await (renderer).convertImageToBase64String('app://missing.png?123');
+      const result = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://missing.png?123');
 
       expect(result).toBe('');
     });
@@ -279,12 +281,12 @@ describe('HtmlRenderer', () => {
       mockApp.vault.adapter.readBinary.mockResolvedValue(mockBuffer);
 
       // First call - should optimize and cache
-      const result1 = await (renderer).convertImageToBase64String('app://test.png?1234567890');
+      const result1 = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://test.png?1234567890');
       expect(ImageOptimizer.optimizeImage).toHaveBeenCalledTimes(1);
       expect(result1).toContain('data:image/webp;base64,');
 
       // Second call with same image - should use cache
-      const result2 = await (renderer).convertImageToBase64String('app://test.png?1234567890');
+      const result2 = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://test.png?1234567890');
       expect(ImageOptimizer.optimizeImage).toHaveBeenCalledTimes(1); // Still 1, not called again
       expect(result2).toBe(result1); // Same result
     });
@@ -324,9 +326,9 @@ describe('HtmlRenderer', () => {
         .mockResolvedValueOnce(mockBuffer2);
 
       // First image
-      const result1 = await (renderer).convertImageToBase64String('app://test1.png?1234567890');
+      const result1 = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://test1.png?1234567890');
       // Second image (different hash)
-      const result2 = await (renderer).convertImageToBase64String('app://test2.png?1234567891');
+      const result2 = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> }).convertImageToBase64String('app://test2.png?1234567891');
 
       expect(ImageOptimizer.optimizeImage).toHaveBeenCalledTimes(2);
       expect(result1).not.toBe(result2);

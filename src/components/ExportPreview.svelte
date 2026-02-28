@@ -11,7 +11,7 @@
 
 <div data-tags="ep-container" class="p-0">
   <header data-tags="ep-header" class="mt-0 mb-5 text-obsidian font-semibold">
-    Export Preview
+    Export preview
   </header>
 
   <section data-tags="ep-summary" class="bg-obsidian-alt p-4 rounded-lg mb-5 text-center text-obsidian">
@@ -66,10 +66,10 @@
       Cancel
     </button>
     <button class="obsidian-btn mod-cta" onclick={() => onAction('selectNotes')}>
-      Select Notes
+      Select notes
     </button>
     <button class="obsidian-btn-danger mod-warning" onclick={() => onAction('exportAll')}>
-      Export All
+      Export all
     </button>
   </footer>
 </div>

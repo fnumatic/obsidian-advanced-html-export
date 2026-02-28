@@ -56,7 +56,7 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
       id: 'export-current-file-as-html',
       name: 'Export current file as HTML',
       callback: () => {
-        exportCommand.execute();
+        void exportCommand.execute();
       }
     });
 
@@ -66,7 +66,7 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
       id: 'export-wiki-as-html',
       name: 'Export wiki as HTML',
       callback: () => {
-        exportWikiCommand.execute();
+        void exportWikiCommand.execute();
       }
     });
 
@@ -99,7 +99,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Advanced HTML export settings')
+      .setName('Export options')
       .setHeading();
 
     new Setting(containerEl)
@@ -216,7 +216,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
       .setHeading();
 
     new Setting(containerEl)
-      .setName('Debug Mode')
+      .setName('Debug mode')
       .setDesc('Enable detailed performance logging and timing measurements for exports (reload required)')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.debugMode)
