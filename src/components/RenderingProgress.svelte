@@ -281,12 +281,12 @@
 
 <div data-tags="rp-container" class="p-0">
   <header data-tags="rp-header" class="mt-0 mb-4 text-obsidian font-semibold">
-    Rendering Wiki Export
+    Rendering wiki export
   </header>
 
 <details data-tags="rp-completed" open={completedOpen} class="mb-3">
     <summary class="font-semibold text-obsidian cursor-pointer py-2">
-      Completed Notes ({completedNotes.length})
+      Completed notes ({completedNotes.length})
     </summary>
     <div class="min-h-[114px] max-h-[114px] overflow-y-auto border border-obsidian rounded p-1.5 mt-2">
       {#each completedNotes as note}
@@ -408,7 +408,7 @@
         onclick={handleCancel}
         disabled={isCompleted}
       >
-        Cancel Export
+        Cancel export
       </button>
     </div>
   </footer>

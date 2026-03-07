@@ -12,3 +12,4 @@ archive/
 testdata/
 bin/
 .vault
+.opencode

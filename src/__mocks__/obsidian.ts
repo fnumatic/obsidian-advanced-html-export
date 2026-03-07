@@ -13,8 +13,8 @@ export class Plugin {
     this.commands.push(command);
   }
 
-  async onload() {}
-  onunload() {}
+  async onload(this: void) {}
+  onunload(this: void) {}
 }
 
 export class Modal {
@@ -26,10 +26,10 @@ export class Modal {
     this.contentEl = document.createElement('div');
   }
 
-  open() {}
-  close() {}
-  onOpen() {}
-  onClose() {}
+  open(this: void) {}
+  close(this: void) {}
+  onOpen(this: void) {}
+  onClose(this: void) {}
 }
 
 export class Notice {
@@ -60,8 +60,8 @@ export class App {
 }
 
 export class Component {
-  load() {}
-  unload() {}
+  load(this: void) {}
+  unload(this: void) {}
 }
 
 export class MarkdownRenderer {
@@ -81,7 +81,7 @@ export class PluginSettingTab {
     this.containerEl = document.createElement('div');
   }
   
-  display() {}
+  display(this: void) {}
 }
 
 export class Setting {
