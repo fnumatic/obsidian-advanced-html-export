@@ -22,7 +22,7 @@ export class LinkResolver {
         return title
             .toLowerCase()
             .replace(/\s+/g, '-')
-            .replace(/[^\w-]+/g, '')
+            .replace(/[^\w\-]+/g, '')
             .replace(/--+/g, '-')
             .replace(/^-+/, '')
             .replace(/-+$/, '');

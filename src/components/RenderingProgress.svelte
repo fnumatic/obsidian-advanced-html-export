@@ -354,7 +354,7 @@
       />
       <DetailRow
         icon="image"
-        label="Images"
+        label="images"
         processed={currentNote?.images.processed ?? 0}
         total={currentNote?.images.total ?? 0}
         currentPhase={currentNote?.images.currentPhase}

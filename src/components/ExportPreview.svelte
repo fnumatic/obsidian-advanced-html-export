@@ -30,7 +30,7 @@
 
   {#if notes.length > 0}
     <section data-tags="ep-notes" class="mt-5">
-      <h3 class="mt-5 mb-3 text-obsidian font-semibold">Notes</h3>
+      <h3 class="mt-5 mb-3 text-obsidian font-semibold">notes</h3>
       <div class="max-h-[300px] overflow-y-auto border border-obsidian rounded-md p-2">
         {#each notes as note}
           <div class="note-list-item">

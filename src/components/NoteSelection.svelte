@@ -133,15 +133,15 @@
   <section data-tags="ns-summary" class="mt-4 p-3 bg-obsidian-alt rounded grid grid-cols-3 gap-3 text-center">
     <div class="flex flex-col gap-1">
       <div class="text-obsidian font-semibold">{selectedCount}</div>
-      <div class="text-obsidian-xs text-obsidian-muted">Selected</div>
+      <div class="text-obsidian-xs text-obsidian-muted">selected</div>
     </div>
     <div class="flex flex-col gap-1">
       <div class="text-obsidian font-semibold">~{totalDiagrams}</div>
-      <div class="text-obsidian-xs text-obsidian-muted">Diagrams</div>
+      <div class="text-obsidian-xs text-obsidian-muted">diagrams</div>
     </div>
     <div class="flex flex-col gap-1">
       <div class="text-obsidian font-semibold">~{estimatedMinutes} min</div>
-      <div class="text-obsidian-xs text-obsidian-muted">Estimated time</div>
+      <div class="text-obsidian-xs text-obsidian-muted">estimated time</div>
     </div>
   </section>
 
