@@ -5,3 +5,5 @@ declare module "obsidian" {
     deleted: boolean;
   }
 }
+
+

@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
-  settings: AdvancedHtmlExportSettings;
+  settings!: AdvancedHtmlExportSettings;
 
   onload = async () => {
     await this.loadSettings();
@@ -110,8 +110,8 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .addOption('medium', 'Medium (80%)')
         .addOption('low', 'Low (70%)')
         .setValue(this.plugin.settings.imageQuality)
-        .onChange(async (value: 'high' | 'medium' | 'low') => {
-          this.plugin.settings.imageQuality = value;
+        .onChange(async (value: string) => {
+          this.plugin.settings.imageQuality = value as 'high' | 'medium' | 'low';
           await this.plugin.saveSettings();
         }));
 
@@ -184,8 +184,8 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .addOption('light', 'Light')
         .addOption('dark', 'Dark')
         .setValue(this.plugin.settings.defaultTheme)
-        .onChange(async (value: 'light' | 'dark') => {
-          this.plugin.settings.defaultTheme = value;
+        .onChange(async (value: string) => {
+          this.plugin.settings.defaultTheme = value as 'light' | 'dark';
           await this.plugin.saveSettings();
         }));
 

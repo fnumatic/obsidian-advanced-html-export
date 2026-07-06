@@ -64,7 +64,8 @@ export class ExportSingleFileCommand {
 
     } catch (error) {
       console.error('Error exporting file:', error);
-      new Notice(`Failed to export file: ${error.message}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      new Notice(`Failed to export file: ${msg}`);
     }
   }
 

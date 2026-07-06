@@ -25,6 +25,7 @@ export class ImageOptimizer {
       canvas.width = 1;
       canvas.height = 1;
       const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
       ctx.fillRect(0, 0, 1, 1);
       const dataURL = canvas.toDataURL('image/webp');
       return dataURL.startsWith('data:image/webp');
@@ -63,6 +64,7 @@ export class ImageOptimizer {
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
     ctx.drawImage(img, 0, 0);
 
     // Check WebP support if requested
