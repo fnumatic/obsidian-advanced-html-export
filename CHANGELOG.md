@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.9](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.8...0.6.9) (2026-07-06)
+
+
+### Bug Fixes
+
+* **deps:** pin codemirror versions to match obsidian peer deps ([bcb637f](https://github.com/fnumatic/obsidian-advanced-html-export/commit/bcb637f5b908e015b5bf7319957a1491c45bf4a3))
+
 ## [0.6.8](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.7...0.6.8) (2026-07-06)
 
 ## [0.6.7](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.6...0.6.7) (2026-07-06)
