@@ -101,7 +101,7 @@ Obsidian plugin that exports notes as self-contained HTML files. Supports both s
 │        │   └── WikiHtmlRenderer                    │          │
 │        │        └── DetailedWikiRenderer           │          │
 │        │                                           │          │
-│        │  Verantwortlich:                          │          │
+│        │  Responsibilities:                        │          │
 │        │  - Markdown → HTML via Obsidian API       │          │
 │        │  - Image processing (embed/optimize)      │          │
 │        │  - Code block handling                    │          │
@@ -172,12 +172,12 @@ Obsidian plugin that exports notes as self-contained HTML files. Supports both s
 
 **`exportWiki.ts`:**
 - Orchestrates multi-phase wiki export:
-  1. **Collect**: `WikiExportOrchestrator.collectNotes()` — rekursiv verlinkte Notizen einsammeln
-  2. **Preview**: `ExportPreviewModal` — Metriken anzeigen
-  3. **Select**: `NoteSelectionModal` — Notizen auswählen
-  4. **Render**: `DetailedWikiRenderer.renderPageWithProgress()` + Event-Emitter
-  5. **Assemble**: `generateWikiHtmlWithRenderedPages()` → Wiki-HTML zusammensetzen
-- Unterstützt Cancel (`CancellationToken`) und Pause/Resume (`PauseController`)
+  1. **Collect**: `WikiExportOrchestrator.collectNotes()` — recursively collect linked notes
+  2. **Preview**: `ExportPreviewModal` — show metrics
+  3. **Select**: `NoteSelectionModal` — select notes
+  4. **Render**: `DetailedWikiRenderer.renderPageWithProgress()` + event emitter
+  5. **Assemble**: `generateWikiHtmlWithRenderedPages()` → assemble wiki HTML
+- Supports Cancel (`CancellationToken`) and Pause/Resume (`PauseController`)
 
 ### 4.3 Renderer Chain (Class Hierarchy)
 
@@ -326,42 +326,42 @@ ExportSingleFileCommand.execute()
   └── fileUtils.downloadBlob(html, filename)
 ```
 
-### 6.2 Wiki Export Pipeline (4 Phasen)
+### 6.2 Wiki Export Pipeline (4 Phases)
 
 ```
 Phase 1: COLLECT (Metadata Only)
   WikiExportOrchestrator.collectNotes(startFile, settings)
     → LinkResolver.findWikiLinks(content)
-    → Rekursiv folgen bis linkDepth
-    → analyzeContent() für jede Note (diagrams, code, images, links)
-    → NoteInfo[] (ohne rendered content)
+    → Recursively follow up to linkDepth
+    → analyzeContent() for each note (diagrams, code, images, links)
+    → NoteInfo[] (without rendered content)
 
 Phase 2: PREVIEW
   ExportPreviewModal.show(NoteInfo[])
-    → Summiert: totalNotes, diagrams, codeBlocks, images
-    → User sieht Metriken, klickt "Continue"
+    → Sums: totalNotes, diagrams, codeBlocks, images
+    → User sees metrics, clicks "Continue"
 
 Phase 3: SELECT
   NoteSelectionModal.show(NoteInfo[])
-    → User wählt Notizen (search, bulk select, "with diagrams only")
-    → NoteInfo[] (gefiltert)
+    → User selects notes (search, bulk select, "with diagrams only")
+    → NoteInfo[] (filtered)
 
 Phase 4: RENDER
   DetailedWikiRenderer.renderPageWithProgress(notes, cancellationToken, pauseController)
     │
-    ├── Für jede Note:
+    ├── For each note:
     │    ├── Emit: RenderEvent.Start(note)
     │    ├── cancellationToken.throwIfCancelled()
     │    ├── pauseController.waitIfPaused()
-    │    ├── render() → HTML snippet (wie Single File)
-    │    ├── Resolve [[Wiki Links]] → Abschnitt-IDs
+    │    ├── render() → HTML snippet (like Single File)
+    │    ├── Resolve [[Wiki Links]] → section IDs
     │    ├── Emit: RenderEvent.Progress(note, html)
     │    └── Emit: RenderEvent.Complete(note)
     │
     └── generateWikiHtmlWithRenderedPages()
          ├── fillTemplate(template.html, {title, sidebar, content})
          ├── Inject styles.css, app.js, helpers.js, signals.js
-         └── → Finale Wiki SPA HTML
+         └── → Final wiki SPA HTML
 ```
 
 ## 7. Design Patterns
