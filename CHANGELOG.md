@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.6](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.5...0.6.6) (2026-07-06)
+
+
+### Bug Fixes
+
+* address plugin review scanner issues ([9b6ceae](https://github.com/fnumatic/obsidian-advanced-html-export/commit/9b6ceaef7b558dfe5b8d48de9f4deb5fdfdf536c))
+
 ## [0.6.5](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.4...0.6.5) (2026-02-18)
 
 
