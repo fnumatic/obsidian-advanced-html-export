@@ -16,6 +16,8 @@
     --accent-color: #0066cc;
     --link-color: #0066cc;
     --link-external-color: #0066cc;
+    --code-inline-color: #e95d00;
+    --code-inline-bg: rgba(204, 204, 204, 0.38);
     --sidebar-width: 280px;
     --toc-width: 300px;
     --sidebar-left-background: var(--background-primary);
@@ -42,6 +44,8 @@
     --accent-color: #6ab0f3;
     --link-color: #6ab0f3;
     --link-external-color: #6ab0f3;
+    --code-inline-color: #ff8a4c;
+    --code-inline-bg: rgba(255, 255, 255, 0.08);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -473,13 +477,14 @@ body {
     margin: 0.5rem 0;
 }
 
-.wiki-content code {
+.wiki-content :not(pre) > code {
     font-family: var(--font-mono);
     font-size: 0.9em;
-    background: var(--bg-secondary);
+    font-weight: 600;
+    background: var(--code-inline-bg);
     padding: 0.15rem 0.35rem;
     border-radius: 3px;
-    color: var(--accent-color);
+    color: var(--code-inline-color);
 }
 
 .wiki-content pre {
