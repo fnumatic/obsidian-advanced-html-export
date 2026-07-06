@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.10](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.9...0.6.10) (2026-07-06)
+
+
+### Bug Fixes
+
+* **build:** add esbuild as direct dependency for vite 8 ([2c0336e](https://github.com/fnumatic/obsidian-advanced-html-export/commit/2c0336e83a64e07eab730526845a5c07ca11ec1d))
+
 ## [0.6.9](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.8...0.6.9) (2026-07-06)
 
 
