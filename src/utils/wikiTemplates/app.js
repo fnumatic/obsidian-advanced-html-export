@@ -197,7 +197,16 @@ function setupEffects() {
     });
 
     effect(() => {
-        const backBtn = el('#wiki-back');
+    const homeBtn = el('#wiki-home');
+    if (homeBtn) {
+        homeBtn.addEventListener('click', function() {
+            if (state.notes.length > 0) {
+                showPage(state.notes[0].slug);
+            }
+        });
+    }
+
+    const backBtn = el('#wiki-back');
         const forwardBtn = el('#wiki-forward');
         if (backBtn) backBtn.disabled = !computedState.canGoBack.value;
         if (forwardBtn) forwardBtn.disabled = !computedState.canGoForward.value;
