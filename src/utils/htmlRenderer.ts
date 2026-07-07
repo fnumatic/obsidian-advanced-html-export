@@ -274,9 +274,11 @@ export default class HtmlRenderer {
       const src = img.src;
       if (src && src !== null && src !== undefined) {
         const hash = await this.convertImageToHash(src);
-        img.setAttribute('data-hash', hash);
-        // Replace src with placeholder to prevent browser errors
-        img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        if (hash) {
+          img.setAttribute('data-hash', hash);
+          // Replace src with placeholder to prevent browser errors
+          img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        }
         if (this.settings.enableLazyLoading) {
           img.setAttribute('loading', 'lazy');
         }
@@ -314,7 +316,10 @@ export default class HtmlRenderer {
     const imagePromises = Array.from(imgElements).map(async (img) => {
       const src = img.src;
       if (src && src !== null && src !== undefined) {
-        img.setAttribute('src', await this.convertImageToBase64String(src));
+        const base64 = await this.convertImageToBase64String(src);
+        if (base64) {
+          img.setAttribute('src', base64);
+        }
         if (this.settings.enableLazyLoading) {
           img.setAttribute('loading', 'lazy');
         }

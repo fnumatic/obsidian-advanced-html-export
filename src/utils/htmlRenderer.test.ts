@@ -334,4 +334,74 @@ describe('HtmlRenderer', () => {
       expect(result1).not.toBe(result2);
     });
   });
+
+  describe('online images', () => {
+    it('keeps external https src unchanged with deduplication enabled', async () => {
+      const mockImg = {
+        src: 'https://example.com/image.png',
+        setAttribute: vi.fn()
+      };
+      Object.defineProperty(mockImg, 'src', {
+        set: vi.fn(),
+        get: () => 'https://example.com/image.png'
+      });
+      const mockElement = {
+        querySelectorAll: vi.fn((selector) => {
+          if (selector === '.copy-code-button') return [];
+          if (selector === 'img') return [mockImg];
+          return [];
+        }),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+        innerHTML: '<p>Content</p>'
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
+
+      await renderer.render('# Test');
+
+      expect(mockImg.setAttribute).not.toHaveBeenCalledWith('data-hash', expect.anything());
+      expect(mockImg.setAttribute).not.toHaveBeenCalledWith('src', expect.stringContaining('data:image/gif'));
+      expect(mockImg.setAttribute).toHaveBeenCalledWith('loading', 'lazy');
+    });
+
+    it('keeps external https src unchanged with deduplication disabled', async () => {
+      const rendererNoDedup = new HtmlRenderer(mockApp as unknown as App, mockComponent as unknown as Component, {
+        imageQuality: 'medium',
+        enableLazyLoading: true,
+        enableImageDeduplication: false
+      });
+
+      const mockImg = {
+        setAttribute: vi.fn()
+      };
+      Object.defineProperty(mockImg, 'src', {
+        set: vi.fn(),
+        get: () => 'https://example.com/image.png'
+      });
+      const mockElement = {
+        querySelectorAll: vi.fn((selector) => {
+          if (selector === '.copy-code-button') return [];
+          if (selector === 'img') return [mockImg];
+          return [];
+        }),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+        innerHTML: '<p>Content</p>'
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
+
+      await rendererNoDedup.render('# Test');
+
+      expect(mockImg.setAttribute).not.toHaveBeenCalledWith('src', expect.stringContaining('data:'));
+      expect(mockImg.setAttribute).toHaveBeenCalledWith('loading', 'lazy');
+    });
+  });
 });

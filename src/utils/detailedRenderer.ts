@@ -240,8 +240,10 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
             details: { phase: 'optimizing', index: i }
           });
 
-          img.setAttribute('data-hash', hash);
-          img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+          if (hash) {
+            img.setAttribute('data-hash', hash);
+            img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+          }
 
           if (this.settings.enableLazyLoading) {
             img.setAttribute('loading', 'lazy');
@@ -255,7 +257,9 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
           });
 
           const base64 = await this.convertImageToBase64String(src);
-          img.setAttribute('src', base64);
+          if (base64) {
+            img.setAttribute('src', base64);
+          }
           
           if (this.settings.enableLazyLoading) {
             img.setAttribute('loading', 'lazy');

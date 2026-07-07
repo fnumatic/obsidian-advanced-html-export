@@ -151,11 +151,13 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             if (src) {
                 if (this.settings.enableImageDeduplication) {
                     const hash = await this.convertImageToHash(src);
-                    // Log image processing for debug
-                    const isCacheHit = this.imageCache.has(hash);
-                    debugLogger.logImageProcessed(true, isCacheHit);
-                    img.setAttribute('data-hash', hash);
-                    img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+                    if (hash) {
+                        // Log image processing for debug
+                        const isCacheHit = this.imageCache.has(hash);
+                        debugLogger.logImageProcessed(true, isCacheHit);
+                        img.setAttribute('data-hash', hash);
+                        img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+                    }
                     if (this.settings.enableLazyLoading) {
                         img.setAttribute('loading', 'lazy');
                     }
@@ -163,7 +165,9 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                     await this.convertImageToBase64String(src);
                     debugLogger.logImageProcessed(false, false);
                     const base64 = await this.convertImageToBase64String(src);
-                    img.setAttribute('src', base64);
+                    if (base64) {
+                        img.setAttribute('src', base64);
+                    }
                     if (this.settings.enableLazyLoading) {
                         img.setAttribute('loading', 'lazy');
                     }
