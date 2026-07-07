@@ -549,6 +549,8 @@ body {
 #iv-i {
   position: fixed; left: 50%; top: 50%; max-width: 90vw; max-height: 85vh;
   object-fit: contain; cursor: grab; user-select: none; -webkit-user-drag: none;
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 1px var(--border-color);
 }
 #iv-i:active { cursor: grabbing; }
 #iv-t {
