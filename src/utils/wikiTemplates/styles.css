@@ -271,9 +271,9 @@ body {
 }
 
 .wiki-inline-toc {
-    background: var(--sidebar-right-background);
+    background: var(--bg-primary);
+    padding: 0;
     border: none;
-    margin: 0;
     overflow: visible;
     position: sticky;
     top: 1.5rem;
@@ -288,7 +288,7 @@ body {
 .wiki-inline-toc-header {
     display: flex;
     align-items: center;
-    padding: 0 0 0.5rem;
+    padding: 0 0 0.75rem;
     background: transparent;
     border-bottom: none;
 }

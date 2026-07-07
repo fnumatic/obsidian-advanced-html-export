@@ -81,44 +81,38 @@ function renderSidebar() {
 
 function generateTOC() {
     const tocBody = el('#wiki-inline-toc-body');
-    if (!tocBody) return;
+    if (!tocBody) { tocBody.innerHTML = ''; return; }
 
-    const activePage = el('.wiki-page.active');
+    tocBody.innerHTML = '';
+
+    var slug = state.currentPage.value;
+    var activePage = el('#page-' + slug);
     if (!activePage) return;
 
-    const headings = activePage.querySelectorAll('h2, h3');
+    var headings = activePage.querySelectorAll('h2, h3');
     if (!headings || headings.length === 0) return;
 
-    let tocHTML = '<ul id="page-toc-list">';
+    var tocHTML = '<ul id="page-toc-list">';
 
-    headings.forEach(heading => {
-        const level = heading.tagName.toLowerCase();
-        const headingText = heading.textContent || '';
-        const text = headingText.trim();
-        const id = heading.id;
-
+    headings.forEach(function(heading) {
+        var id = heading.id;
         if (!id) return;
-
+        var text = (heading.textContent || '').trim();
+        var level = heading.tagName.toLowerCase();
         tocHTML += '<li><a href="#' + id + '" class="' + level + '" data-target="' + id + '">' + text + '</a></li>';
     });
 
     tocHTML += '</ul>';
 
-    if (tocBody) {
-        tocBody.innerHTML = tocHTML;
+    tocBody.innerHTML = tocHTML;
 
-        const tocLinks = tocBody.querySelectorAll('a');
-        tocLinks.forEach(a => {
-            a.addEventListener('click', (e) => {
-                e.preventDefault();
-                const href = a.getAttribute('href');
-                if (href) {
-                    const id = href.substring(1);
-                    scrollToId(id);
-                }
-            });
+    tocBody.querySelectorAll('a').forEach(function(a) {
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            var href = a.getAttribute('href');
+            if (href) scrollToId(href.substring(1));
         });
-    }
+    });
 }
 
 function toggleTOC() {
@@ -146,19 +140,20 @@ function setupScrollSpy() {
         scrollSpyObserver.disconnect();
     }
 
-    const activePage = el('.wiki-page.active');
+    var slug = state.currentPage.value;
+    var activePage = el('#page-' + slug);
     if (!activePage) return;
 
-    const headings = activePage.querySelectorAll('h2, h3');
+    var headings = activePage.querySelectorAll('h2, h3');
     if (!headings || headings.length === 0) return;
 
-    scrollSpyObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
+    scrollSpyObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
             if (entry.isIntersecting) {
-                const id = entry.target.id;
-                const tocBody = el('#wiki-inline-toc-body');
+                var id = entry.target.id;
+                var tocBody = el('#wiki-inline-toc-body');
                 if (tocBody) {
-                    tocBody.querySelectorAll('a').forEach(link => {
+                    tocBody.querySelectorAll('a').forEach(function(link) {
                         if (link.classList) {
                             if (link.dataset.target === id) {
                                 link.classList.add('active');
@@ -172,7 +167,7 @@ function setupScrollSpy() {
         });
     }, { root: null, rootMargin: '-15% 0px -75% 0px', threshold: 0 });
 
-    headings.forEach(h => { if (h.id) scrollSpyObserver.observe(h); });
+    headings.forEach(function(h) { if (h.id) scrollSpyObserver.observe(h); });
 }
 
 function setupEffects() {
