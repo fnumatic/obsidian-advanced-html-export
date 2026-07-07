@@ -475,7 +475,9 @@ body {
     height: auto;
     border-radius: 4px;
     margin: 0.5rem 0;
+    cursor: zoom-in;
 }
+.wiki-content svg { cursor: zoom-in; }
 
 .wiki-content :not(pre) > code {
     font-family: var(--font-mono);
@@ -535,3 +537,27 @@ body {
     border-top: 1px solid var(--border-color);
     margin: 2rem 0;
 }
+
+#iv {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 10000; display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.75);
+}
+#iv-b {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: zoom-out;
+}
+#iv-i {
+  position: fixed; left: 50%; top: 50%; max-width: 90vw; max-height: 85vh;
+  object-fit: contain; cursor: grab; user-select: none; -webkit-user-drag: none;
+}
+#iv-i:active { cursor: grabbing; }
+#iv-t {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px; background: rgba(30,30,30,0.8); border-radius: 8px; padding: 6px 8px; z-index: 10001;
+}
+#iv-t button {
+  width: 36px; height: 36px; border: none; border-radius: 6px;
+  background: transparent; color: #eee; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#iv-t button:hover { background: rgba(255,255,255,0.15); }

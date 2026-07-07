@@ -38,6 +38,7 @@ function initWiki() {
     setupEventHandlers();
     setupScrollSpy();
     {{IMAGE_RESTORATION}}
+    initImageViewer();
 }
 
 function initTheme() {
@@ -302,6 +303,7 @@ function setupEventHandlers() {
 }
 
 function showPage(slug, addToHistory = true) {
+    closeImage();
     const target = el('#page-' + slug);
     if (!target) return;
 
@@ -338,6 +340,133 @@ function goForward() {
     state.forwardStack.value = remaining;
     state.pageHistory.value = [...state.pageHistory.value, state.currentPage.value];
     state.currentPage.value = next;
+}
+
+// =========================================================================
+// Image Viewer (lightbox with zoom/pan)
+// =========================================================================
+
+var ivOpen = false, ivScale = 1, ivX = 0, ivY = 0;
+var ivDrag = false, ivDSX = 0, ivDSY = 0, ivIX = 0, ivIY = 0;
+var ivEl = null;
+
+function initImageViewer() {
+  if (ivEl) return;
+  ivEl = document.createElement('div');
+  ivEl.id = 'iv';
+  ivEl.innerHTML = '<div id="iv-b"></div><img id="iv-i" draggable="false"><div id="iv-t"><button data-a="in">+</button><button data-a="out">−</button><button data-a="rst">↺</button><button data-a="cls">✕</button></div>';
+  document.body.appendChild(ivEl);
+
+  function ivSrc(el) {
+    if (el.tagName === 'IMG') return el.getAttribute('src') || '';
+    var svg = el.cloneNode(true);
+    if (!svg.getAttribute('xmlns')) svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  }
+
+  document.addEventListener('click', function(e) {
+    var media = e.target.closest('.wiki-page.active img, .wiki-page.active svg');
+    if (!media || ivOpen) return;
+    e.preventDefault();
+    ivOpen = true; ivScale = 1; ivX = 0; ivY = 0;
+    ivEl.querySelector('#iv-i').src = ivSrc(media);
+    ivEl.style.display = 'flex';
+    ivUpdate();
+    document.body.style.overflow = 'hidden';
+  });
+
+  ivEl.addEventListener('click', function(e) {
+    if (e.target === ivEl || e.target.id === 'iv-b') closeImage();
+  });
+
+  ivEl.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-a]');
+    if (!btn) return;
+    switch (btn.dataset.a) {
+      case 'cls': closeImage(); break;
+      case 'in': ivZoom(ivScale * 1.4); break;
+      case 'out': ivZoom(ivScale / 1.4); break;
+      case 'rst': ivScale = 1; ivX = 0; ivY = 0; ivUpdate(); break;
+    }
+  });
+
+  ivEl.addEventListener('wheel', function(e) {
+    if (!ivOpen) return;
+    e.preventDefault();
+    ivZoom(ivScale * (e.deltaY > 0 ? 0.9 : 1.1), e.clientX, e.clientY);
+  }, { passive: false });
+
+  ivEl.addEventListener('mousedown', function(e) {
+    if (!ivOpen || !e.target.closest('#iv-i')) return;
+    ivDrag = true; ivDSX = e.clientX; ivDSY = e.clientY;
+    ivIX = ivX; ivIY = ivY;
+    e.target.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!ivDrag) return;
+    ivX = ivIX + e.clientX - ivDSX;
+    ivY = ivIY + e.clientY - ivDSY;
+    ivUpdate();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!ivDrag) return;
+    ivDrag = false;
+    var img = ivEl && ivEl.querySelector('#iv-i');
+    if (img) img.style.cursor = '';
+  });
+
+  ivEl.addEventListener('touchstart', function(e) {
+    if (!ivOpen || e.touches.length !== 1 || !e.target.closest('#iv-i')) return;
+    ivDrag = true;
+    ivDSX = e.touches[0].clientX; ivDSY = e.touches[0].clientY;
+    ivIX = ivX; ivIY = ivY;
+  }, { passive: true });
+
+  ivEl.addEventListener('touchmove', function(e) {
+    if (!ivDrag || e.touches.length !== 1) return;
+    ivX = ivIX + e.touches[0].clientX - ivDSX;
+    ivY = ivIY + e.touches[0].clientY - ivDSY;
+    ivUpdate();
+  }, { passive: true });
+
+  ivEl.addEventListener('touchend', function() { ivDrag = false; }, { passive: true });
+
+  document.addEventListener('keydown', function(e) {
+    if (!ivOpen) return;
+    switch (e.key) {
+      case 'Escape': closeImage(); break;
+      case '+': case '=': ivZoom(ivScale * 1.4); break;
+      case '-': ivZoom(ivScale / 1.4); break;
+      case '0': ivScale = 1; ivX = 0; ivY = 0; ivUpdate(); break;
+    }
+  });
+}
+
+function closeImage() {
+  if (!ivOpen) return;
+  ivOpen = false;
+  if (ivEl) ivEl.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function ivZoom(ns, cx, cy) {
+  ns = Math.max(0.1, Math.min(20, ns));
+  if (cx !== undefined) {
+    var vpw = window.innerWidth, vph = window.innerHeight;
+    var r = ns / ivScale;
+    ivX = (cx - vpw / 2) * (1 - r) + ivX * r;
+    ivY = (cy - vph / 2) * (1 - r) + ivY * r;
+  }
+  ivScale = ns;
+  ivUpdate();
+}
+
+function ivUpdate() {
+  var img = ivEl && ivEl.querySelector('#iv-i');
+  if (img) img.style.transform = 'translate(-50%,-50%) translate(' + ivX + 'px,' + ivY + 'px) scale(' + ivScale + ')';
 }
 
 if (document.readyState === 'loading') {
