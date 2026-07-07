@@ -5,6 +5,8 @@ import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
 import { DetailedWikiRenderer, RenderEvent } from './detailedRenderer';
 
+const VIEWABLE_EXTENSIONS = ['excalidraw'];
+
 export interface WikiExportOptions {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
@@ -57,6 +59,7 @@ export class WikiExportOrchestrator {
   private options: WikiExportOptions;
   private linkResolver: LinkResolver;
   private vaultFiles: Map<string, TFile> = new Map();
+  private viewableFiles: Map<string, TFile> = new Map();
   
   private stage: ExportStage = 'idle';
   private collectedNotes: NoteInfo[] = [];
@@ -75,9 +78,12 @@ export class WikiExportOrchestrator {
     const files = vault.getFiles();
 
     for (const file of files) {
-      if (file.extension === 'md') {
+      if (file.extension === 'md' && !LinkResolver.isExcalidrawFile(file)) {
         this.vaultFiles.set(file.path, file);
         this.vaultFiles.set(file.basename, file);
+      } else if (VIEWABLE_EXTENSIONS.includes(file.extension) || LinkResolver.isExcalidrawFile(file)) {
+        this.viewableFiles.set(file.path, file);
+        this.viewableFiles.set(file.basename, file);
       }
     }
 
@@ -86,6 +92,14 @@ export class WikiExportOrchestrator {
       fileMap.set(key, file.path);
     }
     this.linkResolver.setVaultFiles(fileMap);
+
+    this.linkResolver.setPageSlugResolver((rawTarget: string) => {
+      const file = this.findFileByLink(rawTarget);
+      if (file) {
+        return this.linkResolver.getFileSlug(file);
+      }
+      return null;
+    });
   }
 
   getStage(): ExportStage {
@@ -134,7 +148,7 @@ export class WikiExportOrchestrator {
           
           return {
             file,
-            slug: this.linkResolver.slugify(file.basename),
+            slug: this.linkResolver.getFileSlug(file),
             title: file.basename,
             path: file.path,
             estimatedDiagrams: analysis.diagramCount,
@@ -422,7 +436,11 @@ export class WikiExportOrchestrator {
     const links = this.linkResolver.extractLinks(content);
 
     for (const link of links) {
-      const targetFile = this.findFileByLink(link.target);
+      if (link.type === 'image-embed') {
+        continue;
+      }
+
+      const targetFile = this.findFileByLink(link.rawTarget);
       if (targetFile && !visited.has(targetFile.path)) {
         visited.add(targetFile.path);
         result.push(targetFile);
@@ -432,7 +450,10 @@ export class WikiExportOrchestrator {
             await this.app.vault.cachedRead(targetFile)
           );
           for (const subLink of subLinks) {
-            const subFile = this.findFileByLink(subLink.target);
+            if (subLink.type === 'image-embed') {
+              continue;
+            }
+            const subFile = this.findFileByLink(subLink.rawTarget);
             if (subFile && !visited.has(subFile.path)) {
               visited.add(subFile.path);
               result.push(subFile);
@@ -446,14 +467,35 @@ export class WikiExportOrchestrator {
   }
 
   private findFileByLink(linkTarget: string): TFile | null {
+    // 1. Try markdown files
     const cleanTarget = linkTarget.replace(/\.md$/i, '');
     const targetSlug = this.linkResolver.slugify(cleanTarget);
 
     for (const [, file] of this.vaultFiles) {
       const fileNameSlug = this.linkResolver.slugify(file.basename.replace(/\.md$/i, ''));
-
       if (fileNameSlug === targetSlug) {
         return file;
+      }
+    }
+
+    // 2. Try viewable non-md files (match with extension, e.g. diagram.excalidraw)
+    const rawSlug = this.linkResolver.slugify(linkTarget);
+    for (const [, file] of this.viewableFiles) {
+      const fileSlug = this.linkResolver.slugify(file.basename);
+      if (fileSlug === rawSlug) {
+        return file;
+      }
+    }
+
+    // 3. Try without extension (e.g., diagram → diagram.excalidraw)
+    const noExtTarget = linkTarget.replace(/\.\w+$/i, '');
+    const noExtSlug = this.linkResolver.slugify(noExtTarget);
+    if (noExtSlug !== rawSlug) {
+      for (const [, file] of this.viewableFiles) {
+        const fileSlug = this.linkResolver.slugify(file.basename);
+        if (fileSlug === noExtSlug) {
+          return file;
+        }
       }
     }
 

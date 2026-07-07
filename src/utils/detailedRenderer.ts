@@ -74,9 +74,9 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
     token.throwIfCancelled();
 
-    // Phase 1: Reading file
+    // Phase 1: Reading file (uses shared helper for non-md files like excalidraw)
     token.throwIfCancelled();
-    const content = await this.app.vault.cachedRead(file);
+    const content = await this.readContentForPage(file);
     await this.yieldToUI();
 
     // Phase 2: Parsing content (use pre-analyzed data if available)

@@ -1,12 +1,14 @@
 export interface LinkInfo {
     original: string;
     target: string;
+    rawTarget: string;
     alias: string;
     type: 'wiki' | 'markdown' | 'image-embed';
 }
 
 export class LinkResolver {
     private vaultFiles: Map<string, string> = new Map();
+    private pageSlugResolver: ((rawTarget: string) => string | null) | null = null;
 
     constructor(vaultFiles?: Map<string, string>) {
         if (vaultFiles) {
@@ -16,6 +18,24 @@ export class LinkResolver {
 
     setVaultFiles(files: Map<string, string>): void {
         this.vaultFiles = files;
+    }
+
+    setPageSlugResolver(resolver: (rawTarget: string) => string | null): void {
+        this.pageSlugResolver = resolver;
+    }
+
+    /** Check if a file is an excalidraw file (true .excalidraw or .excalidraw.md) */
+    static isExcalidrawFile(file: { extension: string; basename: string }): boolean {
+        return file.extension === 'excalidraw'
+            || (file.extension === 'md' && /\.excalidraw$/i.test(file.basename));
+    }
+
+    /** Get the correct page slug for a file */
+    getFileSlug(file: { extension: string; basename: string }): string {
+        if (LinkResolver.isExcalidrawFile(file)) {
+            return this.slugify(file.basename.replace(/\.excalidraw$/i, ''));
+        }
+        return this.slugify(file.basename);
     }
 
     slugify(title: string): string {
@@ -46,6 +66,7 @@ export class LinkResolver {
             links.push({
                 original: fullMatch,
                 target: this.slugify(target),
+                rawTarget: target,
                 alias: alias,
                 type: isImageEmbed ? 'image-embed' : 'wiki'
             });
@@ -67,6 +88,7 @@ export class LinkResolver {
                 links.push({
                     original: fullMatch,
                     target: target,
+                    rawTarget: href,
                     alias: alias,
                     type: 'markdown'
                 });
@@ -109,17 +131,35 @@ export class LinkResolver {
         const links = this.extractLinks(content);
         let resolvedContent = content;
 
+        // First pass: protect image-embeds with placeholders to prevent
+        // substring collision when [[x]] appears inside ![[x]]
+        const embedPlaceholders: string[] = [];
         for (const link of links) {
             if (link.type === 'image-embed') {
-                // Keep image embeds unchanged - Obsidian's MarkdownRenderer will handle them
-                // This includes: ![[image.png]], ![[excalidraw]], ![[image.png|300]], etc.
-                continue;
-            } else if (link.type === 'wiki') {
-                // Convert wiki links to anchor tags
-                const replacement = `<a href="javascript:void(0)" data-page="${link.target}" style="cursor: pointer;">${link.alias}</a>`;
+                const placeholder = `\x00EMBED${embedPlaceholders.length}\x00`;
+                embedPlaceholders.push(link.original);
+                resolvedContent = resolvedContent.replace(link.original, placeholder);
+            }
+        }
+
+        // Second pass: replace wiki links with anchor tags
+        for (const link of links) {
+            if (link.type === 'wiki') {
+                let pageSlug = link.target;
+                if (this.pageSlugResolver && link.rawTarget) {
+                    const resolvedSlug = this.pageSlugResolver(link.rawTarget);
+                    if (resolvedSlug) {
+                        pageSlug = resolvedSlug;
+                    }
+                }
+                const replacement = `<a href="javascript:void(0)" data-page="${pageSlug}" style="cursor: pointer;">${link.alias}</a>`;
                 resolvedContent = resolvedContent.replace(link.original, replacement);
             }
-            // markdown links are handled separately in extractLinks
+        }
+
+        // Third pass: restore image-embeds from placeholders
+        for (const original of embedPlaceholders) {
+            resolvedContent = resolvedContent.replace(/\x00EMBED\d+\x00/, original);
         }
 
         return {

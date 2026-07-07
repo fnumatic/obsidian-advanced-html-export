@@ -10,6 +10,8 @@ import signals from './wikiTemplates/signals.js?raw';
 import helpers from './wikiTemplates/helpers.js?raw';
 import appTemplate from './wikiTemplates/app.js?raw';
 
+const VIEWABLE_EXTENSIONS = ['excalidraw'];
+
 export interface WikiRenderOptions {
     imageQuality: 'high' | 'medium' | 'low';
     enableLazyLoading: boolean;
@@ -33,6 +35,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     protected linkResolver: LinkResolver;
     protected pageList: PageInfo[] = [];
     private vaultFiles: Map<string, TFile> = new Map();
+    private viewableFiles: Map<string, TFile> = new Map();
 
     constructor(app: App, component: Component, options: WikiRenderOptions) {
         super(app, component, options);
@@ -45,9 +48,12 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const files = vault.getFiles();
 
         for (const file of files) {
-            if (file.extension === 'md') {
+            if (file.extension === 'md' && !LinkResolver.isExcalidrawFile(file)) {
                 this.vaultFiles.set(file.path, file);
                 this.vaultFiles.set(file.basename, file);
+            } else if (VIEWABLE_EXTENSIONS.includes(file.extension) || LinkResolver.isExcalidrawFile(file)) {
+                this.viewableFiles.set(file.path, file);
+                this.viewableFiles.set(file.basename, file);
             }
         }
 
@@ -56,6 +62,14 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             fileMap.set(key, file.path);
         }
         this.linkResolver.setVaultFiles(fileMap);
+
+        this.linkResolver.setPageSlugResolver((rawTarget: string) => {
+            const file = this.findFileByLink(rawTarget);
+            if (file) {
+                return this.linkResolver.getFileSlug(file);
+            }
+            return null;
+        });
     }
 
     /**
@@ -70,7 +84,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const collectedFiles = await this.collectLinkedNotes(centralFile, 0, options.linkDepth, new Set<string>());
 
         this.pageList = collectedFiles.map((file) => ({
-            slug: this.linkResolver.slugify(file.basename),
+            slug: this.linkResolver.getFileSlug(file),
             title: file.basename,
             path: file.path
         }));
@@ -89,9 +103,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
 
             const results = await Promise.all(
                 chunk.map(async (file) => {
-                    const slug = this.linkResolver.slugify(file.basename);
-                    const content = await this.app.vault.cachedRead(file);
-                    const html = await this.renderPageFromContent(content);
+                    const slug = this.linkResolver.getFileSlug(file);
+                    const html = await this.renderPageFromFile(file);
                     return [slug, html] as [string, string];
                 })
             );
@@ -124,7 +137,11 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const links = this.linkResolver.extractLinks(content);
 
         for (const link of links) {
-            const targetFile = this.findFileByLink(link.target);
+            if (link.type === 'image-embed') {
+                continue;
+            }
+
+            const targetFile = this.findFileByLink(link.rawTarget);
             if (targetFile && !visited.has(targetFile.path)) {
                 visited.add(targetFile.path);
                 result.push(targetFile);
@@ -132,7 +149,10 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                 if (currentDepth + 1 < maxDepth) {
                     const subLinks = this.linkResolver.extractLinks(await this.app.vault.cachedRead(targetFile));
                     for (const subLink of subLinks) {
-                        const subFile = this.findFileByLink(subLink.target);
+                        if (subLink.type === 'image-embed') {
+                            continue;
+                        }
+                        const subFile = this.findFileByLink(subLink.rawTarget);
                         if (subFile && !visited.has(subFile.path)) {
                             visited.add(subFile.path);
                             result.push(subFile);
@@ -146,14 +166,35 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     }
 
     private findFileByLink(linkTarget: string): TFile | null {
+        // 1. Try markdown files
         const cleanTarget = linkTarget.replace(/\.md$/i, '');
         const targetSlug = this.linkResolver.slugify(cleanTarget);
 
         for (const [, file] of this.vaultFiles) {
             const fileNameSlug = this.linkResolver.slugify(file.basename.replace(/\.md$/i, ''));
-
             if (fileNameSlug === targetSlug) {
                 return file;
+            }
+        }
+
+        // 2. Try viewable non-md files (match with extension, e.g. diagram.excalidraw)
+        const rawSlug = this.linkResolver.slugify(linkTarget);
+        for (const [, file] of this.viewableFiles) {
+            const fileSlug = this.linkResolver.slugify(file.basename);
+            if (fileSlug === rawSlug) {
+                return file;
+            }
+        }
+
+        // 3. Try without extension (e.g., diagram → diagram.excalidraw)
+        const noExtTarget = linkTarget.replace(/\.\w+$/i, '');
+        const noExtSlug = this.linkResolver.slugify(noExtTarget);
+        if (noExtSlug !== rawSlug) {
+            for (const [, file] of this.viewableFiles) {
+                const fileSlug = this.linkResolver.slugify(file.basename);
+                if (fileSlug === noExtSlug) {
+                    return file;
+                }
             }
         }
 
@@ -172,9 +213,24 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
      * Render a single note file to HTML
      * This is the new preferred method for rendering from orchestrator
      */
+    /**
+     * Returns content ready for MarkdownRenderer processing.
+     * Override point for non-Markdown files (e.g. excalidraw).
+     */
+    protected async readContentForPage(file: TFile): Promise<string> {
+        if (LinkResolver.isExcalidrawFile(file)) {
+            const embedTarget = file.extension === 'excalidraw'
+                ? file.name
+                : file.basename;
+            return `![[${embedTarget}]]`;
+        }
+        return this.app.vault.cachedRead(file);
+    }
+
     async renderPageFromFile(file: TFile): Promise<string> {
         debugLogger.logNoteStart(file.path);
-        const content = await this.app.vault.cachedRead(file);
+
+        const content = await this.readContentForPage(file);
         const html = await this.renderPageFromContent(content);
         debugLogger.logNoteEnd(file.path);
         return html;
