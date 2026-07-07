@@ -1,5 +1,27 @@
 # Changelog
 
+# [0.7.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.10...0.7.0) (2026-07-07)
+
+
+### Bug Fixes
+
+* **export:** preserve external image src instead of replacing with placeholder ([6df5f88](https://github.com/fnumatic/obsidian-advanced-html-export/commit/6df5f886dc76fb70ba8e582633bdb408db5a0e41))
+* **wiki-export:** add background to viewer image for transparent SVGs ([2097743](https://github.com/fnumatic/obsidian-advanced-html-export/commit/20977436e6922d6cc454416c5d6eab463caa908d))
+* **wiki-export:** collect linked notes with BFS traversal ([9f58818](https://github.com/fnumatic/obsidian-advanced-html-export/commit/9f588181a5152508ba0521ee4e3762e9280c5c30))
+* **wiki-export:** render unresolved wiki links as missing ([eb15c61](https://github.com/fnumatic/obsidian-advanced-html-export/commit/eb15c6115d229d84ba69a3f0b43c56b79d793e8c))
+* **wiki-export:** scope zoom-in cursor to wiki-page only ([29598b7](https://github.com/fnumatic/obsidian-advanced-html-export/commit/29598b79eedc07e268bdb0074fffd698c3768eb4))
+* **wiki-export:** update inline TOC on page navigation ([feb962e](https://github.com/fnumatic/obsidian-advanced-html-export/commit/feb962e3323a8e5f0d067e71942825b47533785c))
+
+
+### Features
+
+* **wiki-export:** add frontmatter reading, publish:false exclusion, and export manifest ([3102c35](https://github.com/fnumatic/obsidian-advanced-html-export/commit/3102c35e4fa9e88154f0bbad961b82bc25ca4fe0))
+* **wiki-export:** add home icon button in wiki header ([187cd1f](https://github.com/fnumatic/obsidian-advanced-html-export/commit/187cd1fe146a139ad9a4620494b3edf1add69f27))
+* **wiki-export:** add image viewer with zoom/pan for exported wiki pages ([1354ddd](https://github.com/fnumatic/obsidian-advanced-html-export/commit/1354ddd7c433a4a389c0ff7858297549899ef7e3))
+* **wiki-export:** generate path-based slugs to prevent collisions ([b57a707](https://github.com/fnumatic/obsidian-advanced-html-export/commit/b57a70706ffcdff10c3ab93a3778fe563049fa9c))
+* **wiki-export:** support all viewable file types as internal wiki pages ([990b27c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/990b27cbcfb838e55576d5fb6861c440b10aa3e7))
+* **wiki-export:** support excalidraw files as internal wiki pages ([b8fb759](https://github.com/fnumatic/obsidian-advanced-html-export/commit/b8fb759ef09d5d1ab533613bd101ed2de799216f))
+
 ## [0.6.10](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.9...0.6.10) (2026-07-06)
 
 
