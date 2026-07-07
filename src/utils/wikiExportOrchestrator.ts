@@ -22,6 +22,7 @@ export interface NoteInfo {
   slug: string;
   title: string;
   path: string;
+  depth: number;
   estimatedDiagrams: number;
   codeBlockCount: number;
   linkCount: number;
@@ -128,19 +129,17 @@ export class WikiExportOrchestrator {
     });
 
     try {
-      const collectedFiles = await this.collectLinkedNotes(
+      const collected = await this.collectLinkedNotes(
         centralFile, 
-        0, 
-        this.options.linkDepth, 
-        new Set<string>()
+        this.options.linkDepth
       );
 
       // Analyze each note for metrics
       this.stage = 'analyzing';
-      debugLogger.startPhase('analyzeNotes', { noteCount: collectedFiles.length });
+      debugLogger.startPhase('analyzeNotes', { noteCount: collected.length });
 
       this.collectedNotes = await Promise.all(
-        collectedFiles.map(async (file) => {
+        collected.map(async ({ file, depth }) => {
           const content = await this.app.vault.cachedRead(file);
           const analysis = this.analyzeNoteContent(content);
           
@@ -149,6 +148,7 @@ export class WikiExportOrchestrator {
             slug: this.linkResolver.getFileSlug(file),
             title: file.basename,
             path: file.path,
+            depth,
             estimatedDiagrams: analysis.diagramCount,
             codeBlockCount: analysis.codeBlockCount,
             linkCount: analysis.linkCount,
@@ -391,6 +391,10 @@ export class WikiExportOrchestrator {
     const totalDiagrams = notes.reduce((sum, note) => sum + note.estimatedDiagrams, 0);
     const notesByDepth = new Map<number, number>();
     
+    for (const note of notes) {
+      notesByDepth.set(note.depth, (notesByDepth.get(note.depth) ?? 0) + 1);
+    }
+
     // Estimate time: base 2s per note + 3s per diagram
     const baseTimePerNote = 2000; // 2 seconds
     const timePerDiagram = 3000; // 3 seconds
@@ -409,54 +413,36 @@ export class WikiExportOrchestrator {
   }
 
   /**
-   * Recursively collect linked notes
+   * Breadth-first search collection of linked notes.
+   * linkDepth 0 = root only, 1 = root + direct links, etc.
    */
   private async collectLinkedNotes(
-    file: TFile, 
-    currentDepth: number, 
-    maxDepth: number, 
-    visited: Set<string>
-  ): Promise<TFile[]> {
-    const result: TFile[] = [];
+    root: TFile,
+    maxDepth: number
+  ): Promise<Array<{ file: TFile; depth: number }>> {
+    const visited = new Set<string>();
+    const queue: Array<{ file: TFile; depth: number }> = [{ file: root, depth: 0 }];
+    const result: Array<{ file: TFile; depth: number }> = [];
 
-    if (visited.has(file.path)) {
-      return result;
-    }
+    while (queue.length > 0) {
+      const { file, depth } = queue.shift()!;
 
-    if (currentDepth >= maxDepth) {
-      return result;
-    }
+      if (visited.has(file.path)) continue;
+      visited.add(file.path);
 
-    visited.add(file.path);
-    result.push(file);
+      result.push({ file, depth });
 
-    const content = await this.app.vault.cachedRead(file);
-    const links = this.linkResolver.extractLinks(content);
+      if (depth >= maxDepth) continue;
 
-    for (const link of links) {
-      if (link.type === 'image-embed') {
-        continue;
-      }
+      const content = await this.app.vault.cachedRead(file);
+      const links = this.linkResolver.extractLinks(content);
 
-      const targetFile = this.findFileByLink(link.rawTarget);
-      if (targetFile && !visited.has(targetFile.path)) {
-        visited.add(targetFile.path);
-        result.push(targetFile);
+      for (const link of links) {
+        if (link.type === 'image-embed') continue;
 
-        if (currentDepth + 1 < maxDepth) {
-          const subLinks = this.linkResolver.extractLinks(
-            await this.app.vault.cachedRead(targetFile)
-          );
-          for (const subLink of subLinks) {
-            if (subLink.type === 'image-embed') {
-              continue;
-            }
-            const subFile = this.findFileByLink(subLink.rawTarget);
-            if (subFile && !visited.has(subFile.path)) {
-              visited.add(subFile.path);
-              result.push(subFile);
-            }
-          }
+        const targetFile = this.findFileByLink(link.rawTarget);
+        if (targetFile && !visited.has(targetFile.path)) {
+          queue.push({ file: targetFile, depth: depth + 1 });
         }
       }
     }

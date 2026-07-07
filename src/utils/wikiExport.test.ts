@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
+import { TFile } from 'obsidian';
 import { LinkResolver } from '../utils/linkResolver';
+import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 
 vi.mock('obsidian', async () => {
   const actual = await vi.importActual('obsidian');
@@ -285,5 +287,167 @@ Links to:
       expect(resolved).toContain('My Custom Alias');
       expect(resolved).toContain('data-page="02-level1-topic-a"');
     });
+  });
+});
+
+// =========================================================================
+// BFS Link Traversal Tests
+// =========================================================================
+
+function createFile(pathStr: string, content: string): TFile {
+  const name = pathStr.split('/').pop() || pathStr;
+  const dot = name.lastIndexOf('.');
+  const ext = dot >= 0 ? name.slice(dot + 1) : '';
+  const basename = dot >= 0 ? name.slice(0, dot) : name;
+  const file = new TFile();
+  file.path = pathStr;
+  file.basename = basename;
+  file.extension = ext;
+  file.name = name;
+  file.stat = { mtime: Date.now(), ctime: Date.now(), size: content.length };
+  (file as unknown as Record<string, unknown>).__content = content;
+  return file as unknown as TFile;
+}
+
+function mockAppWithFiles(entries: Record<string, string>) {
+  const files: TFile[] = [];
+  for (const [p, c] of Object.entries(entries)) {
+    files.push(createFile(p, c));
+  }
+  const vault: Record<string, unknown> = {
+    getFiles: () => files,
+    cachedRead: async (f: TFile) =>
+      (f as unknown as Record<string, unknown>).__content as string || '',
+  };
+  const app = { vault, workspace: {} };
+  return app as unknown as import('obsidian').App;
+}
+
+const bfsOptions: WikiExportOptions = {
+  imageQuality: 'high',
+  enableLazyLoading: false,
+  enableImageDeduplication: false,
+  linkDepth: 3,
+  includeUnlinked: false,
+};
+
+describe('BFS Link Traversal', () => {
+  beforeEach(() => {
+    const body = { createDiv: vi.fn(() => ({ innerHTML: '', querySelectorAll: vi.fn(() => []), setAttribute: vi.fn() })) };
+    Object.defineProperty(globalThis, 'document', {
+      value: { body, createElement: vi.fn(() => ({ innerHTML: '' })) },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it('depth 0 collects only the root', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[a]]',
+      'a.md': '[[b]]',
+      'b.md': '[[c]]',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    expect(notes).toHaveLength(1);
+    expect(notes[0].slug).toBe('root');
+    expect(notes[0].depth).toBe(0);
+  });
+
+  it('depth 1 collects root and direct links', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[a]]',
+      'a.md': '[[b]]',
+      'b.md': '[[c]]',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    expect(notes).toHaveLength(2);
+    const root = notes.find(n => n.slug === 'root')!;
+    const a = notes.find(n => n.slug === 'a')!;
+    expect(root.depth).toBe(0);
+    expect(a.depth).toBe(1);
+  });
+
+  it('depth 2 collects root, direct, and indirect', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[a]]',
+      'a.md': '[[b]]',
+      'b.md': '[[c]]',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    expect(notes).toHaveLength(3);
+    expect(notes.find(n => n.slug === 'root')!.depth).toBe(0);
+    expect(notes.find(n => n.slug === 'a')!.depth).toBe(1);
+    expect(notes.find(n => n.slug === 'b')!.depth).toBe(2);
+  });
+
+  it('depth 3 traverses four levels deep', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[a]]',
+      'a.md': '[[b]]',
+      'b.md': '[[c]]',
+      'c.md': '[[d]]',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 3 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    expect(notes).toHaveLength(4);
+    expect(notes.find(n => n.slug === 'root')!.depth).toBe(0);
+    expect(notes.find(n => n.slug === 'a')!.depth).toBe(1);
+    expect(notes.find(n => n.slug === 'b')!.depth).toBe(2);
+    expect(notes.find(n => n.slug === 'c')!.depth).toBe(3);
+  });
+
+  it('handles cycles without duplicates', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[a]]',
+      'a.md': '[[b]]',
+      'b.md': '[[a]]',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 3 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const slugs = notes.map(n => n.slug).sort();
+    expect(slugs).toEqual(['a', 'b', 'root']);
+  });
+
+  it('does not collect image embeds as pages', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '![[image.png]] [[linked.png]]',
+      'linked.png': '',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
+    const notes = await orch.collectNotes(createFile('root.md', '![[image.png]] [[linked.png]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toContain('root');
+    expect(slugs).toContain('linked');
+    expect(slugs).not.toContain('image');
+  });
+
+  it('collects viewable direct links as pages', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[diagram.svg]]',
+      'diagram.svg': '<svg/>',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[diagram.svg]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toContain('root');
+    expect(slugs).toContain('diagram');
+  });
+
+  it('populates notesByDepth metrics', async () => {
+    const app = mockAppWithFiles({
+      'root.md': '[[a]] [[b]]',
+      'a.md': '[[c]]',
+      'b.md': '',
+      'c.md': '',
+    });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
+    await orch.collectNotes(createFile('root.md', '[[a]] [[b]]'));
+    const metrics = orch.getMetrics()!;
+    expect(metrics.notesByDepth.get(0)).toBe(1);
+    expect(metrics.notesByDepth.get(1)).toBe(2);
+    expect(metrics.notesByDepth.get(2)).toBe(1);
   });
 });

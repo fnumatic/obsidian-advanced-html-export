@@ -81,7 +81,7 @@ function renderSidebar() {
 
 function generateTOC() {
     const tocBody = el('#wiki-inline-toc-body');
-    if (!tocBody) { tocBody.innerHTML = ''; return; }
+    if (!tocBody) return;
 
     tocBody.innerHTML = '';
 
