@@ -25,6 +25,7 @@ interface AdvancedHtmlExportSettings {
   debugMode: boolean;
   disableSyntaxHighlighting: boolean;
   syntaxHighlightLanguages: string;
+  exportAuthor: string;
 }
 
 const DEFAULT_LANGUAGES = 'javascript,typescript,jsx,tsx,html,xml,css,scss,sass,c,cpp,c++,h,hpp,c#,csharp,cs,java,rust,go,ruby,swift,kotlin,scala,objective-c,objectivec,objc,python,py,perl,php,lua,raku,bash,sh,shell,powershell,ps1,cmd,batch,awk,tcl,json,jsonc,json5,yaml,yml,ini,toml,sql,pgsql,postgresql,mysql,sqlite,haskell,ocaml,fsharp,erlang,elixir,clojure,dart,flutter,groovy,gradle,maven,dockerfile,docker,cmake,makefile,markdown,md,latex,tex,asciidoc,adoc,protobuf,proto,thrift,graphql,diff,patch,vim,nginx,apache,apacheconf,lighttpd,terraform,hcl,ansible,puppet,r,julia,matlab,octave,vb,vbnet,vba,vbscript,basic,pascal,delphi,lazarus,fpc';
@@ -41,7 +42,8 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   defaultTheme: 'light',
   debugMode: false,
   disableSyntaxHighlighting: true,
-  syntaxHighlightLanguages: DEFAULT_LANGUAGES
+  syntaxHighlightLanguages: DEFAULT_LANGUAGES,
+  exportAuthor: ''
 }
 
 export default class AdvancedHtmlExportPlugin extends Plugin {
@@ -154,6 +156,17 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.wikiTitle)
         .onChange(async (value) => {
           this.plugin.settings.wikiTitle = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Export author')
+      .setDesc('Default author for exported wiki manifest. Can be overridden per note via frontmatter.')
+      .addText(text => text
+        .setPlaceholder('Author name')
+        .setValue(this.plugin.settings.exportAuthor)
+        .onChange(async (value) => {
+          this.plugin.settings.exportAuthor = value;
           await this.plugin.saveSettings();
         }));
 

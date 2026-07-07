@@ -48,7 +48,9 @@ export class ExportWikiCommand {
                 linkDepth: this.plugin.settings.linkDepth || 1,
                 includeUnlinked: this.plugin.settings.includeUnlinked || false,
                 wikiTitle: this.plugin.settings.wikiTitle || '',
-                disableSyntaxHighlighting: this.plugin.settings.disableSyntaxHighlighting !== false
+                disableSyntaxHighlighting: this.plugin.settings.disableSyntaxHighlighting !== false,
+                exportAuthor: this.plugin.settings.exportAuthor || '',
+                exportVersion: this.plugin.manifest.version || '',
             };
 
             const orchestrator = new WikiExportOrchestrator(this.app, this.plugin, options);

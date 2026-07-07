@@ -52,6 +52,7 @@ function buildVault(entries: Record<string, string>): FakeVault {
     const app = new App() as unknown as Record<string, unknown>;
     app.vault = vault;
     app.workspace = {};
+    app.metadataCache = { getFileCache: () => null };
     return { app: app as unknown as App, files, byPath };
 }
 

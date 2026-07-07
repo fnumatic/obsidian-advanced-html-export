@@ -6,6 +6,16 @@ import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
 import { DetailedWikiRenderer, RenderEvent } from './detailedRenderer';
 
+export interface PageFrontmatter {
+  title?: string;
+  publish?: boolean;
+  aliases?: string[];
+  tags?: string[];
+  author?: string;
+  license?: string;
+  note?: string;
+}
+
 export interface WikiExportOptions {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
@@ -16,6 +26,8 @@ export interface WikiExportOptions {
   enableThemeToggle?: boolean;
   enableInlineTOC?: boolean;
   defaultTheme?: 'light' | 'dark';
+  exportAuthor?: string;
+  exportVersion?: string;
 }
 
 export interface NoteInfo {
@@ -27,6 +39,7 @@ export interface NoteInfo {
   estimatedDiagrams: number;
   codeBlockCount: number;
   linkCount: number;
+  frontmatter: PageFrontmatter;
   analysis?: {
     diagramCount: number;
     codeBlockCount: number;
@@ -88,6 +101,19 @@ export class WikiExportOrchestrator {
     return this.metrics;
   }
 
+  private getPageFrontmatter(file: TFile): PageFrontmatter {
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
+    return {
+      title: fm.title as string | undefined,
+      publish: fm.publish as boolean | undefined,
+      aliases: Array.isArray(fm.aliases) ? fm.aliases as string[] : undefined,
+      tags: Array.isArray(fm.tags) ? fm.tags as string[] : undefined,
+      author: fm.author as string | undefined,
+      license: fm.license as string | undefined,
+      note: fm.note as string | undefined,
+    };
+  }
+
   /**
    * Phase 1: Collect all notes without rendering
    * This is fast - just metadata collection
@@ -100,9 +126,25 @@ export class WikiExportOrchestrator {
     });
 
     try {
+      // Hard rule: publish: false excludes the note entirely
+      const centralFm = this.getPageFrontmatter(centralFile);
+      if (centralFm.publish === false) {
+        this.collectedNotes = [];
+        this.calculateMetrics();
+        this.stage = 'ready';
+        debugLogger.endPhase();
+        return this.collectedNotes;
+      }
+
+      const shouldIncludeFile = (file: TFile): boolean => {
+        const fm = this.getPageFrontmatter(file);
+        return fm.publish !== false;
+      };
+
       const collected = await this.collector.collectLinkedFiles(
         centralFile, 
-        this.options.linkDepth
+        this.options.linkDepth,
+        shouldIncludeFile
       );
 
       // Analyze each note for metrics
@@ -113,16 +155,18 @@ export class WikiExportOrchestrator {
         collected.map(async ({ file, depth }) => {
           const content = await this.app.vault.cachedRead(file);
           const analysis = this.analyzeNoteContent(content);
+          const frontmatter = this.getPageFrontmatter(file);
           
           return {
             file,
             slug: this.linkResolver.getFileSlug(file),
-            title: file.basename,
+            title: frontmatter.title ?? file.basename,
             path: file.path,
             depth,
             estimatedDiagrams: analysis.diagramCount,
             codeBlockCount: analysis.codeBlockCount,
             linkCount: analysis.linkCount,
+            frontmatter,
             analysis: {
               diagramCount: analysis.diagramCount,
               codeBlockCount: analysis.codeBlockCount,

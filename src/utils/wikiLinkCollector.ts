@@ -96,7 +96,7 @@ export class WikiLinkCollector {
         return null;
     }
 
-    async collectLinkedFiles(root: TFile, maxDepth: number): Promise<CollectedFile[]> {
+    async collectLinkedFiles(root: TFile, maxDepth: number, shouldIncludeFile?: (file: TFile) => boolean): Promise<CollectedFile[]> {
         const visited = new Set<string>();
         const queue: Array<{ file: TFile; depth: number }> = [{ file: root, depth: 0 }];
         const result: CollectedFile[] = [];
@@ -106,6 +106,11 @@ export class WikiLinkCollector {
 
             if (visited.has(file.path)) continue;
             visited.add(file.path);
+
+            // Exclude check: stop traversal for excluded files
+            if (shouldIncludeFile && !shouldIncludeFile(file)) {
+                continue;
+            }
 
             result.push({ file, depth });
 

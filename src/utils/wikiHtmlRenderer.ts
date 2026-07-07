@@ -22,6 +22,8 @@ export interface WikiRenderOptions {
     enableInlineTOC?: boolean;
     defaultTheme?: 'light' | 'dark';
     disableSyntaxHighlighting?: boolean;
+    exportAuthor?: string;
+    exportVersion?: string;
 }
 
 export interface PageInfo {
@@ -211,6 +213,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const centralSlug = this.pageList.length > 0 ? this.pageList[0].slug : 'central';
         const pagesJson = JSON.stringify(this.pageList);
         const imageRestoration = this.settings.enableImageDeduplication ? this.getImageRestorationScript() : '';
+        const exportManifestJson = this.buildExportManifest(centralFile);
 
         const scripts = fillTemplate(appTemplate, {
             CENTRAL_SLUG: centralSlug,
@@ -224,7 +227,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             DEFAULT_THEME: defaultTheme,
             STYLES: styles,
             CONTENT: this.getWikiHtmlStructure(renderedPages),
-            SCRIPTS: signals + '\n' + helpers + '\n' + scripts
+            SCRIPTS: signals + '\n' + helpers + '\n' + scripts,
+            EXPORT_MANIFEST: exportManifestJson
         });
     }
 
@@ -243,6 +247,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const centralSlug = pageList.length > 0 ? pageList[0].slug : 'central';
         const pagesJson = JSON.stringify(pageList);
         const imageRestoration = this.settings.enableImageDeduplication ? this.getImageRestorationScript() : '';
+        const exportManifestJson = this.buildExportManifest(centralFile);
 
         const scripts = fillTemplate(appTemplate, {
             CENTRAL_SLUG: centralSlug,
@@ -260,7 +265,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             DEFAULT_THEME: defaultTheme,
             STYLES: styles,
             CONTENT: this.getWikiHtmlStructure(renderedPages),
-            SCRIPTS: signals + '\n' + helpers + '\n' + scripts
+            SCRIPTS: signals + '\n' + helpers + '\n' + scripts,
+            EXPORT_MANIFEST: exportManifestJson
         });
 
         // Restore original pageList
@@ -383,6 +389,20 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             const isActive = page.slug === this.pageList[0].slug ? ' active' : '';
             return `<div id="page-${page.slug}" class="wiki-page markdown-body${isActive}" data-title="${page.title}">${html}</div>`;
         }).join('\n');
+    }
+
+    private buildExportManifest(centralFile: TFile): string {
+        const options = this.settings as WikiRenderOptions;
+        const wikiTitle = options.wikiTitle || centralFile.basename;
+        const fm = this.app.metadataCache.getFileCache(centralFile)?.frontmatter ?? {};
+        const manifest: Record<string, string> = {};
+        manifest.title = (fm.title as string) || wikiTitle;
+        manifest.version = options.exportVersion || '';
+        manifest.publishedAt = new Date().toISOString().split('T')[0];
+        manifest.author = (fm.author as string) || options.exportAuthor || '';
+        if (fm.license) manifest.license = String(fm.license);
+        if (fm.note) manifest.note = String(fm.note);
+        return JSON.stringify(manifest);
     }
 
     protected getImageRestorationScript(): string {

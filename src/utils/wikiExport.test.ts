@@ -353,7 +353,7 @@ function createFile(pathStr: string, content: string): TFile {
   return file as unknown as TFile;
 }
 
-function mockAppWithFiles(entries: Record<string, string>) {
+function mockAppWithFiles(entries: Record<string, string>, frontmatterByPath?: Record<string, Record<string, unknown>>) {
   const files: TFile[] = [];
   for (const [p, c] of Object.entries(entries)) {
     files.push(createFile(p, c));
@@ -363,7 +363,13 @@ function mockAppWithFiles(entries: Record<string, string>) {
     cachedRead: async (f: TFile) =>
       (f as unknown as Record<string, unknown>).__content as string || '',
   };
-  const app = { vault, workspace: {} };
+  const metadataCache = {
+    getFileCache: (file: TFile) => {
+      const fm = frontmatterByPath?.[file.path];
+      return fm ? { frontmatter: fm } : null;
+    },
+  };
+  const app = { vault, workspace: {}, metadataCache };
   return app as unknown as import('obsidian').App;
 }
 
@@ -493,5 +499,134 @@ describe('BFS Link Traversal', () => {
     expect(metrics.notesByDepth.get(0)).toBe(1);
     expect(metrics.notesByDepth.get(1)).toBe(2);
     expect(metrics.notesByDepth.get(2)).toBe(1);
+  });
+});
+
+// =========================================================================
+// Frontmatter Tests
+// =========================================================================
+
+describe('Frontmatter', () => {
+  it('uses frontmatter.title as note title', async () => {
+    const app = mockAppWithFiles(
+      { 'note.md': '# Hello' },
+      { 'note.md': { title: 'My Custom Title' } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    expect(notes[0].title).toBe('My Custom Title');
+  });
+
+  it('falls back to file.basename when no frontmatter.title', async () => {
+    const app = mockAppWithFiles(
+      { 'note.md': '# Hello' },
+      { 'note.md': { publish: true } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    expect(notes[0].title).toBe('note');
+  });
+
+  it('attaches frontmatter to NoteInfo', async () => {
+    const app = mockAppWithFiles(
+      { 'note.md': '# Hello' },
+      { 'note.md': { title: 'T', aliases: ['A', 'B'], tags: ['tag1'] } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    expect(notes[0].frontmatter.title).toBe('T');
+    expect(notes[0].frontmatter.aliases).toEqual(['A', 'B']);
+    expect(notes[0].frontmatter.tags).toEqual(['tag1']);
+  });
+
+  it('excludes note with publish: false (root returns empty)', async () => {
+    const app = mockAppWithFiles(
+      { 'note.md': '# Hello' },
+      { 'note.md': { publish: false } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    expect(notes).toHaveLength(0);
+  });
+
+  it('excludes publish: false linked note from collection', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '[[secret]]', 'secret.md': '# Shh' },
+      { 'secret.md': { publish: false } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[secret]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toContain('root');
+    expect(slugs).not.toContain('secret');
+  });
+
+  it('stops traversal at publish: false note', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '# should not appear' },
+      { 'a.md': { publish: false } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toEqual(['root']);
+    expect(slugs).not.toContain('a');
+    expect(slugs).not.toContain('b');
+  });
+
+  it('includes notes with no frontmatter', async () => {
+    const app = mockAppWithFiles({ 'note.md': '# Hello' });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    expect(notes).toHaveLength(1);
+    expect(notes[0].frontmatter).toEqual({});
+  });
+});
+
+// =========================================================================
+// Export Manifest Tests
+// =========================================================================
+
+describe('Export Manifest', () => {
+  it('includes export-manifest script tag in head', () => {
+    const manifestJson = JSON.stringify({ title: 'Test' });
+    const html = `<html><head><script id="export-manifest" type="application/json">${manifestJson}</script></head></html>`;
+    expect(html).toContain('export-manifest');
+    expect(html).toContain('application/json');
+  });
+
+  it('manifest contains title from wikiTitle option', () => {
+    const app = mockAppWithFiles({ 'note.md': '# Hello' });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0, exportAuthor: 'Test Author', exportVersion: '1.0.0' });
+    expect(orch).toBeDefined();
+  });
+
+  it('manifest contains title from frontmatter.title of central note', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '# Hello' },
+      { 'root.md': { title: 'My Wiki', author: 'Max', license: 'MIT', note: 'Test export' } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('root.md', '# Hello'));
+    expect(notes[0].title).toBe('My Wiki');
+    expect(notes[0].frontmatter.author).toBe('Max');
+    expect(notes[0].frontmatter.license).toBe('MIT');
+    expect(notes[0].frontmatter.note).toBe('Test export');
+  });
+
+  it('author falls back to exportAuthor config when not in frontmatter', async () => {
+    const app = mockAppWithFiles({ 'root.md': '# Hello' });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0, exportAuthor: 'Config Author' });
+    const notes = await orch.collectNotes(createFile('root.md', '# Hello'));
+    const author = notes[0].frontmatter.author || 'Config Author';
+    expect(author).toBe('Config Author');
+  });
+
+  it('license and note only come from frontmatter', async () => {
+    const app = mockAppWithFiles({ 'root.md': '# Hello' });
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
+    const notes = await orch.collectNotes(createFile('root.md', '# Hello'));
+    expect(notes[0].frontmatter.license).toBeUndefined();
+    expect(notes[0].frontmatter.note).toBeUndefined();
   });
 });
