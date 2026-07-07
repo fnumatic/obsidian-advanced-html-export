@@ -1,14 +1,15 @@
-# Excalidraw Wiki Page Support
+# Viewable File Wiki Page Support
 
 ## Goal
 
-The wiki export should correctly handle two different Obsidian link types:
+The wiki export should correctly handle two different Obsidian link types for
+all viewable file types (images, excalidraw, etc.):
 
-1. Excalidraw embeds:
-   `![[diagram.excalidraw]]`
+1. Viewable embeds:
+   `![[diagram.excalidraw]]`, `![[image.png]]`, `![[photo.jpg]]`, `![[icon.svg]]`, etc.
 
-2. Excalidraw files as internal wiki pages:
-   `[[diagram.excalidraw]]`
+2. Viewable files as internal wiki pages:
+   `[[diagram.excalidraw]]`, `[[image.png]]`, `[[photo.webp]]`, etc.
 
 These two cases must be handled separately because they mean different things.
 
@@ -61,6 +62,14 @@ const svg = data.source || '';
 
 Many Excalidraw files do not contain `data.source`, so the exported page becomes empty or broken.
 
+## Supported Viewable Types
+
+All types listed in `LinkResolver.VIEWABLE_EXTENSIONS`:
+
+- Raster images: `jpg`, `jpeg`, `png`, `bmp`, `gif`, `webp`
+- Vector images: `svg`
+- Diagrams: `excalidraw` (also supports `.excalidraw.md`)
+
 ## Target Architecture
 
 Markdown files and renderable non-Markdown files must be indexed separately.
@@ -79,7 +88,7 @@ Contains only `.md` files.
 private viewableFiles: Map<string, TFile> = new Map();
 ```
 
-Contains `.excalidraw` and `.excalidraw.md` files (and potentially other renderable non-md types in the future).
+Contains all viewable file types (images + excalidraw), including `.excalidraw.md`.
 
 ## Link Metadata
 
@@ -112,15 +121,15 @@ for (const link of links) {
 }
 ```
 
-This ensures `![[diagram.excalidraw]]` is never collected.
+This ensures `![[diagram.excalidraw]]`, `![[image.png]]`, etc. are never collected.
 
 ## File Resolution
 
 `findFileByLink()` resolves files in three phases:
 
 1. **Markdown files** — match by slugified basename without extension.
-2. **Viewable files with extension** — match by slugified basename (e.g. `diagram.excalidraw` → slug matches `diagram.excalidraw` file).
-3. **Viewable files without extension** — fallback match when link has no extension (e.g. `diagram` → `diagram.excalidraw`).
+2. **Viewable files with extension** — match by slugified basename (e.g. `diagram.excalidraw` → slug matches `diagram.excalidraw` file, `image.png` → slug matches `image.png` file).
+3. **Viewable files without extension** — fallback match when link has no extension (e.g. `diagram` → `diagram.excalidraw`, `logo` → `logo.svg`).
 
 Markdown always takes priority over viewable files.
 
@@ -149,31 +158,28 @@ const pageSlug = this.pageSlugResolver?.(link.rawTarget) ?? link.target;
 
 This produces the correct `data-page` attribute for excalidraw wiki links.
 
-## Excalidraw Page Rendering
+## Viewable File Page Rendering
 
-Excalidraw files are rendered through `readContentForPage()`, a shared helper
+All viewable files are rendered through `readContentForPage()`, a shared helper
 used by both `WikiHtmlRenderer.renderPageFromFile()` and
 `DetailedWikiRenderer.renderPageWithProgress()`:
 
 ```ts
 protected async readContentForPage(file: TFile): Promise<string> {
-    if (LinkResolver.isExcalidrawFile(file)) {
-        const embedTarget = file.extension === 'excalidraw'
-            ? file.name
-            : file.basename;
-        return `![[${embedTarget}]]`;
+    if (LinkResolver.isViewableFile(file)) {
+        return `![[${LinkResolver.getEmbedTarget(file)}]]`;
     }
     return this.app.vault.cachedRead(file);
 }
 ```
 
-For a true `.excalidraw` file `diagram.excalidraw`:
-- `embedTarget` = `diagram.excalidraw` (`file.name`)
-- Produces `` ![[diagram.excalidraw]] ``
+`LinkResolver.isViewableFile()` checks both `VIEWABLE_EXTENSIONS` (image types
++ excalidraw) and the `.excalidraw.md` pattern.
 
-For a `.excalidraw.md` file `diagram.excalidraw.md`:
-- `embedTarget` = `diagram.excalidraw` (`file.basename`)
-- Produces `` ![[diagram.excalidraw]] ``
+`LinkResolver.getEmbedTarget()` returns:
+- `diagram.excalidraw` → `diagram.excalidraw` (true `.excalidraw` file)
+- `diagram.excalidraw.md` → `diagram.excalidraw` (basename without `.md`)
+- `image.png` → `image.png` (`file.name`)
 
 The synthetic embed is then processed by `MarkdownRenderer.render()` exactly
 like a real inline embed, producing identical output.
@@ -181,8 +187,8 @@ like a real inline embed, producing identical output.
 Benefits:
 - Same behavior as inline embeds.
 - Excalidraw plugin handles rendering.
+- Standard image types render as `<img>` tags.
 - Works even when `data.source` is missing.
-- Works for both `.excalidraw` and `.excalidraw.md` files.
 
 ## Affected Files
 
@@ -194,21 +200,7 @@ Benefits:
 | `src/utils/detailedRenderer.ts` | Uses `readContentForPage()` instead of direct `cachedRead` |
 | `src/utils/excalidrawWikiExport.test.ts` | 16 pipeline tests covering `.excalidraw` and `.excalidraw.md` |
 
-## Acceptance Criteria
-
-- `![[diagram.excalidraw]]` stays inline, not collected as separate page.
-- `[[diagram.excalidraw]]` creates an internal wiki page showing the rendered drawing.
-- Markdown links (`[[note]]`, `[[note.md]]`) continue to work.
-- No raw JSON or empty SVG when opening an excalidraw page.
-
 ## Test Strategy
 
-### Existing Tests
-
-All 60 tests pass (44 existing + 16 excalidraw-specific).
-
-### Manual Verification
-
-1. Create a note with `![[diagram.excalidraw]]` — embed renders inline.
-2. Create a note with `[[diagram.excalidraw]]` — opens an excalidraw wiki page.
-3. Excalidraw page shows the rendered drawing, not JSON.
+All 67 tests pass (44 original + 23 viewable-file-specific). See
+`doc/TEST_EXCALIDRAW_WIKI_PAGES.md` for the full test plan.

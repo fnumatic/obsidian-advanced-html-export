@@ -74,7 +74,7 @@ const pauseController = new PauseController();
 // Module-level state for the MarkdownRenderer mock
 // ---------------------------------------------------------------------------
 
-const excalidrawContent = new Map<string, string>();
+const viewableContent = new Map<string, string>();
 
 vi.mock('obsidian', async () => {
     const actual = await vi.importActual('obsidian');
@@ -90,10 +90,10 @@ vi.mock('obsidian', async () => {
             ) => {
                 let html = markdown;
                 html = html.replace(
-                    /!\[\[([^\]]+\.excalidraw)\]\]/g,
+                    /!\[\[([^\]]+\.(?:png|jpg|jpeg|gif|svg|webp|bmp|excalidraw))\]\]/g,
                     (_match: string, relPath: string) => {
-                        const svg = excalidrawContent.get(relPath) ?? '<svg>fallback</svg>';
-                        return `<div class="excalidraw-embed" data-path="${relPath}">${svg}</div>`;
+                        const content = viewableContent.get(relPath) ?? '<viewable-mock>fallback</viewable-mock>';
+                        return `<div class="viewable-embed" data-path="${relPath}">${content}</div>`;
                     },
                 );
                 el.innerHTML = html;
@@ -126,7 +126,7 @@ function mockEl() {
 }
 
 beforeEach(() => {
-    excalidrawContent.clear();
+    viewableContent.clear();
 
     const body = { createDiv: vi.fn(() => mockEl()) };
     Object.defineProperty(globalThis, 'document', {
@@ -146,7 +146,7 @@ describe('A – Embed only', () => {
             'central.md': '# Central\n\n![[diagram.excalidraw]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         const notes = await orch.collectNotes(byPath.get('central.md')!);
@@ -166,7 +166,7 @@ describe('B – Direct link only', () => {
             'central.md': '# Central\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -182,7 +182,7 @@ describe('B – Direct link only', () => {
             'central.md': '# Central\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -199,7 +199,7 @@ describe('B – Direct link only', () => {
         const diagramPage = rendered.get('diagram');
         expect(diagramPage).toBeDefined();
         expect(diagramPage!).not.toContain('{"source"');
-        expect(diagramPage!).toContain('excalidraw-embed');
+        expect(diagramPage!).toContain('viewable-embed');
         expect(diagramPage!).toContain('circle');
     });
 
@@ -208,7 +208,7 @@ describe('B – Direct link only', () => {
             'central.md': '# Central\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -252,7 +252,7 @@ describe('C – Both embed and direct link', () => {
                 '# Central\n\n![[diagram.excalidraw]]\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -268,7 +268,7 @@ describe('C – Both embed and direct link', () => {
                 '# Central\n\n![[diagram.excalidraw]]\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -284,7 +284,7 @@ describe('C – Both embed and direct link', () => {
 
         // Central page contains the embed
         const centralPage = rendered.get('central')!;
-        expect(centralPage).toContain('excalidraw-embed');
+        expect(centralPage).toContain('viewable-embed');
 
         // Diagram page is separate
         expect(rendered.has('diagram')).toBe(true);
@@ -300,7 +300,7 @@ describe('D – Detailed renderer direct', () => {
         const { app, byPath } = buildVault({
             'drawing.excalidraw': JSON.stringify({ source: SVG_RECT, elements: [] }),
         });
-        excalidrawContent.set('drawing.excalidraw', SVG_RECT);
+        viewableContent.set('drawing.excalidraw', SVG_RECT);
 
         const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
         const html = await renderer.renderPageWithProgress(
@@ -313,7 +313,7 @@ describe('D – Detailed renderer direct', () => {
         expect(html).not.toContain('elements');
         expect(html).not.toContain('excalidraw-error');
         expect(html).toContain('rect');
-        expect(html).toContain('excalidraw-embed');
+        expect(html).toContain('viewable-embed');
     });
 });
 
@@ -327,7 +327,7 @@ describe('E – Link without extension', () => {
             'central.md': '# Central\n\n[[diagram]]',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -348,7 +348,7 @@ describe('F – Extension collision', () => {
             'diagram.md': '# Diagram note',
             'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -389,7 +389,7 @@ describe('H – Special characters', () => {
             'central.md': '# Central\n\n[[My Drawing.excalidraw]]',
             'My Drawing.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('My Drawing.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('My Drawing.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -406,7 +406,7 @@ describe('H – Special characters', () => {
             'central.md': '# Central\n\n[[My Drawing.excalidraw|My Drawing]]',
             'My Drawing.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
         });
-        excalidrawContent.set('My Drawing.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('My Drawing.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -450,7 +450,7 @@ describe('I – .excalidraw.md embed only', () => {
             'central.md': '# Central\n\n![[diagram.excalidraw]]',
             'diagram.excalidraw.md': excalidrawJson,
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -472,7 +472,7 @@ describe('J – .excalidraw.md direct link', () => {
             'central.md': '# Central\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw.md': excalidrawJson,
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -488,7 +488,7 @@ describe('J – .excalidraw.md direct link', () => {
             'central.md': '# Central\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw.md': excalidrawJson,
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -508,7 +508,7 @@ describe('J – .excalidraw.md direct link', () => {
         expect(diagramPage!).not.toContain('{"source"');
         expect(diagramPage!).not.toContain('elements');
         // must contain rendered excalidraw embed
-        expect(diagramPage!).toContain('excalidraw-embed');
+        expect(diagramPage!).toContain('viewable-embed');
         expect(diagramPage!).toContain('circle');
     });
 
@@ -517,7 +517,7 @@ describe('J – .excalidraw.md direct link', () => {
             'central.md': '# Central\n\n[[diagram.excalidraw]]',
             'diagram.excalidraw.md': excalidrawJson,
         });
-        excalidrawContent.set('diagram.excalidraw', SVG_EXAMPLE);
+        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
         const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
         await orch.collectNotes(byPath.get('central.md')!);
@@ -548,5 +548,180 @@ describe('J – .excalidraw.md direct link', () => {
         expect(finalHtml).toContain('id="page-diagram"');
         expect(finalHtml).not.toContain('data-page="diagramexcalidraw"');
         expect(finalHtml).not.toContain('id="page-diagramexcalidraw"');
+    });
+});
+
+// ===========================================================================
+// K – PNG as wiki page
+// ===========================================================================
+
+describe('K – PNG direct link', () => {
+    it('collects a .png file as a wiki page', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[diagram.png]]',
+            'diagram.png': '<binary png data>',
+        });
+        viewableContent.set('diagram.png', '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+
+        const slugs = orch.getCollectedNotes().map((n) => n.slug);
+        expect(slugs).toContain('central');
+        expect(slugs).toContain('diagram');
+        expect(slugs.length).toBe(2);
+    });
+
+    it('renders a .png page via embed, not raw content', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[diagram.png]]',
+            'diagram.png': '<binary png data>',
+        });
+        viewableContent.set('diagram.png', '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+        orch.setSelectedNotes(orch.getCollectedNotes());
+
+        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
+        const rendered = await orch.renderNotesWithProgress(
+            renderer,
+            token,
+            pauseController,
+            () => {},
+        );
+
+        const page = rendered.get('diagram');
+        expect(page).toBeDefined();
+        expect(page!).toContain('viewable-embed');
+        expect(page!).toContain('circle');
+        expect(page!).not.toContain('binary png data');
+    });
+
+    it('produces correct slug for .png in final HTML', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[diagram.png]]',
+            'diagram.png': '<binary png data>',
+        });
+        viewableContent.set('diagram.png', '<svg>png-mock</svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+        orch.setSelectedNotes(orch.getCollectedNotes());
+
+        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
+        const rendered = await orch.renderNotesWithProgress(
+            renderer,
+            token,
+            pauseController,
+            () => {},
+        );
+
+        const centralFile = byPath.get('central.md')!;
+        const pageList = orch.getSelectedNotes().map((n) => ({
+            slug: n.slug,
+            title: n.title,
+            path: n.path,
+        }));
+        const finalHtml = renderer.generateWikiHtmlWithRenderedPages(
+            centralFile,
+            rendered,
+            pageList,
+        );
+
+        expect(finalHtml).toContain('data-page="diagram"');
+        expect(finalHtml).toContain('id="page-diagram"');
+    });
+});
+
+// ===========================================================================
+// L – SVG as wiki page
+// ===========================================================================
+
+describe('L – SVG direct link', () => {
+    it('collects an .svg file as a wiki page', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[icon.svg]]',
+            'icon.svg': '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>',
+        });
+        viewableContent.set('icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+
+        const slugs = orch.getCollectedNotes().map((n) => n.slug);
+        expect(slugs).toContain('central');
+        expect(slugs).toContain('icon');
+    });
+
+    it('renders .svg page content', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[icon.svg]]',
+            'icon.svg': '<svg><rect width="50" height="50"/></svg>',
+        });
+        viewableContent.set('icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+        orch.setSelectedNotes(orch.getCollectedNotes());
+
+        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
+        const rendered = await orch.renderNotesWithProgress(
+            renderer,
+            token,
+            pauseController,
+            () => {},
+        );
+
+        const page = rendered.get('icon');
+        expect(page).toBeDefined();
+        expect(page!).toContain('viewable-embed');
+        expect(page!).toContain('rect');
+    });
+});
+
+// ===========================================================================
+// M – MD wins over PNG collision
+// ===========================================================================
+
+describe('M – Extension collision: .md wins over .png', () => {
+    it('resolves [[diagram]] to diagram.md when both diagram.md and diagram.png exist', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[diagram]]',
+            'diagram.md': '# Diagram note',
+            'diagram.png': '<binary png data>',
+        });
+        viewableContent.set('diagram.png', '<svg>png-mock</svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+
+        const slugs = orch.getCollectedNotes().map((n) => n.slug);
+        expect(slugs).toContain('diagram');
+        expect(slugs.length).toBe(2); // central + diagram.md only
+        const collectedMd = orch
+            .getCollectedNotes()
+            .filter((n) => n.file.extension === 'md');
+        expect(collectedMd.length).toBe(2);
+    });
+});
+
+// ===========================================================================
+// N – Embed of image does not create a wiki page
+// ===========================================================================
+
+describe('N – Image embed only', () => {
+    it('does not collect image files from embeds', async () => {
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n![[photo.png]]',
+            'photo.png': '<binary>',
+        });
+        viewableContent.set('photo.png', '<svg>photo-mock</svg>');
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+
+        expect(orch.getCollectedNotes().length).toBe(1);
+        expect(orch.getCollectedNotes()[0].slug).toBe('central');
     });
 });

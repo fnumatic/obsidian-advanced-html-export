@@ -10,6 +10,11 @@ export class LinkResolver {
     private vaultFiles: Map<string, string> = new Map();
     private pageSlugResolver: ((rawTarget: string) => string | null) | null = null;
 
+    /** Extensions that can be displayed inline by Obsidian's MarkdownRenderer */
+    static readonly VIEWABLE_EXTENSIONS = [
+        'jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp', 'excalidraw',
+    ];
+
     constructor(vaultFiles?: Map<string, string>) {
         if (vaultFiles) {
             this.vaultFiles = vaultFiles;
@@ -24,15 +29,23 @@ export class LinkResolver {
         this.pageSlugResolver = resolver;
     }
 
-    /** Check if a file is an excalidraw file (true .excalidraw or .excalidraw.md) */
-    static isExcalidrawFile(file: { extension: string; basename: string }): boolean {
-        return file.extension === 'excalidraw'
+    /** Check if a file is a known viewable type (image or excalidraw) */
+    static isViewableFile(file: { extension: string; basename: string }): boolean {
+        return LinkResolver.VIEWABLE_EXTENSIONS.includes(file.extension.toLowerCase())
             || (file.extension === 'md' && /\.excalidraw$/i.test(file.basename));
+    }
+
+    /** Get the embed link target for a viewable file (as used in ![[target]]) */
+    static getEmbedTarget(file: { extension: string; name: string; basename: string }): string {
+        if (file.extension === 'md' && /\.excalidraw$/i.test(file.basename)) {
+            return file.basename;
+        }
+        return file.name;
     }
 
     /** Get the correct page slug for a file */
     getFileSlug(file: { extension: string; basename: string }): string {
-        if (LinkResolver.isExcalidrawFile(file)) {
+        if (LinkResolver.isViewableFile(file) && /\.excalidraw$/i.test(file.basename)) {
             return this.slugify(file.basename.replace(/\.excalidraw$/i, ''));
         }
         return this.slugify(file.basename);

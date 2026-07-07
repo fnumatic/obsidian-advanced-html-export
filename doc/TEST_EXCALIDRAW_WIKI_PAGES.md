@@ -202,27 +202,79 @@ const pageSlug = resolver.resolveLinks('[[diagram.excalidraw]]');
 - Slug is `diagram` not `diagramexcalidraw`
 - Final HTML has `data-page="diagram"` and `id="page-diagram"`
 
+### K. PNG direct link
+
+**Vault files:**
+| Path | Content |
+|------|---------|
+| `central.md` | `# Central\n\n[[diagram.png]]` |
+| `diagram.png` | `<binary png data>` |
+
+**Expected:**
+- 2 files collected (central + diagram)
+- Rendered page contains `<div class="viewable-embed">`, not raw binary
+- Slug is `diagram`
+
+### L. SVG direct link
+
+**Vault files:**
+| Path | Content |
+|------|---------|
+| `central.md` | `# Central\n\n[[icon.svg]]` |
+| `icon.svg` | `<svg>...</svg>` |
+
+**Expected:**
+- 2 files collected (central + icon)
+- Rendered page contains embed with SVG content
+
+### M. Extension collision: `.md` wins over `.png`
+
+**Vault files:**
+| Path | Content |
+|------|---------|
+| `central.md` | `# Central\n\n[[diagram]]` |
+| `diagram.md` | `# Diagram note` |
+| `diagram.png` | `<binary png data>` |
+
+**Expected:**
+- `[[diagram]]` resolves to `diagram.md`
+- `diagram.png` NOT collected
+- 2 files total (central + diagram.md)
+
+### N. Image embed does not create a page
+
+**Vault files:**
+| Path | Content |
+|------|---------|
+| `central.md` | `# Central\n\n![[photo.png]]` |
+| `photo.png` | `<binary>` |
+
+**Expected:**
+- Only `central.md` collected
+- `photo.png` NOT collected
+
 ## Current Test Status
 
 | Check | Result |
 |-------|--------|
 | `pnpm type-check` | 0 errors |
-| `pnpm test` | 60/60 pass |
+| `pnpm test` | 67/67 pass |
 | `pnpm build` | Produces valid main.js |
-| Test file | `src/utils/excalidrawWikiExport.test.ts` (16 tests) |
+| Test file | `src/utils/excalidrawWikiExport.test.ts` (23 tests) |
 
 ## Implemented Fix Summary
 
 ### `src/utils/linkResolver.ts`
 
-- `LinkResolver.isExcalidrawFile(file)` — detects both `.excalidraw` and `.excalidraw.md`
+- `LinkResolver.isViewableFile(file)` — detects all image types + excalidraw + `.excalidraw.md`
+- `LinkResolver.getEmbedTarget(file)` — returns correct `![[target]]` for each type
 - `LinkResolver.getFileSlug(file)` — strips `.excalidraw` suffix for correct slugs
 - `resolveLinks()` — embed placeholder pass prevents `[[x]]` substring collision with `![[x]]`
 
 ### `src/utils/wikiHtmlRenderer.ts`
 
-- `initializeVaultFiles()` — `.excalidraw.md` files go to `viewableFiles`
-- `readContentForPage()` — returns `` ![[embedTarget]] `` for excalidraw files
+- `initializeVaultFiles()` — all viewable + `.excalidraw.md` go to `viewableFiles`
+- `readContentForPage()` — returns `![[embedTarget]]` for all viewable files
 - `renderWiki()` — uses `getFileSlug()` and `renderPageFromFile()`
 
 ### `src/utils/wikiExportOrchestrator.ts`

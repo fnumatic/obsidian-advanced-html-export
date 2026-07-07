@@ -10,8 +10,6 @@ import signals from './wikiTemplates/signals.js?raw';
 import helpers from './wikiTemplates/helpers.js?raw';
 import appTemplate from './wikiTemplates/app.js?raw';
 
-const VIEWABLE_EXTENSIONS = ['excalidraw'];
-
 export interface WikiRenderOptions {
     imageQuality: 'high' | 'medium' | 'low';
     enableLazyLoading: boolean;
@@ -48,10 +46,10 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         const files = vault.getFiles();
 
         for (const file of files) {
-            if (file.extension === 'md' && !LinkResolver.isExcalidrawFile(file)) {
+            if (file.extension === 'md' && !LinkResolver.isViewableFile(file)) {
                 this.vaultFiles.set(file.path, file);
                 this.vaultFiles.set(file.basename, file);
-            } else if (VIEWABLE_EXTENSIONS.includes(file.extension) || LinkResolver.isExcalidrawFile(file)) {
+            } else if (LinkResolver.isViewableFile(file)) {
                 this.viewableFiles.set(file.path, file);
                 this.viewableFiles.set(file.basename, file);
             }
@@ -218,11 +216,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
      * Override point for non-Markdown files (e.g. excalidraw).
      */
     protected async readContentForPage(file: TFile): Promise<string> {
-        if (LinkResolver.isExcalidrawFile(file)) {
-            const embedTarget = file.extension === 'excalidraw'
-                ? file.name
-                : file.basename;
-            return `![[${embedTarget}]]`;
+        if (LinkResolver.isViewableFile(file)) {
+            return `![[${LinkResolver.getEmbedTarget(file)}]]`;
         }
         return this.app.vault.cachedRead(file);
     }

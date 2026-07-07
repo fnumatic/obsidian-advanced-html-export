@@ -5,8 +5,6 @@ import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
 import { DetailedWikiRenderer, RenderEvent } from './detailedRenderer';
 
-const VIEWABLE_EXTENSIONS = ['excalidraw'];
-
 export interface WikiExportOptions {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
@@ -78,10 +76,10 @@ export class WikiExportOrchestrator {
     const files = vault.getFiles();
 
     for (const file of files) {
-      if (file.extension === 'md' && !LinkResolver.isExcalidrawFile(file)) {
+      if (file.extension === 'md' && !LinkResolver.isViewableFile(file)) {
         this.vaultFiles.set(file.path, file);
         this.vaultFiles.set(file.basename, file);
-      } else if (VIEWABLE_EXTENSIONS.includes(file.extension) || LinkResolver.isExcalidrawFile(file)) {
+      } else if (LinkResolver.isViewableFile(file)) {
         this.viewableFiles.set(file.path, file);
         this.viewableFiles.set(file.basename, file);
       }
