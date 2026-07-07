@@ -10,16 +10,31 @@ The plugin exports Obsidian notes as self-contained HTML files and sits between 
 
 Strongest differentiator: The plugin uses Obsidian's own `MarkdownRenderer` and exports the actual rendered DOM (including Dataview, Kanban, Excalidraw), not raw Markdown. This sets it apart from pure Markdown→HTML converters.
 
+## Recently Completed
+
+| Feature | Commit | Description |
+|---|---|---|
+| Excalidraw wiki pages | `b8fb759` | `.excalidraw` and `.excalidraw.md` files as internal wiki pages, rendered via synthetic embed |
+| Viewable file pages | `990b27c` | All `jpg`, `jpeg`, `png`, `bmp`, `gif`, `svg`, `webp` as wiki pages; direct links open inline rendered page |
+| Image/SVG viewer | `1354ddd` | Lightbox with zoom/pan/drag, keyboard shortcuts, touch support, works with `<img>` and inline `<svg>` |
+| Transparent SVG background | `2097743` | Viewer image shows theme background behind transparent areas instead of dark overlay |
+| Browser history navigation | `3618b4b` | `pushState`/`popstate` for back/forward in browser, initial hash support (`#slug`) |
+| Inline TOC fixes | `feb962e` | TOC updates on page navigation, uses `state.currentPage` instead of fragile `.active` class |
+| Inline TOC styling | `feb962e` | Publish-like sidebar column instead of card overlay, still collapsible |
+
 ## Validated Weak Points
 
 | Issue | Location | Details |
 |---|---|---|
-| Incomplete link traversal | `wikiExportOrchestrator.ts:402-446` | `collectLinkedNotes()` only collects up to depth 2, no real recursion/queue — `linkDepth` setting up to 10 is not fully utilized |
-| `notesByDepth` empty | `wikiExportOrchestrator.ts:380` | `ExportMetrics` `Map` initialized but never populated |
-| Slug collision | `wikiExportOrchestrator.ts:138` | `slugify(file.basename)` ignores path — two files with the same name in different folders collide |
+| Incomplete link traversal | `wikiExportOrchestrator.ts:414-465` | `collectLinkedNotes()` only collects up to depth 2, no real recursion/queue — `linkDepth` setting up to 10 is not fully utilized |
+| `notesByDepth` empty | `wikiExportOrchestrator.ts:392` | `ExportMetrics` `Map` initialized but never populated |
+| Slug collision | `wikiExportOrchestrator.ts:470` | `slugify(file.basename)` ignores path — two files with the same name in different folders collide |
 | No frontmatter support | entire codebase | `title`, `publish: false`, `aliases` from frontmatter are ignored |
-| Incomplete wiki-link regex | `linkResolver.ts:35` | Only supports `[[target]]` and `[[target\|alias]]`, not `[[Note#Heading]]`, `[[Note^blockid]]` |
+| Incomplete wiki-link regex | `linkResolver.ts:68` | Only supports `[[target]]` and `[[target\|alias]]`, not `[[Note#Heading]]`, `[[Note^blockid]]` |
 | Hardcoded theme values | `wikiTemplates/styles.css` | Uses `#ffffff`, `#37352f`, `#0066cc` instead of CSS variable adapter |
+| Duplicate link collection | `wikiExportOrchestrator.ts` + `wikiHtmlRenderer.ts` | Both files contain their own `collectLinkedNotes()` / `findFileByLink()` — logic drifts independently |
+| No missing-link detection | `linkResolver.ts:184-211` | `findFileByLink()` returns `null` silently, no distinction between resolved and missing targets |
+| No export manifest | `wikiHtmlRenderer.ts:317-339` | No embedded metadata block (version, root, pages, timestamp) |
 
 ---
 
@@ -59,6 +74,8 @@ async function collectLinkedNotes(root: TFile, maxDepth: number): Promise<TFile[
 ```
 
 This also makes `notesByDepth` properly fillable: `notesByDepth.set(depth, (notesByDepth.get(depth) ?? 0) + 1)`.
+
+After BFS is done, consolidate link traversal into one place — the orchestrator should be the single source of truth.
 
 ### 1.2 Path-based Slugs
 
@@ -271,3 +288,5 @@ type ExportedPage = {
 ```
 
 Currently, collection, rendering, page list, template, and runtime app are tightly coupled. A separate model layer allows keeping the existing single HTML mode intact while implementing the static site mode in parallel, without breaking existing code.
+
+Once BFS link traversal and frontmatter reading are in place, the WikiModel becomes the natural next step — it consolidates all data into one shape that both export modes consume.
