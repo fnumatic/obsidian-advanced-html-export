@@ -36,11 +36,74 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     protected linkResolver: LinkResolver;
     protected pageList: PageInfo[] = [];
     private collector: WikiLinkCollector;
+    private resolvableSlugs: Set<string> = new Set();
 
     constructor(app: App, component: Component, options: WikiRenderOptions) {
         super(app, component, options);
         this.linkResolver = new LinkResolver();
         this.collector = new WikiLinkCollector(this.app, this.linkResolver);
+    }
+
+    setResolvablePages(pages: PageInfo[]): void {
+        this.resolvableSlugs = new Set(pages.map(p => p.slug));
+        this.linkResolver.setPageSlugResolver((rawTarget: string) => {
+            const file = this.collector.findFileByLink(rawTarget);
+            if (!file) return { slug: null, resolved: false };
+            const slug = this.linkResolver.getFileSlug(file);
+            return this.resolvableSlugs.has(slug)
+                ? { slug, resolved: true }
+                : { slug: null, resolved: false };
+        });
+    }
+
+    /**
+     * Normalize all links after rendering:
+     * - Clean up existing data-page links (remove target/rel/style)
+     * - Convert Obsidian-rendered internal links to SPA data-page links
+     * - Replace unresolvable links with wiki-link-missing spans
+     */
+    protected normalizeRenderedLinks(el: HTMLElement): void {
+        el.querySelectorAll('a[data-page]').forEach((a) => {
+            a.removeAttribute('target');
+            a.removeAttribute('rel');
+            a.removeAttribute('style');
+        });
+
+        el.querySelectorAll('a.internal-link[data-href]').forEach((a) => {
+            const href = a.getAttribute('data-href');
+            if (!href) return;
+
+            // Strip subpath references (headings, block refs)
+            const target = href.split('#')[0].split('^')[0].trim();
+            if (!target) return;
+
+            const file = this.collector.findFileByLink(target);
+            if (!file) {
+                this.replaceWithMissingLink(a as HTMLAnchorElement, href);
+                return;
+            }
+
+            const slug = this.linkResolver.getFileSlug(file);
+            if (this.resolvableSlugs.has(slug)) {
+                const anchor = a as HTMLAnchorElement;
+                anchor.href = 'javascript:void(0)';
+                anchor.setAttribute('data-page', slug);
+                anchor.removeAttribute('target');
+                anchor.removeAttribute('rel');
+                anchor.removeAttribute('style');
+                anchor.removeAttribute('data-href');
+            } else {
+                this.replaceWithMissingLink(a as HTMLAnchorElement, href);
+            }
+        });
+    }
+
+    private replaceWithMissingLink(anchor: HTMLAnchorElement, rawTarget: string): void {
+        const span = document.createElement('span');
+        span.className = 'wiki-link-missing';
+        span.setAttribute('data-missing-target', rawTarget);
+        span.textContent = anchor.textContent || rawTarget;
+        anchor.replaceWith(span);
     }
 
     /**
@@ -60,6 +123,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             title: file.basename,
             path: file.path
         }));
+
+        this.setResolvablePages(this.pageList);
 
         const progressCallback = onProgress || ((_current: number, _total: number) => {
             // Silent progress callback
@@ -177,11 +242,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
 
         await Promise.all(imagePromises);
 
-        el.querySelectorAll('a[data-page]').forEach((a) => {
-            a.removeAttribute('target');
-            a.removeAttribute('rel');
-            a.removeAttribute('style');
-        });
+        this.normalizeRenderedLinks(el);
 
         let html = el.innerHTML;
         html = this.addHeadingIds(html);

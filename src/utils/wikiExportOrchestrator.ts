@@ -14,6 +14,11 @@ export interface PageFrontmatter {
   author?: string;
   license?: string;
   note?: string;
+  export?: {
+    scope?: {
+      maxDepth?: number;
+    };
+  };
 }
 
 export interface WikiExportOptions {
@@ -103,6 +108,11 @@ export class WikiExportOrchestrator {
 
   private getPageFrontmatter(file: TFile): PageFrontmatter {
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
+    const rawExportScope = (fm.export as { scope?: { maxDepth?: unknown } } | undefined)?.scope;
+    const rawMaxDepth = rawExportScope?.maxDepth;
+    const maxDepth = typeof rawMaxDepth === 'number' && Number.isInteger(rawMaxDepth) && rawMaxDepth >= 0
+      ? rawMaxDepth
+      : undefined;
     return {
       title: fm.title as string | undefined,
       publish: fm.publish as boolean | undefined,
@@ -111,6 +121,7 @@ export class WikiExportOrchestrator {
       author: fm.author as string | undefined,
       license: fm.license as string | undefined,
       note: fm.note as string | undefined,
+      export: maxDepth !== undefined ? { scope: { maxDepth } } : undefined,
     };
   }
 
@@ -120,79 +131,75 @@ export class WikiExportOrchestrator {
    */
   async collectNotes(centralFile: TFile): Promise<NoteInfo[]> {
     this.stage = 'collecting';
+    const centralFm = this.getPageFrontmatter(centralFile);
+
+    // Hard rule: publish: false excludes the note entirely
+    if (centralFm.publish === false) {
+      this.collectedNotes = [];
+      this.calculateMetrics();
+      this.stage = 'ready';
+      return this.collectedNotes;
+    }
+
+    const linkDepth = centralFm.export?.scope?.maxDepth ?? this.options.linkDepth;
+
     debugLogger.startPhase('collectNotes', { 
       centralFile: centralFile.path,
-      linkDepth: this.options.linkDepth 
+      linkDepth
     });
 
-    try {
-      // Hard rule: publish: false excludes the note entirely
-      const centralFm = this.getPageFrontmatter(centralFile);
-      if (centralFm.publish === false) {
-        this.collectedNotes = [];
-        this.calculateMetrics();
-        this.stage = 'ready';
-        debugLogger.endPhase();
-        return this.collectedNotes;
-      }
+    const shouldIncludeFile = (file: TFile): boolean => {
+      const fm = this.getPageFrontmatter(file);
+      return fm.publish !== false;
+    };
 
-      const shouldIncludeFile = (file: TFile): boolean => {
-        const fm = this.getPageFrontmatter(file);
-        return fm.publish !== false;
-      };
+    const collected = await this.collector.collectLinkedFiles(
+      centralFile, 
+      linkDepth,
+      shouldIncludeFile
+    );
 
-      const collected = await this.collector.collectLinkedFiles(
-        centralFile, 
-        this.options.linkDepth,
-        shouldIncludeFile
-      );
+    // Analyze each note for metrics
+    this.stage = 'analyzing';
+    debugLogger.startPhase('analyzeNotes', { noteCount: collected.length });
 
-      // Analyze each note for metrics
-      this.stage = 'analyzing';
-      debugLogger.startPhase('analyzeNotes', { noteCount: collected.length });
-
-      this.collectedNotes = await Promise.all(
-        collected.map(async ({ file, depth }) => {
-          const content = await this.app.vault.cachedRead(file);
-          const analysis = this.analyzeNoteContent(content);
-          const frontmatter = this.getPageFrontmatter(file);
-          
-          return {
-            file,
-            slug: this.linkResolver.getFileSlug(file),
-            title: frontmatter.title ?? file.basename,
-            path: file.path,
-            depth,
-            estimatedDiagrams: analysis.diagramCount,
+    this.collectedNotes = await Promise.all(
+      collected.map(async ({ file, depth }) => {
+        const content = await this.app.vault.cachedRead(file);
+        const analysis = this.analyzeNoteContent(content);
+        const frontmatter = this.getPageFrontmatter(file);
+        
+        return {
+          file,
+          slug: this.linkResolver.getFileSlug(file),
+          title: frontmatter.title ?? file.basename,
+          path: file.path,
+          depth,
+          estimatedDiagrams: analysis.diagramCount,
+          codeBlockCount: analysis.codeBlockCount,
+          linkCount: analysis.linkCount,
+          frontmatter,
+          analysis: {
+            diagramCount: analysis.diagramCount,
             codeBlockCount: analysis.codeBlockCount,
-            linkCount: analysis.linkCount,
-            frontmatter,
-            analysis: {
-              diagramCount: analysis.diagramCount,
-              codeBlockCount: analysis.codeBlockCount,
-              imageCount: analysis.images.length,
-              diagrams: analysis.diagrams,
-              codeBlocks: analysis.codeBlocks,
-              images: analysis.images
-            }
-          };
-        })
-      );
+            imageCount: analysis.images.length,
+            diagrams: analysis.diagrams,
+            codeBlocks: analysis.codeBlocks,
+            images: analysis.images
+          }
+        };
+      })
+    );
 
-      debugLogger.endPhase();
+    debugLogger.endPhase();
 
-      // Calculate metrics
-      this.calculateMetrics();
-      
-      this.stage = 'ready';
-      debugLogger.endPhase();
+    // Calculate metrics
+    this.calculateMetrics();
+    
+    this.stage = 'ready';
+    debugLogger.endPhase();
 
-      return this.collectedNotes;
-    } catch (error) {
-      this.stage = 'idle';
-      debugLogger.endPhase();
-      throw error;
-    }
+    return this.collectedNotes;
   }
 
   /**

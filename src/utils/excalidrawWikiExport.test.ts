@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, Component, TFile } from 'obsidian';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 import { DetailedWikiRenderer } from './detailedRenderer';
+import WikiHtmlRenderer from './wikiHtmlRenderer';
+import { LinkResolver } from './linkResolver';
 import { CancellationToken } from './cancellationToken';
 import { PauseController } from './pauseController';
 
@@ -109,14 +111,76 @@ vi.mock('obsidian', async () => {
 
 function mockEl() {
     let _html = '';
-    return {
+    const _children: Array<Record<string, unknown>> = [];
+    const _querySelectorAll = function (this: Record<string, unknown>, selector: string) {
+        // support basic selectors used by normalizeRenderedLinks
+        const isDataPage = selector === 'a[data-page]';
+        const isInternalLink = selector === 'a.internal-link[data-href]';
+        const results: Array<Record<string, unknown>> = [];
+        const tagRe = /<a\s+([^>]*)>/g;
+        let m: RegExpExecArray | null;
+        while ((m = tagRe.exec(_html)) !== null) {
+            const attrs = m[1];
+            const hasDataPage = /data-page\s*=\s*["']([^"']*)["']/.test(attrs);
+            const hasDataHref = /data-href\s*=\s*["']([^"']*)["']/.test(attrs);
+            const hasInternalLink = /\binternal-link\b/.test(attrs);
+            if (isDataPage && hasDataPage) {
+                const dataPage = attrs.match(/data-page\s*=\s*["']([^"']*)["']/)?.[1] || '';
+                const href = attrs.match(/href\s*=\s*["']([^"']*)["']/)?.[1] || '';
+                results.push({
+                    tagName: 'A',
+                    getAttribute: (name: string) => {
+                        if (name === 'data-page') return dataPage;
+                        if (name === 'href') return href;
+                        return null;
+                    },
+                    setAttribute: vi.fn(),
+                    removeAttribute: vi.fn(),
+                    textContent: '',
+                });
+            } else if (isInternalLink && hasInternalLink && hasDataHref) {
+                const dataHref = attrs.match(/data-href\s*=\s*["']([^"']*)["']/)?.[1] || '';
+                const href = attrs.match(/href\s*=\s*["']([^"']*)["']/)?.[1] || '';
+                const className = attrs.match(/class\s*=\s*["']([^"']*)["']/)?.[1] || '';
+                const replaced = { replaced: false };
+                results.push({
+                    tagName: 'A',
+                    className,
+                    textContent: '',
+                    getAttribute: (name: string) => {
+                        if (name === 'data-href') return dataHref;
+                        if (name === 'href') return href;
+                        if (name === 'class') return className;
+                        return null;
+                    },
+                    setAttribute: vi.fn((name: string, value: string) => {
+                        if (name === 'data-page') {
+                            replaced.replaced = true;
+                        }
+                    }),
+                    removeAttribute: vi.fn(() => {}),
+                    replaceWith: vi.fn((_el: unknown) => {
+                        replaced.replaced = true;
+                    }),
+                    _replaced: replaced,
+                });
+            }
+        }
+        return results;
+    };
+    const self: Record<string, unknown> = {
         get innerHTML() {
             return _html;
         },
         set innerHTML(v: string) {
             _html = v;
         },
-        querySelectorAll: vi.fn(() => []),
+        querySelectorAll: _querySelectorAll,
+        querySelector(this: Record<string, unknown>, selector: string) {
+            const results = _querySelectorAll.call(this, selector);
+            return results.length > 0 ? results[0] : null;
+        },
+        getAttribute: vi.fn(() => null),
         setAttribute: vi.fn(),
         removeAttribute: vi.fn(),
         appendChild: vi.fn(),
@@ -124,6 +188,7 @@ function mockEl() {
         insertBefore: vi.fn(),
         firstChild: null,
     };
+    return self;
 }
 
 beforeEach(() => {
@@ -724,5 +789,233 @@ describe('N – Image embed only', () => {
 
         expect(orch.getCollectedNotes().length).toBe(1);
         expect(orch.getCollectedNotes()[0].slug).toBe('central');
+    });
+});
+
+// ===========================================================================
+// O – Obsidian internal-link conversion
+// ===========================================================================
+//
+// Tests for normalizeRenderedLinks: after MarkdownRenderer.render produces
+// <a class="internal-link" data-href="..."> elements (from embedded content),
+// they must be converted to SPA data-page links or wiki-link-missing spans.
+// ===========================================================================
+
+class ExposedRenderer extends WikiHtmlRenderer {
+    constructor(app: App, component: Component, options: WikiExportOptions) {
+        super(app, component, options);
+    }
+
+    callNormalizeRenderedLinks(el: HTMLElement): void {
+        this.normalizeRenderedLinks(el);
+    }
+}
+
+describe('O – Obsidian internal-link conversion', () => {
+    it('converts internal-link to data-page when target is exported', async () => {
+        const { app } = buildVault({
+            'central.md': '# Central',
+            'detail.md': '# Detail',
+        });
+
+        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+
+        // Track setAttribute calls
+        const setAttrSpy = vi.fn();
+        const removeAttrSpy = vi.fn();
+
+        vi.spyOn(renderer, 'callNormalizeRenderedLinks').mockRestore?.();
+
+        const el = document.createElement('div') as Record<string, unknown>;
+
+        const queryResults = [{
+            tagName: 'A',
+            getAttribute: (name: string) => {
+                if (name === 'data-href') return 'detail';
+                if (name === 'href') return 'detail';
+                if (name === 'class') return 'internal-link';
+                return null;
+            },
+            setAttribute: setAttrSpy,
+            removeAttribute: removeAttrSpy,
+            textContent: 'Detail',
+            href: 'detail',
+        }];
+
+        el.querySelectorAll = vi.fn((selector: string) => {
+            if (selector === 'a.internal-link[data-href]') return queryResults;
+            return [];
+        });
+
+        renderer.setResolvablePages([
+            { slug: 'central', title: 'Central', path: 'central.md' },
+            { slug: 'detail', title: 'Detail', path: 'detail.md' },
+        ]);
+
+        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+
+        expect(setAttrSpy).toHaveBeenCalledWith('data-page', 'detail');
+        expect(removeAttrSpy).toHaveBeenCalledWith('data-href');
+        expect(removeAttrSpy).toHaveBeenCalledWith('target');
+        expect(queryResults[0].href).toBe('javascript:void(0)');
+    });
+
+    it('replaces internal-link with missing span when target not exported', async () => {
+        const { app } = buildVault({
+            'central.md': '# Central',
+        });
+
+        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+
+        const replaceWithSpy = vi.fn();
+
+        const el = document.createElement('div') as Record<string, unknown>;
+
+        const queryResults = [{
+            tagName: 'A',
+            getAttribute: (name: string) => {
+                if (name === 'data-href') return 'secret';
+                if (name === 'href') return 'secret';
+                if (name === 'class') return 'internal-link';
+                return null;
+            },
+            setAttribute: vi.fn(),
+            removeAttribute: vi.fn(),
+            textContent: 'Secret',
+            href: 'secret',
+            replaceWith: replaceWithSpy,
+        }];
+
+        el.querySelectorAll = vi.fn((selector: string) => {
+            if (selector === 'a.internal-link[data-href]') return queryResults;
+            return [];
+        });
+
+        renderer.setResolvablePages([
+            { slug: 'central', title: 'Central', path: 'central.md' },
+        ]);
+
+        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+
+        expect(replaceWithSpy).toHaveBeenCalled();
+        const spanArg = replaceWithSpy.mock.calls[0][0] as Record<string, unknown>;
+        expect(spanArg.className).toBe('wiki-link-missing');
+        // data-missing-target is set via setAttribute (mocked to no-op);
+        // verify via spy if needed: setAttribute.mock.calls
+    });
+
+    it('strips subpath references from data-href heading refs', async () => {
+        const { app } = buildVault({
+            'central.md': '# Central',
+            'detail.md': '# Detail',
+        });
+
+        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+
+        const setAttrSpy = vi.fn();
+
+        const el = document.createElement('div') as Record<string, unknown>;
+
+        const queryResults = [{
+            tagName: 'A',
+            getAttribute: (name: string) => {
+                if (name === 'data-href') return 'detail#Heading';
+                if (name === 'href') return 'detail#Heading';
+                if (name === 'class') return 'internal-link';
+                return null;
+            },
+            setAttribute: setAttrSpy,
+            removeAttribute: vi.fn(),
+            textContent: 'Detail Section',
+            href: 'detail#Heading',
+        }];
+
+        el.querySelectorAll = vi.fn((selector: string) => {
+            if (selector === 'a.internal-link[data-href]') return queryResults;
+            return [];
+        });
+
+        renderer.setResolvablePages([
+            { slug: 'central', title: 'Central', path: 'central.md' },
+            { slug: 'detail', title: 'Detail', path: 'detail.md' },
+        ]);
+
+        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+
+        expect(setAttrSpy).toHaveBeenCalledWith('data-page', 'detail');
+    });
+
+    it('replaces internal-link with missing span when file not found', async () => {
+        const { app } = buildVault({
+            'central.md': '# Central',
+        });
+
+        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+
+        const replaceWithSpy = vi.fn();
+
+        const el = document.createElement('div') as Record<string, unknown>;
+
+        const queryResults = [{
+            tagName: 'A',
+            getAttribute: (name: string) => {
+                if (name === 'data-href') return 'nonexistent';
+                if (name === 'href') return 'nonexistent';
+                if (name === 'class') return 'internal-link';
+                return null;
+            },
+            setAttribute: vi.fn(),
+            removeAttribute: vi.fn(),
+            textContent: 'Missing',
+            href: 'nonexistent',
+            replaceWith: replaceWithSpy,
+        }];
+
+        el.querySelectorAll = vi.fn((selector: string) => {
+            if (selector === 'a.internal-link[data-href]') return queryResults;
+            return [];
+        });
+
+        renderer.setResolvablePages([
+            { slug: 'central', title: 'Central', path: 'central.md' },
+        ]);
+
+        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+
+        expect(replaceWithSpy).toHaveBeenCalled();
+        const spanArg = replaceWithSpy.mock.calls[0][0] as Record<string, unknown>;
+        expect(spanArg.className).toBe('wiki-link-missing');
+    });
+
+    it('cleans up existing data-page links', async () => {
+        const { app } = buildVault({
+            'central.md': '# Central',
+        });
+
+        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+
+        const removeAttrSpy = vi.fn();
+
+        const el = document.createElement('div') as Record<string, unknown>;
+
+        const queryResults = [{
+            tagName: 'A',
+            getAttribute: (name: string) => null,
+            setAttribute: vi.fn(),
+            removeAttribute: removeAttrSpy,
+            textContent: 'Central',
+            href: 'javascript:void(0)',
+        }];
+
+        el.querySelectorAll = vi.fn((selector: string) => {
+            if (selector === 'a[data-page]') return queryResults;
+            return [];
+        });
+
+        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+
+        expect(removeAttrSpy).toHaveBeenCalledWith('target');
+        expect(removeAttrSpy).toHaveBeenCalledWith('rel');
+        expect(removeAttrSpy).toHaveBeenCalledWith('style');
     });
 });

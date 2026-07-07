@@ -584,6 +584,74 @@ describe('Frontmatter', () => {
 });
 
 // =========================================================================
+// Frontmatter Depth Override Tests
+// =========================================================================
+
+describe('Frontmatter Depth Override', () => {
+  it('uses frontmatter export.scope.maxDepth when set', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '' },
+      { 'root.md': { export: { scope: { maxDepth: 2 } } } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toContain('root');
+    expect(slugs).toContain('a');
+    expect(slugs).toContain('b');
+  });
+
+  it('falls back to settings depth when no frontmatter maxDepth', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '' },
+      { 'root.md': {} }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toContain('root');
+    expect(slugs).toContain('a');
+    expect(slugs).not.toContain('b');
+  });
+
+  it('maxDepth: 0 collects only root', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '' },
+      { 'root.md': { export: { scope: { maxDepth: 0 } } } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const slugs = notes.map(n => n.slug);
+    expect(slugs).toEqual(['root']);
+  });
+
+  it('publish: false overrides depth entirely', async () => {
+    const app = mockAppWithFiles(
+      { 'root.md': '[[a]]' },
+      { 'root.md': { publish: false, export: { scope: { maxDepth: 3 } } } }
+    );
+    const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
+    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    expect(notes).toHaveLength(0);
+  });
+
+  it('links to non-exported pages render as missing when depth restricted', () => {
+    const resolver = new LinkResolver();
+    const allowedSlugs = new Set(['root']);
+    resolver.setPageSlugResolver((rawTarget: string) => {
+      const slug = resolver.slugify(rawTarget);
+      return allowedSlugs.has(slug)
+        ? { slug, resolved: true }
+        : { slug: null, resolved: false };
+    });
+    const { content } = resolver.resolveLinks('[[root]] [[a]]');
+    expect(content).toContain('data-page="root"');
+    expect(content).toContain('wiki-link-missing');
+    expect(content).toContain('data-missing-target="a"');
+  });
+});
+
+// =========================================================================
 // Export Manifest Tests
 // =========================================================================
 

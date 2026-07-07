@@ -165,7 +165,7 @@ export class ExportWikiCommand {
 
     private async performRendering(
         orchestrator: WikiExportOrchestrator,
-        _selectedNotes: NoteInfo[],
+        selectedNotes: NoteInfo[],
         options: WikiRenderOptions,
         token: CancellationToken,
         pauseController: PauseController,
@@ -174,6 +174,11 @@ export class ExportWikiCommand {
         // Create detailed renderer
         const detailedRenderer = new DetailedWikiRenderer(this.app, this.plugin, options);
         
+        // Only resolve links to pages that will actually be in the export
+        detailedRenderer.setResolvablePages(
+            selectedNotes.map(n => ({ slug: n.slug, title: n.title, path: n.path }))
+        );
+
         // Start rendering with progress tracking
         const renderedPages = await orchestrator.renderNotesWithProgress(
             detailedRenderer,

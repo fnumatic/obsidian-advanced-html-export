@@ -300,11 +300,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       // Phase 5: Clean up links
       token.throwIfCancelled();
-      el.querySelectorAll('a[data-page]').forEach((a) => {
-        a.removeAttribute('target');
-        a.removeAttribute('rel');
-        a.removeAttribute('style');
-      });
+      this.normalizeRenderedLinks(el);
 
       // Phase 6: Add heading IDs
       token.throwIfCancelled();
