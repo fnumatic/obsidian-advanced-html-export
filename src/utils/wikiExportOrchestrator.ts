@@ -1,5 +1,6 @@
 import { App, Component, TFile } from 'obsidian';
 import { LinkResolver } from './linkResolver';
+import { WikiLinkCollector } from './wikiLinkCollector';
 import { debugLogger } from './debugLogger';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
@@ -57,8 +58,7 @@ export class WikiExportOrchestrator {
   private app: App;
   private options: WikiExportOptions;
   private linkResolver: LinkResolver;
-  private vaultFiles: Map<string, TFile> = new Map();
-  private viewableFiles: Map<string, TFile> = new Map();
+  private collector: WikiLinkCollector;
   
   private stage: ExportStage = 'idle';
   private collectedNotes: NoteInfo[] = [];
@@ -69,36 +69,7 @@ export class WikiExportOrchestrator {
     this.app = app;
     this.options = options;
     this.linkResolver = new LinkResolver();
-    this.initializeVaultFiles();
-  }
-
-  private initializeVaultFiles(): void {
-    const vault = this.app.vault;
-    const files = vault.getFiles();
-
-    for (const file of files) {
-      if (file.extension === 'md' && !LinkResolver.isViewableFile(file)) {
-        this.vaultFiles.set(file.path, file);
-        this.vaultFiles.set(file.basename, file);
-      } else if (LinkResolver.isViewableFile(file)) {
-        this.viewableFiles.set(file.path, file);
-        this.viewableFiles.set(file.basename, file);
-      }
-    }
-
-    const fileMap = new Map<string, string>();
-    for (const [key, file] of this.vaultFiles) {
-      fileMap.set(key, file.path);
-    }
-    this.linkResolver.setVaultFiles(fileMap);
-
-    this.linkResolver.setPageSlugResolver((rawTarget: string) => {
-      const file = this.findFileByLink(rawTarget);
-      if (file) {
-        return this.linkResolver.getFileSlug(file);
-      }
-      return null;
-    });
+    this.collector = new WikiLinkCollector(this.app, this.linkResolver);
   }
 
   getStage(): ExportStage {
@@ -129,7 +100,7 @@ export class WikiExportOrchestrator {
     });
 
     try {
-      const collected = await this.collectLinkedNotes(
+      const collected = await this.collector.collectLinkedFiles(
         centralFile, 
         this.options.linkDepth
       );
@@ -410,80 +381,6 @@ export class WikiExportOrchestrator {
       estimatedTimeMinutes: Math.max(1, estimatedTimeMinutes),
       notesByDepth,
     };
-  }
-
-  /**
-   * Breadth-first search collection of linked notes.
-   * linkDepth 0 = root only, 1 = root + direct links, etc.
-   */
-  private async collectLinkedNotes(
-    root: TFile,
-    maxDepth: number
-  ): Promise<Array<{ file: TFile; depth: number }>> {
-    const visited = new Set<string>();
-    const queue: Array<{ file: TFile; depth: number }> = [{ file: root, depth: 0 }];
-    const result: Array<{ file: TFile; depth: number }> = [];
-
-    while (queue.length > 0) {
-      const { file, depth } = queue.shift()!;
-
-      if (visited.has(file.path)) continue;
-      visited.add(file.path);
-
-      result.push({ file, depth });
-
-      if (depth >= maxDepth) continue;
-
-      const content = await this.app.vault.cachedRead(file);
-      const links = this.linkResolver.extractLinks(content);
-
-      for (const link of links) {
-        if (link.type === 'image-embed') continue;
-
-        const targetFile = this.findFileByLink(link.rawTarget);
-        if (targetFile && !visited.has(targetFile.path)) {
-          queue.push({ file: targetFile, depth: depth + 1 });
-        }
-      }
-    }
-
-    return result;
-  }
-
-  private findFileByLink(linkTarget: string): TFile | null {
-    // 1. Try markdown files
-    const cleanTarget = linkTarget.replace(/\.md$/i, '');
-    const targetSlug = this.linkResolver.slugify(cleanTarget);
-
-    for (const [, file] of this.vaultFiles) {
-      const fileNameSlug = this.linkResolver.slugify(file.basename.replace(/\.md$/i, ''));
-      if (fileNameSlug === targetSlug) {
-        return file;
-      }
-    }
-
-    // 2. Try viewable non-md files (match with extension, e.g. diagram.excalidraw)
-    const rawSlug = this.linkResolver.slugify(linkTarget);
-    for (const [, file] of this.viewableFiles) {
-      const fileSlug = this.linkResolver.slugify(file.basename);
-      if (fileSlug === rawSlug) {
-        return file;
-      }
-    }
-
-    // 3. Try without extension (e.g., diagram → diagram.excalidraw)
-    const noExtTarget = linkTarget.replace(/\.\w+$/i, '');
-    const noExtSlug = this.linkResolver.slugify(noExtTarget);
-    if (noExtSlug !== rawSlug) {
-      for (const [, file] of this.viewableFiles) {
-        const fileSlug = this.linkResolver.slugify(file.basename);
-        if (fileSlug === noExtSlug) {
-          return file;
-        }
-      }
-    }
-
-    return null;
   }
 
   reset(): void {

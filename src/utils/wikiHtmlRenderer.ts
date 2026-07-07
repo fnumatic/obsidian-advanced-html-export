@@ -1,6 +1,7 @@
 import { App, Component, MarkdownRenderer, TFile } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
+import { WikiLinkCollector } from './wikiLinkCollector';
 import { fillTemplate } from './templateUtils';
 import { debugLogger } from './debugLogger';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
@@ -32,42 +33,12 @@ export interface PageInfo {
 export default class WikiHtmlRenderer extends HtmlRenderer {
     protected linkResolver: LinkResolver;
     protected pageList: PageInfo[] = [];
-    private vaultFiles: Map<string, TFile> = new Map();
-    private viewableFiles: Map<string, TFile> = new Map();
+    private collector: WikiLinkCollector;
 
     constructor(app: App, component: Component, options: WikiRenderOptions) {
         super(app, component, options);
         this.linkResolver = new LinkResolver();
-        this.initializeVaultFiles();
-    }
-
-    private initializeVaultFiles(): void {
-        const vault = this.app.vault;
-        const files = vault.getFiles();
-
-        for (const file of files) {
-            if (file.extension === 'md' && !LinkResolver.isViewableFile(file)) {
-                this.vaultFiles.set(file.path, file);
-                this.vaultFiles.set(file.basename, file);
-            } else if (LinkResolver.isViewableFile(file)) {
-                this.viewableFiles.set(file.path, file);
-                this.viewableFiles.set(file.basename, file);
-            }
-        }
-
-        const fileMap = new Map<string, string>();
-        for (const [key, file] of this.vaultFiles) {
-            fileMap.set(key, file.path);
-        }
-        this.linkResolver.setVaultFiles(fileMap);
-
-        this.linkResolver.setPageSlugResolver((rawTarget: string) => {
-            const file = this.findFileByLink(rawTarget);
-            if (file) {
-                return this.linkResolver.getFileSlug(file);
-            }
-            return null;
-        });
+        this.collector = new WikiLinkCollector(this.app, this.linkResolver);
     }
 
     /**
@@ -79,7 +50,8 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     async renderWiki(centralFile: TFile, onProgress?: (current: number, total: number) => void): Promise<string> {
         const options = this.settings as WikiRenderOptions;
 
-        const collectedFiles = await this.collectLinkedNotes(centralFile, 0, options.linkDepth, new Set<string>());
+        const collected = await this.collector.collectLinkedFiles(centralFile, options.linkDepth);
+        const collectedFiles = collected.map(c => c.file);
 
         this.pageList = collectedFiles.map((file) => ({
             slug: this.linkResolver.getFileSlug(file),
@@ -115,88 +87,6 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         }
 
         return this.generateWikiHtml(centralFile, renderedPages);
-    }
-
-    private async collectLinkedNotes(file: TFile, currentDepth: number, maxDepth: number, visited: Set<string>): Promise<TFile[]> {
-        const result: TFile[] = [];
-
-        if (visited.has(file.path)) {
-            return result;
-        }
-
-        if (currentDepth >= maxDepth) {
-            return result;
-        }
-
-        visited.add(file.path);
-        result.push(file);
-
-        const content = await this.app.vault.cachedRead(file);
-        const links = this.linkResolver.extractLinks(content);
-
-        for (const link of links) {
-            if (link.type === 'image-embed') {
-                continue;
-            }
-
-            const targetFile = this.findFileByLink(link.rawTarget);
-            if (targetFile && !visited.has(targetFile.path)) {
-                visited.add(targetFile.path);
-                result.push(targetFile);
-
-                if (currentDepth + 1 < maxDepth) {
-                    const subLinks = this.linkResolver.extractLinks(await this.app.vault.cachedRead(targetFile));
-                    for (const subLink of subLinks) {
-                        if (subLink.type === 'image-embed') {
-                            continue;
-                        }
-                        const subFile = this.findFileByLink(subLink.rawTarget);
-                        if (subFile && !visited.has(subFile.path)) {
-                            visited.add(subFile.path);
-                            result.push(subFile);
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private findFileByLink(linkTarget: string): TFile | null {
-        // 1. Try markdown files
-        const cleanTarget = linkTarget.replace(/\.md$/i, '');
-        const targetSlug = this.linkResolver.slugify(cleanTarget);
-
-        for (const [, file] of this.vaultFiles) {
-            const fileNameSlug = this.linkResolver.slugify(file.basename.replace(/\.md$/i, ''));
-            if (fileNameSlug === targetSlug) {
-                return file;
-            }
-        }
-
-        // 2. Try viewable non-md files (match with extension, e.g. diagram.excalidraw)
-        const rawSlug = this.linkResolver.slugify(linkTarget);
-        for (const [, file] of this.viewableFiles) {
-            const fileSlug = this.linkResolver.slugify(file.basename);
-            if (fileSlug === rawSlug) {
-                return file;
-            }
-        }
-
-        // 3. Try without extension (e.g., diagram → diagram.excalidraw)
-        const noExtTarget = linkTarget.replace(/\.\w+$/i, '');
-        const noExtSlug = this.linkResolver.slugify(noExtTarget);
-        if (noExtSlug !== rawSlug) {
-            for (const [, file] of this.viewableFiles) {
-                const fileSlug = this.linkResolver.slugify(file.basename);
-                if (fileSlug === noExtSlug) {
-                    return file;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**
