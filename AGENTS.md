@@ -225,3 +225,8 @@ The plugin uses Vite for bundling with these key settings:
 - **Package manager**: pnpm is the primary package manager
 - **Manifest**: Update `manifest.json` and `manifest-beta.json` for version changes
 - **Hot reload**: Available during development for rapid iteration
+
+## HARD RULES
+
+- **Never commit without explicit request.** Do not run any VCS write operation
+  (`git commit`, `git push`, etc.) unless the user explicitly tells you to commit.
