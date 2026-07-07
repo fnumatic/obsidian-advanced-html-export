@@ -103,7 +103,10 @@ export class ImageOptimizer {
       'webp': 'image/webp',
       'jpeg': 'image/jpeg',
       'jpg': 'image/jpeg',
-      'png': 'image/png'
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'svg': 'image/svg+xml',
     };
     return mimeTypes[format.toLowerCase()] || 'application/octet-stream';
   }

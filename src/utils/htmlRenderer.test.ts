@@ -404,4 +404,53 @@ describe('HtmlRenderer', () => {
       expect(mockImg.setAttribute).toHaveBeenCalledWith('loading', 'lazy');
     });
   });
+
+  describe('blob image sources', () => {
+    beforeEach(() => {
+      globalThis.fetch = vi.fn();
+    });
+
+    it('convertImageToBase64String reads blob: via fetch and returns base64', async () => {
+      const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
+      fetchMock.mockResolvedValue({
+        blob: () => Promise.resolve(new Blob(['<svg><rect/></svg>'], { type: 'image/svg+xml' })),
+      });
+
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      vi.mocked(ImageOptimizer.optimizeImage).mockRejectedValue(new Error('WebP not supported'));
+
+      const result = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> })
+        .convertImageToBase64String('blob:test-diagram');
+
+      expect(fetchMock).toHaveBeenCalledWith('blob:test-diagram');
+      expect(result).toContain('data:image/svg+xml;base64,');
+    });
+
+    it('convertImageToHash reads blob: via fetch and returns hash', async () => {
+      const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
+      fetchMock.mockResolvedValue({
+        blob: () => Promise.resolve(new Blob(['<svg><circle/></svg>'], { type: 'image/svg+xml' })),
+      });
+
+      const { ImageOptimizer } = await import('./imageOptimizer');
+      vi.mocked(ImageOptimizer.generateImageHash).mockResolvedValue('blobhash');
+      vi.mocked(ImageOptimizer.optimizeImage).mockRejectedValue(new Error('WebP not supported'));
+
+      const result = await (renderer as unknown as { convertImageToHash: (path: string) => Promise<string> })
+        .convertImageToHash('blob:test-diagram');
+
+      expect(fetchMock).toHaveBeenCalledWith('blob:test-diagram');
+      expect(result).toBe('blobhash');
+    });
+
+    it('returns empty for blob: URL when fetch fails', async () => {
+      const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
+      fetchMock.mockRejectedValue(new Error('Network error'));
+
+      const result = await (renderer as unknown as { convertImageToBase64String: (path: string) => Promise<string> })
+        .convertImageToBase64String('blob:broken');
+
+      expect(result).toBe('');
+    });
+  });
 });

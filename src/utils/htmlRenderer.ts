@@ -70,52 +70,73 @@ export default class HtmlRenderer {
   }
 
   /**
+   * Reads an image from any source URL (data:, blob:, app://, http(s)://)
+   * and returns its buffer and MIME type.
+   * Returns null for external http/https URLs (not embedded).
+   */
+  protected async readImageSource(imagePath: string): Promise<{ buffer: ArrayBuffer; mimeType: string } | null> {
+    if (imagePath.startsWith('data:')) {
+      try {
+        const buffer = this.parseDataUrlToBuffer(imagePath);
+        const mimeMatch = imagePath.match(/^data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        return { buffer, mimeType };
+      } catch {
+        return null;
+      }
+    }
+
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return null;
+    }
+
+    if (imagePath.startsWith('blob:')) {
+      try {
+        const response = await fetch(imagePath);
+        const blob = await response.blob();
+        const buffer = await blob.arrayBuffer();
+        const mimeType = blob.type || 'application/octet-stream';
+        return { buffer, mimeType };
+      } catch {
+        return null;
+      }
+    }
+
+    // app:// URLs or other Obsidian image paths
+    const pathParts = imagePath.split('/');
+    const fileNameWithTimestamp = pathParts[pathParts.length - 1];
+    const paramParts = fileNameWithTimestamp?.split('?');
+    const fileName = paramParts?.[0];
+    const timestamp = paramParts?.[1];
+
+    let file: TFile | undefined;
+
+    if (fileName !== undefined && timestamp !== undefined) {
+      file = this.imageFiles.get(decodeURIComponent(fileName));
+      if (file && file.stat.mtime !== parseInt(timestamp)) {
+        file = undefined;
+      }
+    }
+
+    if (file === undefined) {
+      return null;
+    }
+
+    const buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
+    const mimeType = ImageOptimizer.getMimeType(file.extension);
+    return { buffer, mimeType };
+  }
+
+  /**
    * Converts an image path to hash for deduplication
    * @param imagePath The image path as returned by the MarkdownRenderer
    * @returns The hash of the optimized image or empty string if not found
    */
   protected async convertImageToHash(imagePath: string): Promise<string> {
-    let buffer: ArrayBuffer;
-    let mimeType: string;
+    const source = await this.readImageSource(imagePath);
+    if (!source) return '';
 
-    if (imagePath.startsWith('data:')) {
-      // Parse data: URL
-      try {
-        buffer = this.parseDataUrlToBuffer(imagePath);
-        const mimeMatch = imagePath.match(/^data:([^;]+)/);
-        mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
-      } catch (error) {
-        return '';
-      }
-    } else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      // External URL - skip for now
-      return '';
-    } else if (imagePath.startsWith('blob:')) {
-      // Blob URLs (e.g., from Excalidraw) - cannot be processed as they are temporary browser URLs
-      return '';
-    } else {
-      // Existing logic for app:// URLs - use cached image files map
-      const pathParts = imagePath.split('/');
-      const fileNameWithTimestamp = pathParts[pathParts.length - 1];
-      const paramParts = fileNameWithTimestamp?.split('?');
-      const fileName = paramParts?.[0];
-      const timestamp = paramParts?.[1];
-
-      let file: TFile | undefined;
-
-      if (fileName !== undefined && timestamp !== undefined) {
-        file = this.imageFiles.get(decodeURIComponent(fileName));
-        if (file && file.stat.mtime !== parseInt(timestamp)) {
-          file = undefined;
-        }
-      }
-
-      if (file === undefined) {
-        return '';
-      }
-      buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
-      mimeType = ImageOptimizer.getMimeType(file.extension);
-    }
+    const { buffer, mimeType } = source;
 
     // Generate hash for deduplication
     const imageHash = await ImageOptimizer.generateImageHash(buffer);
@@ -155,42 +176,10 @@ export default class HtmlRenderer {
    * @returns The base64 representation of the optimized image or empty string if not found
    */
   protected async convertImageToBase64String(imagePath: string): Promise<string> {
-    let buffer: ArrayBuffer;
-    let mimeType: string;
+    const source = await this.readImageSource(imagePath);
+    if (!source) return '';
 
-    if (imagePath.startsWith('data:')) {
-      // Parse data: URL
-      try {
-        buffer = this.parseDataUrlToBuffer(imagePath);
-        const mimeMatch = imagePath.match(/^data:([^;]+)/);
-        mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
-      } catch (error) {
-        return '';
-      }
-    } else {
-      // Existing logic for app:// URLs - use cached image files map
-      const pathParts = imagePath.split('/');
-      const fileNameWithTimestamp = pathParts[pathParts.length - 1];
-      const paramParts = fileNameWithTimestamp?.split('?');
-      const fileName = paramParts?.[0];
-      const timestamp = paramParts?.[1];
-
-      let file: TFile | undefined;
-
-      if (fileName !== undefined && timestamp !== undefined) {
-        file = this.imageFiles.get(decodeURIComponent(fileName));
-        if (file && file.stat.mtime !== parseInt(timestamp)) {
-          file = undefined;
-        }
-      }
-
-      if (file === undefined) {
-        return '';
-      }
-
-      buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
-      mimeType = ImageOptimizer.getMimeType(file.extension);
-    }
+    const { buffer, mimeType } = source;
 
     // Generate hash for deduplication
     const imageHash = await ImageOptimizer.generateImageHash(buffer);

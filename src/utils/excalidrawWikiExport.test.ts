@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { App, Component, TFile } from 'obsidian';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 import { DetailedWikiRenderer } from './detailedRenderer';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
-import { LinkResolver } from './linkResolver';
 import { CancellationToken } from './cancellationToken';
 import { PauseController } from './pauseController';
 
@@ -111,12 +110,40 @@ vi.mock('obsidian', async () => {
 
 function mockEl() {
     let _html = '';
-    const _children: Array<Record<string, unknown>> = [];
+    const _imgAttrsList: Array<Record<string, string>> = [];
+
+    const updateHtmlAttr = (attrName: string, attrValue: string) => {
+        const re = new RegExp(`\\s${attrName}\\s*=\\s*["'][^"']*["']`);
+        if (re.test(_html)) {
+            _html = _html.replace(
+                new RegExp(`(${attrName}\\s*=\\s*)["'][^"']*["']`),
+                `$1"${attrValue}"`,
+            );
+        } else {
+            _html = _html.replace(/(<img[^>]*)>/, `$1 ${attrName}="${attrValue}">`);
+        }
+    };
+
     const _querySelectorAll = function (this: Record<string, unknown>, selector: string) {
-        // support basic selectors used by normalizeRenderedLinks
         const isDataPage = selector === 'a[data-page]';
         const isInternalLink = selector === 'a.internal-link[data-href]';
+        const isImg = selector === 'img';
         const results: Array<Record<string, unknown>> = [];
+
+        if (isImg) {
+            for (const attrs of _imgAttrsList) {
+                results.push({
+                    tagName: 'IMG',
+                    get src() { return attrs.src ?? ''; },
+                    setAttribute: (name: string, value: string) => {
+                        attrs[name] = value;
+                        updateHtmlAttr(name, value);
+                    },
+                });
+            }
+            return results;
+        }
+
         const tagRe = /<a\s+([^>]*)>/g;
         let m: RegExpExecArray | null;
         while ((m = tagRe.exec(_html)) !== null) {
@@ -168,12 +195,28 @@ function mockEl() {
         }
         return results;
     };
+
+    const parseHtml = (html: string) => {
+        _imgAttrsList.length = 0;
+        const imgRe = /<img\s+([^>]*)>/g;
+        let im: RegExpExecArray | null;
+        while ((im = imgRe.exec(html)) !== null) {
+            const attrs = im[1];
+            const parsed: Record<string, string> = {};
+            const attrRe = /(\w[\w-]*)\s*=\s*["']([^"']*)["']/g;
+            let a: RegExpExecArray | null;
+            while ((a = attrRe.exec(attrs)) !== null) {
+                parsed[a[1]] = a[2];
+            }
+            _imgAttrsList.push(parsed);
+        }
+    };
+
     const self: Record<string, unknown> = {
-        get innerHTML() {
-            return _html;
-        },
+        get innerHTML() { return _html; },
         set innerHTML(v: string) {
             _html = v;
+            parseHtml(v);
         },
         querySelectorAll: _querySelectorAll,
         querySelector(this: Record<string, unknown>, selector: string) {
@@ -1017,5 +1060,82 @@ describe('O – Obsidian internal-link conversion', () => {
         expect(removeAttrSpy).toHaveBeenCalledWith('target');
         expect(removeAttrSpy).toHaveBeenCalledWith('rel');
         expect(removeAttrSpy).toHaveBeenCalledWith('style');
+    });
+});
+
+// ===========================================================================
+// F – Direct link to excalidraw with blob image source (regression)
+// ===========================================================================
+
+describe('F – Direct link to excalidraw with blob image source', () => {
+    beforeEach(() => {
+        globalThis.fetch = vi.fn();
+    });
+
+    it('converts blob image to base64 on the excalidraw page (non-dedup)', async () => {
+        const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
+        fetchMock.mockResolvedValue({
+            blob: () =>
+                Promise.resolve(new Blob([SVG_EXAMPLE], { type: 'image/svg+xml' })),
+        });
+
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[Deployment und Virtualisierung.excalidraw]]',
+            'Deployment und Virtualisierung.excalidraw':
+                JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
+        });
+        // Mock MarkdownRenderer to produce blob img (as Excalidraw plugin does)
+        viewableContent.set(
+            'Deployment und Virtualisierung.excalidraw',
+            '<img src="blob:excalidraw-diagram">',
+        );
+
+        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+        orch.setSelectedNotes(orch.getCollectedNotes());
+
+        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
+        const rendered = await orch.renderNotesWithProgress(
+            renderer, token, pauseController, () => {},
+        );
+
+        const diagramPage = rendered.get('deployment-und-virtualisierung');
+        expect(diagramPage).toBeDefined();
+        expect(diagramPage!).not.toContain('blob:');
+        expect(diagramPage!).toContain('<img');
+        expect(diagramPage!).toContain('data:image/');
+    });
+
+    it('converts blob image with deduplication enabled', async () => {
+        const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
+        fetchMock.mockResolvedValue({
+            blob: () =>
+                Promise.resolve(new Blob([SVG_EXAMPLE], { type: 'image/svg+xml' })),
+        });
+
+        const dedupOptions = { ...defaultOptions, enableImageDeduplication: true };
+        const { app, byPath } = buildVault({
+            'central.md': '# Central\n\n[[Deployment und Virtualisierung.excalidraw]]',
+            'Deployment und Virtualisierung.excalidraw':
+                JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
+        });
+        viewableContent.set(
+            'Deployment und Virtualisierung.excalidraw',
+            '<img src="blob:excalidraw-diagram">',
+        );
+
+        const orch = new WikiExportOrchestrator(app, new Component(), dedupOptions);
+        await orch.collectNotes(byPath.get('central.md')!);
+        orch.setSelectedNotes(orch.getCollectedNotes());
+
+        const renderer = new DetailedWikiRenderer(app, new Component(), dedupOptions);
+        const rendered = await orch.renderNotesWithProgress(
+            renderer, token, pauseController, () => {},
+        );
+
+        const diagramPage = rendered.get('deployment-und-virtualisierung');
+        expect(diagramPage).toBeDefined();
+        expect(diagramPage!).not.toContain('blob:');
+        expect(diagramPage!).toContain('data-hash=');
     });
 });

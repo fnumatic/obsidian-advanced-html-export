@@ -227,7 +227,6 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                         img.setAttribute('loading', 'lazy');
                     }
                 } else {
-                    await this.convertImageToBase64String(src);
                     debugLogger.logImageProcessed(false, false);
                     const base64 = await this.convertImageToBase64String(src);
                     if (base64) {
