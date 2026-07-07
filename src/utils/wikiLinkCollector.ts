@@ -39,9 +39,15 @@ export class WikiLinkCollector {
         this.linkResolver.setPageSlugResolver((rawTarget: string) => {
             const file = this.findFileByLink(rawTarget);
             if (file) {
-                return this.linkResolver.getFileSlug(file);
+                return {
+                    slug: this.linkResolver.getFileSlug(file),
+                    resolved: true,
+                };
             }
-            return null;
+            return {
+                slug: null,
+                resolved: false,
+            };
         });
     }
 

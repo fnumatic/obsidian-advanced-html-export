@@ -288,6 +288,50 @@ Links to:
       expect(resolved).toContain('data-page="02-level1-topic-a"');
     });
   });
+
+  describe('Missing Link Detection', () => {
+    it('should render missing link as wiki-link-missing span', () => {
+      const resolver = new LinkResolver();
+      resolver.setPageSlugResolver(() => ({ slug: null, resolved: false }));
+      const { content: resolved } = resolver.resolveLinks('[[NonExistentNote]]');
+      expect(resolved).toContain('class="wiki-link-missing"');
+      expect(resolved).toContain('data-missing-target="NonExistentNote"');
+      expect(resolved).not.toContain('data-page="');
+    });
+
+    it('should preserve alias in missing link', () => {
+      const resolver = new LinkResolver();
+      resolver.setPageSlugResolver(() => ({ slug: null, resolved: false }));
+      const { content: resolved } = resolver.resolveLinks('[[NonExistentNote|My Label]]');
+      expect(resolved).toContain('wiki-link-missing');
+      expect(resolved).toContain('My Label');
+      expect(resolved).toContain('data-missing-target="NonExistentNote"');
+    });
+
+    it('should render resolved link as anchor', () => {
+      const resolver = new LinkResolver();
+      resolver.setPageSlugResolver(() => ({ slug: 'existing-slug', resolved: true }));
+      const { content: resolved } = resolver.resolveLinks('[[ExistingNote]]');
+      expect(resolved).toContain('data-page="existing-slug"');
+      expect(resolved).not.toContain('wiki-link-missing');
+    });
+
+    it('should not affect image embeds', () => {
+      const resolver = new LinkResolver();
+      resolver.setPageSlugResolver(() => ({ slug: null, resolved: false }));
+      const { content: resolved } = resolver.resolveLinks('![[MissingImage.png]]');
+      expect(resolved).toBe('![[MissingImage.png]]');
+    });
+
+    it('should escape HTML in missing link alias and target', () => {
+      const resolver = new LinkResolver();
+      resolver.setPageSlugResolver(() => ({ slug: null, resolved: false }));
+      const { content: resolved } = resolver.resolveLinks('[[Bad <script>|Evil "Alias"]]');
+      expect(resolved).toContain('&lt;script&gt;');
+      expect(resolved).toContain('&quot;Alias&quot;');
+      expect(resolved).not.toContain('<script>');
+    });
+  });
 });
 
 // =========================================================================

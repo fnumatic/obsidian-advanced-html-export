@@ -470,6 +470,12 @@ body {
 
 .wiki-content a:visited { color: var(--link-color); }
 
+.wiki-link-missing {
+    color: var(--text-error, #c0392b);
+    text-decoration: underline dashed;
+    cursor: help;
+}
+
 .wiki-content img {
     max-width: 100%;
     height: auto;

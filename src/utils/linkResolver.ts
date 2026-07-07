@@ -6,9 +6,14 @@ export interface LinkInfo {
     type: 'wiki' | 'markdown' | 'image-embed';
 }
 
+export interface PageSlugResolution {
+    slug: string | null;
+    resolved: boolean;
+}
+
 export class LinkResolver {
     private vaultFiles: Map<string, string> = new Map();
-    private pageSlugResolver: ((rawTarget: string) => string | null) | null = null;
+    private pageSlugResolver: ((rawTarget: string) => PageSlugResolution) | null = null;
 
     /** Extensions that can be displayed inline by Obsidian's MarkdownRenderer */
     static readonly VIEWABLE_EXTENSIONS = [
@@ -25,8 +30,17 @@ export class LinkResolver {
         this.vaultFiles = files;
     }
 
-    setPageSlugResolver(resolver: (rawTarget: string) => string | null): void {
+    setPageSlugResolver(resolver: (rawTarget: string) => PageSlugResolution): void {
         this.pageSlugResolver = resolver;
+    }
+
+    private escapeHtml(value: string): string {
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     /** Check if a file is a known viewable type (image or excalidraw) */
@@ -173,17 +187,26 @@ export class LinkResolver {
             }
         }
 
-        // Second pass: replace wiki links with anchor tags
+        // Second pass: replace wiki links with anchors or missing spans
         for (const link of links) {
             if (link.type === 'wiki') {
-                let pageSlug = link.target;
+                let replacement: string;
+
                 if (this.pageSlugResolver && link.rawTarget) {
-                    const resolvedSlug = this.pageSlugResolver(link.rawTarget);
-                    if (resolvedSlug) {
-                        pageSlug = resolvedSlug;
+                    const resolution = this.pageSlugResolver(link.rawTarget);
+                    if (!resolution.resolved) {
+                        replacement =
+                            `<span class="wiki-link-missing" data-missing-target="${this.escapeHtml(link.rawTarget)}">${this.escapeHtml(link.alias)}</span>`;
+                    } else {
+                        const slug = resolution.slug ?? link.target;
+                        replacement =
+                            `<a href="javascript:void(0)" data-page="${this.escapeHtml(slug)}" style="cursor: pointer;">${this.escapeHtml(link.alias)}</a>`;
                     }
+                } else {
+                    replacement =
+                        `<a href="javascript:void(0)" data-page="${this.escapeHtml(link.target)}" style="cursor: pointer;">${this.escapeHtml(link.alias)}</a>`;
                 }
-                const replacement = `<a href="javascript:void(0)" data-page="${pageSlug}" style="cursor: pointer;">${link.alias}</a>`;
+
                 resolvedContent = resolvedContent.replace(link.original, replacement);
             }
         }
