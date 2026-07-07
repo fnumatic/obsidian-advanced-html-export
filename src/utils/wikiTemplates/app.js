@@ -6,8 +6,8 @@ let scrollSpyObserver = null;
 // State
 const state = {
     currentPage: signal('{{CENTRAL_SLUG}}'),
-    pageHistory: signal([]),
-    forwardStack: signal([]),
+    _history: signal(['{{CENTRAL_SLUG}}']),
+    _historyIndex: signal(0),
     sidebarCollapsed: signal(false),
     tocCollapsed: signal(true),
     searchQuery: signal(''),
@@ -17,8 +17,8 @@ const state = {
 
 // Computed values
 const computedState = {
-    canGoBack: computed(() => state.pageHistory.value.length > 0),
-    canGoForward: computed(() => state.forwardStack.value.length > 0),
+    canGoBack: computed(() => state._historyIndex.value > 0),
+    canGoForward: computed(() => state._historyIndex.value < state._history.value.length - 1),
     filteredNotes: computed(() => {
         const query = state.searchQuery.value.toLowerCase();
         if (!query) return state.notes;
@@ -39,6 +39,16 @@ function initWiki() {
     setupScrollSpy();
     {{IMAGE_RESTORATION}}
     initImageViewer();
+
+    var hash = location.hash.replace(/^#/, '');
+    if (hash) {
+        var target = el('#page-' + hash);
+        if (target) {
+            state.currentPage.value = hash;
+            history.replaceState({ slug: hash, index: 0 }, '', '#' + hash);
+            scrollToTop();
+        }
+    }
 }
 
 function initTheme() {
@@ -295,51 +305,43 @@ function setupEventHandlers() {
         }
     });
 
-    window.addEventListener('popstate', (e) => {
+    window.addEventListener('popstate', function(e) {
         if (e.state && e.state.slug) {
-            state.currentPage.value = e.state.slug;
+            var slug = e.state.slug;
+            var index = e.state.index || 0;
+            closeImage();
+            state._historyIndex.value = index;
+            state.currentPage.value = slug;
         }
     });
 }
 
-function showPage(slug, addToHistory = true) {
+function showPage(slug) {
     closeImage();
-    const target = el('#page-' + slug);
+    var target = el('#page-' + slug);
     if (!target) return;
 
-    const previousSlug = state.currentPage.value;
+    var previousSlug = state.currentPage.value;
+    if (previousSlug === slug) return;
+
+    var h = state._history.value;
+    var idx = state._historyIndex.value;
+    h = h.slice(0, idx + 1);
+    h.push(slug);
+    idx = h.length - 1;
+    state._history.value = h;
+    state._historyIndex.value = idx;
     state.currentPage.value = slug;
-
-    if (addToHistory && previousSlug !== slug) {
-        state.pageHistory.value = [...state.pageHistory.value, previousSlug];
-        state.forwardStack.value = [];
-    }
-
+    history.pushState({ slug: slug, index: idx }, '', '#' + slug);
     scrollToTop();
-    window.history.replaceState({ slug: slug }, '', '#' + slug);
 }
 
 function goBack() {
-    if (!computedState.canGoBack.value) return;
-
-    const history = [...state.pageHistory.value];
-    const prev = history.pop();
-    if (!prev) return;
-
-    state.pageHistory.value = history;
-    state.forwardStack.value = [state.currentPage.value, ...state.forwardStack.value];
-    state.currentPage.value = prev;
+    window.history.back();
 }
 
 function goForward() {
-    if (!computedState.canGoForward.value) return;
-
-    const [next, ...remaining] = state.forwardStack.value;
-    if (!next) return;
-
-    state.forwardStack.value = remaining;
-    state.pageHistory.value = [...state.pageHistory.value, state.currentPage.value];
-    state.currentPage.value = next;
+    window.history.forward();
 }
 
 // =========================================================================
