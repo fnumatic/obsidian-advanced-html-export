@@ -476,14 +476,14 @@ body {
     cursor: help;
 }
 
-.wiki-content img {
+.wiki-page img {
     max-width: 100%;
     height: auto;
     border-radius: 4px;
     margin: 0.5rem 0;
     cursor: zoom-in;
 }
-.wiki-content svg { cursor: zoom-in; }
+.wiki-page svg { cursor: zoom-in; }
 
 .wiki-content :not(pre) > code {
     font-family: var(--font-mono);
