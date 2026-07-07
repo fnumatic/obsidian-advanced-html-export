@@ -116,11 +116,16 @@ function copyPluginToVault(vaultPath, pluginName) {
   console.log(`Plugin "${pluginName}" copied to vault: ${vaultPath}`)
 }
 
+function getPluginId() {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.json'), 'utf8')).id;
+}
+
 module.exports = {
   findObsidianVaults,
   loadVaultPath,
   saveVaultPath,
   promptUser,
   copyPluginToVault,
-  ensureHotReloadFile
-}
+  ensureHotReloadFile,
+  getPluginId
+};

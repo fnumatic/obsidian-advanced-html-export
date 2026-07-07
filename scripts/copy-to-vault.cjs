@@ -2,11 +2,10 @@
 
 const fs = require('fs')
 const { build } = require('vite')
-const { findObsidianVaults, loadVaultPath, saveVaultPath, promptUser, copyPluginToVault } = require('./utils.cjs')
+const { findObsidianVaults, loadVaultPath, saveVaultPath, promptUser, copyPluginToVault, getPluginId } = require('./utils.cjs')
 
-// Get plugin name from package.json
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
-const pluginName = packageJson.name
+// Get plugin id from manifest.json (used by Obsidian for plugin folder name)
+const pluginName = getPluginId()
 
 async function main() {
   console.log('🔨 Building plugin...')
