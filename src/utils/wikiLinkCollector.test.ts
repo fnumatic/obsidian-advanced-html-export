@@ -113,3 +113,71 @@ describe('WikiLinkCollector', () => {
         expect(found!.basename).toBe('image');
     });
 });
+
+describe('Path-based slugs', () => {
+    beforeEach(() => {
+        const body = { createDiv: vi.fn(() => ({ innerHTML: '', querySelectorAll: vi.fn(() => []), setAttribute: vi.fn() })) };
+        Object.defineProperty(globalThis, 'document', {
+            value: { body, createElement: vi.fn(() => ({ innerHTML: '' })) },
+            writable: true,
+            configurable: true,
+        });
+    });
+
+    it('generates unique slugs for same basename in different folders', () => {
+        const resolver = new LinkResolver();
+        const foo = createFile('Projects/Foo/readme.md', '');
+        const bar = createFile('Projects/Bar/readme.md', '');
+        expect(resolver.getFileSlug(foo)).toBe('projects-foo-readme');
+        expect(resolver.getFileSlug(bar)).toBe('projects-bar-readme');
+    });
+
+    it('generates correct slug for viewable file with path', () => {
+        const resolver = new LinkResolver();
+        const svg = createFile('assets/icons/settings.svg', '<svg/>');
+        expect(resolver.getFileSlug(svg)).toBe('assets-icons-settings');
+    });
+
+    it('generates correct slug for excalidraw', () => {
+        const resolver = new LinkResolver();
+        const drawing = createFile('drawing.excalidraw', '{}');
+        expect(resolver.getFileSlug(drawing)).toBe('drawing');
+    });
+
+    it('generates correct slug for excalidraw.md', () => {
+        const resolver = new LinkResolver();
+        const board = createFile('Boards/system.excalidraw.md', '');
+        expect(resolver.getFileSlug(board)).toBe('boards-system');
+    });
+
+    it('generates unique slugs for viewable files in different folders', () => {
+        const resolver = new LinkResolver();
+        const a = createFile('Diagrams/foo.svg', '<svg/>');
+        const b = createFile('Assets/foo.svg', '<svg/>');
+        expect(resolver.getFileSlug(a)).toBe('diagrams-foo');
+        expect(resolver.getFileSlug(b)).toBe('assets-foo');
+    });
+
+    it('resolves path-based direct link', () => {
+        const app = mockAppWithFiles({
+            'root.md': '[[Projects/Foo/readme]]',
+            'Projects/Foo/readme.md': '',
+        });
+        const resolver = new LinkResolver();
+        const collector = new WikiLinkCollector(app, resolver);
+        const found = collector.findFileByLink('Projects/Foo/readme');
+        expect(found).not.toBeNull();
+        expect(found!.path).toBe('Projects/Foo/readme.md');
+    });
+
+    it('resolves basename fallback still works', () => {
+        const app = mockAppWithFiles({
+            'unique-note.md': '',
+        });
+        const resolver = new LinkResolver();
+        const collector = new WikiLinkCollector(app, resolver);
+        const found = collector.findFileByLink('unique-note');
+        expect(found).not.toBeNull();
+        expect(found!.basename).toBe('unique-note');
+    });
+});

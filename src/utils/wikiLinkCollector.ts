@@ -19,16 +19,14 @@ export class WikiLinkCollector {
     }
 
     private initializeVaultFiles(): void {
-        const vault = this.app.vault;
-        const files = vault.getFiles();
+        const files = this.app.vault.getFiles();
 
         for (const file of files) {
+            const key = file.path.toLowerCase();
             if (file.extension === 'md' && !LinkResolver.isViewableFile(file)) {
-                this.vaultFiles.set(file.path, file);
-                this.vaultFiles.set(file.basename, file);
+                this.vaultFiles.set(key, file);
             } else if (LinkResolver.isViewableFile(file)) {
-                this.viewableFiles.set(file.path, file);
-                this.viewableFiles.set(file.basename, file);
+                this.viewableFiles.set(key, file);
             }
         }
 
@@ -48,33 +46,42 @@ export class WikiLinkCollector {
     }
 
     findFileByLink(linkTarget: string): TFile | null {
-        // 1. Try markdown files
-        const cleanTarget = linkTarget.replace(/\.md$/i, '');
-        const targetSlug = this.linkResolver.slugify(cleanTarget);
+        const lowerTarget = linkTarget.toLowerCase();
 
-        for (const [, file] of this.vaultFiles) {
-            const fileNameSlug = this.linkResolver.slugify(file.basename.replace(/\.md$/i, ''));
-            if (fileNameSlug === targetSlug) {
+        // 1. Exact path match on markdown files
+        const mdExact = this.vaultFiles.get(lowerTarget) as TFile | undefined;
+        if (mdExact) return mdExact;
+
+        // 2. Exact path + .md
+        const mdWithExt = this.vaultFiles.get(lowerTarget + '.md') as TFile | undefined;
+        if (mdWithExt) return mdWithExt;
+
+        // 3. Exact path match on viewable files
+        const vwExact = this.viewableFiles.get(lowerTarget) as TFile | undefined;
+        if (vwExact) return vwExact;
+
+        // 4. Basename fallback for markdown (backward compat)
+        const targetSlug = this.linkResolver.slugify(linkTarget.replace(/\.md$/i, ''));
+        for (const file of this.vaultFiles.values()) {
+            if (this.linkResolver.slugify(file.basename) === targetSlug) {
                 return file;
             }
         }
 
-        // 2. Try viewable non-md files (match with extension, e.g. diagram.excalidraw)
+        // 5. Viewable with extension (e.g. diagram.excalidraw)
         const rawSlug = this.linkResolver.slugify(linkTarget);
-        for (const [, file] of this.viewableFiles) {
-            const fileSlug = this.linkResolver.slugify(file.basename);
-            if (fileSlug === rawSlug) {
+        for (const file of this.viewableFiles.values()) {
+            if (this.linkResolver.slugify(file.basename) === rawSlug) {
                 return file;
             }
         }
 
-        // 3. Try without extension (e.g., diagram → diagram.excalidraw)
+        // 6. Viewable without extension (e.g., diagram → diagram.excalidraw)
         const noExtTarget = linkTarget.replace(/\.\w+$/i, '');
         const noExtSlug = this.linkResolver.slugify(noExtTarget);
         if (noExtSlug !== rawSlug) {
-            for (const [, file] of this.viewableFiles) {
-                const fileSlug = this.linkResolver.slugify(file.basename);
-                if (fileSlug === noExtSlug) {
+            for (const file of this.viewableFiles.values()) {
+                if (this.linkResolver.slugify(file.basename) === noExtSlug) {
                     return file;
                 }
             }

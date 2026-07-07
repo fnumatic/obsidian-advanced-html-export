@@ -44,11 +44,29 @@ export class LinkResolver {
     }
 
     /** Get the correct page slug for a file */
-    getFileSlug(file: { extension: string; basename: string }): string {
-        if (LinkResolver.isViewableFile(file) && /\.excalidraw$/i.test(file.basename)) {
-            return this.slugify(file.basename.replace(/\.excalidraw$/i, ''));
+    getFileSlug(file: { path?: string; extension: string; basename: string }): string {
+        let pathBase: string;
+
+        if (file.path) {
+            pathBase = file.path;
+
+            if (file.extension === 'md' && /\.excalidraw$/i.test(file.basename)) {
+                pathBase = pathBase.replace(/\.excalidraw\.md$/i, '');
+            } else if (LinkResolver.isViewableFile(file)) {
+                pathBase = pathBase.replace(new RegExp('\\.' + file.extension.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i'), '');
+            } else {
+                pathBase = pathBase.replace(/\.md$/i, '');
+            }
+
+            pathBase = pathBase.replace(/[/\\]+/g, '-');
+        } else {
+            pathBase = file.basename;
+            if (LinkResolver.isViewableFile(file) && /\.excalidraw$/i.test(file.basename)) {
+                pathBase = file.basename.replace(/\.excalidraw$/i, '');
+            }
         }
-        return this.slugify(file.basename);
+
+        return this.slugify(pathBase);
     }
 
     slugify(title: string): string {
