@@ -11,6 +11,11 @@ export interface RenderMarkdownResult {
   timedOut?: boolean;
 }
 
+interface ProcessedImage {
+  hash: string;
+  base64: string;
+}
+
 interface HtmlRendererSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
@@ -134,90 +139,37 @@ export default class HtmlRenderer {
     return { buffer, mimeType };
   }
 
-  /**
-   * Converts an image path to hash for deduplication
-   * @param imagePath The image path as returned by the MarkdownRenderer
-   * @returns The hash of the optimized image or empty string if not found
-   */
-  protected async convertImageToHash(imagePath: string): Promise<string> {
+  private async processImage(imagePath: string): Promise<ProcessedImage | null> {
     const source = await this.readImageSource(imagePath);
-    if (!source) return '';
+    if (!source) return null;
 
     const { buffer, mimeType } = source;
+    const hash = await ImageOptimizer.generateImageHash(buffer);
 
-    // Generate hash for deduplication
-    const imageHash = await ImageOptimizer.generateImageHash(buffer);
-
-    // Check cache first
-    if (this.imageCache.has(imageHash)) {
-      return imageHash;
+    if (this.imageCache.has(hash)) {
+      return { hash, base64: this.imageCache.get(hash)! };
     }
 
-    let optimizedBase64: string;
-
+    let base64: string;
     try {
-      // Optimize the image
       const qualityMap = { high: 90, medium: 80, low: 70 };
       const quality = qualityMap[this.settings.imageQuality];
-      const optimizedBuffer = await ImageOptimizer.optimizeImage(buffer, {
-        quality,
-        format: 'webp'
-      });
-
-      const optimizedMimeType = ImageOptimizer.getMimeType('webp');
-      optimizedBase64 = `data:${optimizedMimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
-    } catch (error) {
-      // Fallback to original image
-      optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
+      const optimizedBuffer = await ImageOptimizer.optimizeImage(buffer, { quality, format: 'webp' });
+      base64 = `data:${ImageOptimizer.getMimeType('webp')};base64,${arrayBufferToBase64(optimizedBuffer)}`;
+    } catch {
+      base64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
     }
 
-    // Cache the result
-    this.imageCache.set(imageHash, optimizedBase64);
-
-    return imageHash;
+    this.imageCache.set(hash, base64);
+    return { hash, base64 };
   }
 
-  /**
-   * Converts an image path to optimized base64 string for embedding
-   * @param imagePath The image path as returned by the MarkdownRenderer
-   * @returns The base64 representation of the optimized image or empty string if not found
-   */
+  protected async convertImageToHash(imagePath: string): Promise<string> {
+    return (await this.processImage(imagePath))?.hash ?? '';
+  }
+
   protected async convertImageToBase64String(imagePath: string): Promise<string> {
-    const source = await this.readImageSource(imagePath);
-    if (!source) return '';
-
-    const { buffer, mimeType } = source;
-
-    // Generate hash for deduplication
-    const imageHash = await ImageOptimizer.generateImageHash(buffer);
-
-    // Check cache first
-    if (this.imageCache.has(imageHash)) {
-      return this.imageCache.get(imageHash)!;
-    }
-
-    let optimizedBase64: string;
-
-    try {
-      // Optimize the image
-      const qualityMap = { high: 90, medium: 80, low: 70 };
-      const quality = qualityMap[this.settings.imageQuality];
-      const optimizedBuffer = await ImageOptimizer.optimizeImage(buffer, {
-        quality,
-        format: 'webp'
-      });
-
-      const optimizedMimeType = ImageOptimizer.getMimeType('webp');
-      optimizedBase64 = `data:${optimizedMimeType};base64,${arrayBufferToBase64(optimizedBuffer)}`;
-    } catch (error) {
-      // Fallback to original image
-      optimizedBase64 = `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
-    }
-
-    // Cache the result
-    this.imageCache.set(imageHash, optimizedBase64);
-
-    return optimizedBase64;
+    return (await this.processImage(imagePath))?.base64 ?? '';
   }
 
 
