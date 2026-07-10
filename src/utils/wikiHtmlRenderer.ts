@@ -1,5 +1,5 @@
 import { App, Component, TFile } from 'obsidian';
-import HtmlRenderer from './htmlRenderer';
+import HtmlRenderer, { type ImageProcessingHooks, type RenderMarkdownResult } from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { fillTemplate } from './templateUtils';
@@ -30,6 +30,18 @@ export interface PageInfo {
     slug: string;
     title: string;
     path: string;
+}
+
+export interface RenderPipelineHooks {
+  beforeResolveLinks?: () => void | Promise<void>;
+  beforeMarkdownRender?: () => void | Promise<void>;
+  afterMarkdownRender?: (result: RenderMarkdownResult, el: HTMLElement) => void | Promise<void>;
+  afterLanguageRestore?: (el: HTMLElement) => void | Promise<void>;
+  beforeImageProcessing?: (el: HTMLElement) => void | Promise<void>;
+  imageHooks?: ImageProcessingHooks;
+  onImageProcessed?: (dedup: boolean, cacheHit: boolean) => void;
+  beforeNormalizeLinks?: (el: HTMLElement) => void | Promise<void>;
+  beforeHeadingIds?: (el: HTMLElement) => void | Promise<void>;
 }
 
 export default class WikiHtmlRenderer extends HtmlRenderer {
@@ -189,32 +201,50 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     }
 
     async renderPageFromContent(markdownContent: string): Promise<string> {
+        return this.renderResolvedContent(markdownContent, '.', {
+            onImageProcessed: (dedup, cacheHit) => debugLogger.logImageProcessed(dedup, cacheHit),
+        });
+    }
+
+    /**
+     * Core render pipeline shared by normal wiki and detailed progress exporters.
+     */
+    protected async renderResolvedContent(
+        markdownContent: string,
+        sourcePath: string,
+        hooks?: RenderPipelineHooks,
+    ): Promise<string> {
+        await hooks?.beforeResolveLinks?.();
         const { content: resolvedContent } = this.linkResolver.resolveLinks(markdownContent);
 
-        // Pre-process: hide language identifiers to prevent syntax highlighting
         const languages = parseLanguagesString(this.settings.syntaxHighlightLanguages || '');
         const processedContent = this.settings.disableSyntaxHighlighting !== false
             ? hideLanguageIdentifiers(resolvedContent, languages)
             : resolvedContent;
 
         const el = document.body.createDiv();
-        await this.renderMarkdownSafely(processedContent, el, '.');
 
-        // Post-process: restore language identifiers
+        await hooks?.beforeMarkdownRender?.();
+        const renderResult = await this.renderMarkdownSafely(processedContent, el, sourcePath);
+        await hooks?.afterMarkdownRender?.(renderResult, el);
+
         if (this.settings.disableSyntaxHighlighting !== false) {
             restoreLanguageIdentifiers(el);
         }
+        await hooks?.afterLanguageRestore?.(el);
 
         el.querySelectorAll('.copy-code-button').forEach((e) => {
             e.remove();
         });
 
-        await this.processImagesInElement(el, undefined, (dedup, cacheHit) => {
-            debugLogger.logImageProcessed(dedup, cacheHit);
-        });
+        await hooks?.beforeImageProcessing?.(el);
+        await this.processImagesInElement(el, hooks?.imageHooks, hooks?.onImageProcessed);
+        await hooks?.afterImageProcessing?.(el);
 
+        await hooks?.beforeNormalizeLinks?.(el);
         this.normalizeRenderedLinks(el);
 
+        await hooks?.beforeHeadingIds?.(el);
         let html = el.innerHTML;
         html = this.addHeadingIds(html);
 
