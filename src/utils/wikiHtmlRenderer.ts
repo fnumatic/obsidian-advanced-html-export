@@ -1,4 +1,4 @@
-import { App, Component, MarkdownRenderer, TFile } from 'obsidian';
+import { App, Component, TFile } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
@@ -198,7 +198,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             : resolvedContent;
 
         const el = document.body.createDiv();
-        await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
+        await this.renderMarkdownSafely(processedContent, el, '.');
 
         // Post-process: restore language identifiers
         if (this.settings.disableSyntaxHighlighting !== false) {

@@ -453,4 +453,55 @@ describe('HtmlRenderer', () => {
       expect(result).toBe('');
     });
   });
+
+  describe('renderMarkdownSafely', () => {
+    it('returns fallback HTML when MarkdownRenderer.render throws', async () => {
+      const mockElement = {
+        innerHTML: '',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockRejectedValue(
+        new Error("Cannot destructure property 'headings' of 's' as it is null"),
+      );
+
+      const result = await renderer.render('# Test Content');
+
+      expect(result).toContain('markdown-render-error-fallback');
+      expect(result).toContain('Test Content');
+    });
+
+    it('produces partial HTML when render throws but el was partially filled', async () => {
+      const mockElement = {
+        innerHTML: '<p>Partial content before crash</p>',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      Object.defineProperty(mockElement, 'innerHTML', {
+        get: () => '<p>Partial content before crash</p>',
+        set: vi.fn(),
+      });
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockRejectedValue(
+        new Error('some postprocessor error'),
+      );
+
+      const result = await renderer.render('# Hello');
+
+      // Partial content is preserved, no fallback wrapper needed
+      expect(result).toContain('Partial content before crash');
+      expect(result).not.toContain('markdown-render-error-fallback');
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { MarkdownRenderer, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
@@ -137,7 +137,16 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       // Render markdown - this is the heavy operation
       const renderStartTime = performance.now();
-      await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
+      const renderOk = await this.renderMarkdownSafely(processedContent, el, file.path);
+
+      if (!renderOk) {
+        this.emit({
+          type: 'note_error',
+          timestamp: Date.now(),
+          notePath: file.path,
+          details: { error: 'MarkdownRenderer.render failed (postprocessor error)' }
+        });
+      }
 
       // Post-process: restore language identifiers
       if (this.settings.disableSyntaxHighlighting !== false) {

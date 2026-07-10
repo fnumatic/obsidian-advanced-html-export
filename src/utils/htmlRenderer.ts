@@ -216,6 +216,30 @@ export default class HtmlRenderer {
 
 
   /**
+   * Renders markdown safely – isolates foreign postprocessor errors
+   * so a crashed plugin doesn't abort the entire export.
+   */
+  protected async renderMarkdownSafely(content: string, el: HTMLElement, sourcePath: string): Promise<boolean> {
+    try {
+      await MarkdownRenderer.render(this.app, content, el, sourcePath, this.component);
+      return true;
+    } catch (error) {
+      console.warn(
+        `renderMarkdownSafely: MarkdownRenderer.render threw for sourcePath="${sourcePath}":`,
+        error instanceof Error ? error.message : String(error),
+      );
+      if (!el.innerHTML || el.innerHTML.trim() === '') {
+        const escaped = content
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        el.innerHTML = `<pre class="markdown-render-error-fallback">${escaped}</pre>`;
+      }
+      return false;
+    }
+  }
+
+  /**
    * Renders markdown content to HTML with embedded images
    * @param markdownContent The markdown content to render
    * @returns Promise resolving to HTML string
@@ -231,7 +255,7 @@ export default class HtmlRenderer {
       : markdownContent;
       
     const el = document.body.createDiv();
-    await MarkdownRenderer.render(this.app, processedContent, el, '.', this.component);
+    await this.renderMarkdownSafely(processedContent, el, '.');
 
     // Post-process: restore language identifiers
     if (this.settings.disableSyntaxHighlighting !== false) {
