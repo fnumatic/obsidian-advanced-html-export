@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { App, Component, TFile } from 'obsidian';
+import { Component } from 'obsidian';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 import { DetailedWikiRenderer } from './detailedRenderer';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken } from './cancellationToken';
 import { PauseController } from './pauseController';
+import { createMockFile as excCreateFile, mockAppWithFiles } from './test-utils';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -13,48 +14,8 @@ import { PauseController } from './pauseController';
 const SVG_EXAMPLE = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
 const SVG_RECT = '<svg viewBox="0 0 200 200"><rect width="100" height="100"/></svg>';
 
-function createFile(path: string, content: string): TFile {
-    const name = path.split('/').pop() || path;
-    const dot = name.lastIndexOf('.');
-    const ext = dot >= 0 ? name.slice(dot + 1) : '';
-    const basename = dot >= 0 ? name.slice(0, dot) : name;
-    const file = new TFile();
-    file.path = path;
-    file.basename = basename;
-    file.extension = ext;
-    file.name = name;
-    file.stat = { mtime: Date.now(), ctime: Date.now(), size: 0 };
-    (file as unknown as Record<string, unknown>).__content = content;
-    return file as unknown as TFile;
-}
-
-interface FakeVault {
-    app: App;
-    files: TFile[];
-    byPath: Map<string, TFile>;
-}
-
-function buildVault(entries: Record<string, string>): FakeVault {
-    const files: TFile[] = [];
-    const byPath = new Map<string, TFile>();
-
-    for (const [path, content] of Object.entries(entries)) {
-        const f = createFile(path, content);
-        files.push(f);
-        byPath.set(path, f);
-    }
-
-    const vault: Record<string, unknown> = {
-        getFiles: () => files,
-        cachedRead: async (file: TFile) =>
-            (file as unknown as Record<string, unknown>).__content as string || '',
-    };
-
-    const app = new App() as unknown as Record<string, unknown>;
-    app.vault = vault;
-    app.workspace = {};
-    app.metadataCache = { getFileCache: () => null };
-    return { app: app as unknown as App, files, byPath };
+function buildVault(entries: Record<string, string>) {
+    return mockAppWithFiles(entries);
 }
 
 const defaultOptions: WikiExportOptions = {

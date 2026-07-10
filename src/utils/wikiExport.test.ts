@@ -3,6 +3,7 @@ import path from 'path';
 import { TFile } from 'obsidian';
 import { LinkResolver } from '../utils/linkResolver';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
+import { createMockFile as bfsCreateFile, mockAppWithFiles as bfsMockApp } from './test-utils';
 
 vi.mock('obsidian', async () => {
   const actual = await vi.importActual('obsidian');
@@ -338,41 +339,6 @@ Links to:
 // BFS Link Traversal Tests
 // =========================================================================
 
-function createFile(pathStr: string, content: string): TFile {
-  const name = pathStr.split('/').pop() || pathStr;
-  const dot = name.lastIndexOf('.');
-  const ext = dot >= 0 ? name.slice(dot + 1) : '';
-  const basename = dot >= 0 ? name.slice(0, dot) : name;
-  const file = new TFile();
-  file.path = pathStr;
-  file.basename = basename;
-  file.extension = ext;
-  file.name = name;
-  file.stat = { mtime: Date.now(), ctime: Date.now(), size: content.length };
-  (file as unknown as Record<string, unknown>).__content = content;
-  return file as unknown as TFile;
-}
-
-function mockAppWithFiles(entries: Record<string, string>, frontmatterByPath?: Record<string, Record<string, unknown>>) {
-  const files: TFile[] = [];
-  for (const [p, c] of Object.entries(entries)) {
-    files.push(createFile(p, c));
-  }
-  const vault: Record<string, unknown> = {
-    getFiles: () => files,
-    cachedRead: async (f: TFile) =>
-      (f as unknown as Record<string, unknown>).__content as string || '',
-  };
-  const metadataCache = {
-    getFileCache: (file: TFile) => {
-      const fm = frontmatterByPath?.[file.path];
-      return fm ? { frontmatter: fm } : null;
-    },
-  };
-  const app = { vault, workspace: {}, metadataCache };
-  return app as unknown as import('obsidian').App;
-}
-
 const bfsOptions: WikiExportOptions = {
   imageQuality: 'high',
   enableLazyLoading: false,
@@ -392,26 +358,26 @@ describe('BFS Link Traversal', () => {
   });
 
   it('depth 0 collects only the root', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[a]]',
       'a.md': '[[b]]',
       'b.md': '[[c]]',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     expect(notes).toHaveLength(1);
     expect(notes[0].slug).toBe('root');
     expect(notes[0].depth).toBe(0);
   });
 
   it('depth 1 collects root and direct links', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[a]]',
       'a.md': '[[b]]',
       'b.md': '[[c]]',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     expect(notes).toHaveLength(2);
     const root = notes.find(n => n.slug === 'root')!;
     const a = notes.find(n => n.slug === 'a')!;
@@ -420,13 +386,13 @@ describe('BFS Link Traversal', () => {
   });
 
   it('depth 2 collects root, direct, and indirect', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[a]]',
       'a.md': '[[b]]',
       'b.md': '[[c]]',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     expect(notes).toHaveLength(3);
     expect(notes.find(n => n.slug === 'root')!.depth).toBe(0);
     expect(notes.find(n => n.slug === 'a')!.depth).toBe(1);
@@ -434,14 +400,14 @@ describe('BFS Link Traversal', () => {
   });
 
   it('depth 3 traverses four levels deep', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[a]]',
       'a.md': '[[b]]',
       'b.md': '[[c]]',
       'c.md': '[[d]]',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 3 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     expect(notes).toHaveLength(4);
     expect(notes.find(n => n.slug === 'root')!.depth).toBe(0);
     expect(notes.find(n => n.slug === 'a')!.depth).toBe(1);
@@ -450,24 +416,24 @@ describe('BFS Link Traversal', () => {
   });
 
   it('handles cycles without duplicates', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[a]]',
       'a.md': '[[b]]',
       'b.md': '[[a]]',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 3 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     const slugs = notes.map(n => n.slug).sort();
     expect(slugs).toEqual(['a', 'b', 'root']);
   });
 
   it('does not collect image embeds as pages', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '![[image.png]] [[linked.png]]',
       'linked.png': '',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
-    const notes = await orch.collectNotes(createFile('root.md', '![[image.png]] [[linked.png]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '![[image.png]] [[linked.png]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toContain('root');
     expect(slugs).toContain('linked');
@@ -475,26 +441,26 @@ describe('BFS Link Traversal', () => {
   });
 
   it('collects viewable direct links as pages', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[diagram.svg]]',
       'diagram.svg': '<svg/>',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[diagram.svg]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[diagram.svg]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toContain('root');
     expect(slugs).toContain('diagram');
   });
 
   it('populates notesByDepth metrics', async () => {
-    const app = mockAppWithFiles({
+    const { app } = bfsMockApp({
       'root.md': '[[a]] [[b]]',
       'a.md': '[[c]]',
       'b.md': '',
       'c.md': '',
     });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
-    await orch.collectNotes(createFile('root.md', '[[a]] [[b]]'));
+    await orch.collectNotes(bfsCreateFile('root.md', '[[a]] [[b]]'));
     const metrics = orch.getMetrics()!;
     expect(metrics.notesByDepth.get(0)).toBe(1);
     expect(metrics.notesByDepth.get(1)).toBe(2);
@@ -508,66 +474,66 @@ describe('BFS Link Traversal', () => {
 
 describe('Frontmatter', () => {
   it('uses frontmatter.title as note title', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'note.md': '# Hello' },
       { 'note.md': { title: 'My Custom Title' } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('note.md', '# Hello'));
     expect(notes[0].title).toBe('My Custom Title');
   });
 
   it('falls back to file.basename when no frontmatter.title', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'note.md': '# Hello' },
       { 'note.md': { publish: true } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('note.md', '# Hello'));
     expect(notes[0].title).toBe('note');
   });
 
   it('attaches frontmatter to NoteInfo', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'note.md': '# Hello' },
       { 'note.md': { title: 'T', aliases: ['A', 'B'], tags: ['tag1'] } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('note.md', '# Hello'));
     expect(notes[0].frontmatter.title).toBe('T');
     expect(notes[0].frontmatter.aliases).toEqual(['A', 'B']);
     expect(notes[0].frontmatter.tags).toEqual(['tag1']);
   });
 
   it('excludes note with publish: false (root returns empty)', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'note.md': '# Hello' },
       { 'note.md': { publish: false } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('note.md', '# Hello'));
     expect(notes).toHaveLength(0);
   });
 
   it('excludes publish: false linked note from collection', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '[[secret]]', 'secret.md': '# Shh' },
       { 'secret.md': { publish: false } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[secret]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[secret]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toContain('root');
     expect(slugs).not.toContain('secret');
   });
 
   it('stops traversal at publish: false note', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '# should not appear' },
       { 'a.md': { publish: false } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toEqual(['root']);
     expect(slugs).not.toContain('a');
@@ -575,9 +541,9 @@ describe('Frontmatter', () => {
   });
 
   it('includes notes with no frontmatter', async () => {
-    const app = mockAppWithFiles({ 'note.md': '# Hello' });
+    const { app } = bfsMockApp({ 'note.md': '# Hello' });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('note.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('note.md', '# Hello'));
     expect(notes).toHaveLength(1);
     expect(notes[0].frontmatter).toEqual({});
   });
@@ -589,12 +555,12 @@ describe('Frontmatter', () => {
 
 describe('Frontmatter Depth Override', () => {
   it('uses frontmatter export.scope.maxDepth when set', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '' },
       { 'root.md': { export: { scope: { maxDepth: 2 } } } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toContain('root');
     expect(slugs).toContain('a');
@@ -602,12 +568,12 @@ describe('Frontmatter Depth Override', () => {
   });
 
   it('falls back to settings depth when no frontmatter maxDepth', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '' },
       { 'root.md': {} }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 1 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toContain('root');
     expect(slugs).toContain('a');
@@ -615,23 +581,23 @@ describe('Frontmatter Depth Override', () => {
   });
 
   it('maxDepth: 0 collects only root', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '[[a]]', 'a.md': '' },
       { 'root.md': { export: { scope: { maxDepth: 0 } } } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     const slugs = notes.map(n => n.slug);
     expect(slugs).toEqual(['root']);
   });
 
   it('publish: false overrides depth entirely', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '[[a]]' },
       { 'root.md': { publish: false, export: { scope: { maxDepth: 3 } } } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 2 });
-    const notes = await orch.collectNotes(createFile('root.md', '[[a]]'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '[[a]]'));
     expect(notes).toHaveLength(0);
   });
 
@@ -664,18 +630,18 @@ describe('Export Manifest', () => {
   });
 
   it('manifest contains title from wikiTitle option', () => {
-    const app = mockAppWithFiles({ 'note.md': '# Hello' });
+    const { app } = bfsMockApp({ 'note.md': '# Hello' });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0, exportAuthor: 'Test Author', exportVersion: '1.0.0' });
     expect(orch).toBeDefined();
   });
 
   it('manifest contains title from frontmatter.title of central note', async () => {
-    const app = mockAppWithFiles(
+    const { app } = bfsMockApp(
       { 'root.md': '# Hello' },
       { 'root.md': { title: 'My Wiki', author: 'Max', license: 'MIT', note: 'Test export' } }
     );
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('root.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '# Hello'));
     expect(notes[0].title).toBe('My Wiki');
     expect(notes[0].frontmatter.author).toBe('Max');
     expect(notes[0].frontmatter.license).toBe('MIT');
@@ -683,17 +649,17 @@ describe('Export Manifest', () => {
   });
 
   it('author falls back to exportAuthor config when not in frontmatter', async () => {
-    const app = mockAppWithFiles({ 'root.md': '# Hello' });
+    const { app } = bfsMockApp({ 'root.md': '# Hello' });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0, exportAuthor: 'Config Author' });
-    const notes = await orch.collectNotes(createFile('root.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '# Hello'));
     const author = notes[0].frontmatter.author || 'Config Author';
     expect(author).toBe('Config Author');
   });
 
   it('license and note only come from frontmatter', async () => {
-    const app = mockAppWithFiles({ 'root.md': '# Hello' });
+    const { app } = bfsMockApp({ 'root.md': '# Hello' });
     const orch = new WikiExportOrchestrator(app, {} as never, { ...bfsOptions, linkDepth: 0 });
-    const notes = await orch.collectNotes(createFile('root.md', '# Hello'));
+    const notes = await orch.collectNotes(bfsCreateFile('root.md', '# Hello'));
     expect(notes[0].frontmatter.license).toBeUndefined();
     expect(notes[0].frontmatter.note).toBeUndefined();
   });
