@@ -14,20 +14,20 @@ export const DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES = new Set([
   'dockerfile', 'docker', 'cmake', 'makefile',
   'markdown', 'md', 'latex', 'tex', 'asciidoc', 'adoc',
   'protobuf', 'proto', 'thrift', 'graphql',
-  'diff', 'patch', 'vim', 'bash', 'powershell',
-  'ini', 'cfg', 'conf', 'config', 'env', 'dotenv',
+  'diff', 'patch', 'vim',
+  'cfg', 'conf', 'config', 'env', 'dotenv',
   'nginx', 'apache', 'apacheconf', 'lighttpd',
   'terraform', 'hcl', 'ansible', 'puppet',
   'r', 'julia', 'matlab', 'octave',
-  'scala', 'kotlin', 'groovy', 'gradle', 'ant',
-  'xml', 'xsl', 'xslt', 'html', 'htm', 'xhtml',
-  'scss', 'less', 'stylus', 'postcss',
-  'coffeescript', 'livescript', 'typescript',
+  'ant',
+  'xsl', 'xslt', 'htm', 'xhtml',
+  'less', 'stylus', 'postcss',
+  'coffeescript', 'livescript',
   'actionscript', 'flash', 'flex',
   'pascal', 'delphi', 'lazarus', 'fpc',
   'basic', 'vb', 'vbnet', 'vba', 'vbscript',
-  'actionscript', 'ecmascript', 'extend',
-  'd', 'dlang', 'dylan', '的女',
+  'ecmascript', 'extend',
+  'd', 'dlang', 'dylan',
   'fortran', 'f77', 'f90', 'f95', 'f03', 'f08',
   'prolog', 'clips', 'clipper', 'foxpro',
   'scheme', 'racket', 'lisp', 'commonlisp', 'cl',
@@ -36,18 +36,17 @@ export const DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES = new Set([
   'algol', 'algol68', 'algol60',
   'applescript', 'osascript', 'hy',
   'io', 'moo', 'murphi', 'promela',
-  'cmake', 'make', 'qmake', 'qmakefile',
+  'qmake', 'qmakefile',
   'x86asm', 'armasm', 'mipsasm', 'nasm', 'fasm',
-  'tex', 'latex', 'context', 'bibtex',
+  'context', 'bibtex',
   'restructuredtext', 'rst', 'text', 'plain',
-  'tap', '单元测试', 'tap',
-  'tap', 'tap',
+  'tap',
 ]);
 
 /**
- * Ersetzt Sprach-Klassen in Markdown vor dem Rendering
- * ```json → ```__lang_json__
- * Nur Sprachen aus der Whitelist werden ersetzt (mermaid, plantuml, etc. bleiben unberührt)
+ * Hides code block language identifiers before MarkdownRenderer runs.
+ * ```json -> ```__lang_json__
+ * Only languages in the allowlist are replaced (mermaid, plantuml, etc. are left untouched)
  */
 export function hideLanguageIdentifiers(markdown: string, languages?: Set<string>): string {
   const langSet = languages || DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES;
@@ -62,7 +61,7 @@ export function hideLanguageIdentifiers(markdown: string, languages?: Set<string
 }
 
 /**
- * Hilfsfunktion: Parsed eine kommagetrennte Liste von Sprachen in ein Set
+ * Parses a comma-separated list of languages into a Set
  */
 export function parseLanguagesString(languagesStr: string): Set<string> {
   return new Set(
@@ -74,9 +73,9 @@ export function parseLanguagesString(languagesStr: string): Set<string> {
 }
 
 /**
- * Stellt Sprach-Klassen im gerenderten HTML wieder her
- * language-__lang_json__ → language-json
- * Auch für <pre> Tags
+ * Restores code block language identifiers after MarkdownRenderer runs.
+ * language-__lang_json__ -> language-json
+ * Also handles <pre> tags
  */
 export function restoreLanguageIdentifiers(element: HTMLElement): void {
   // Restore <pre> tags
