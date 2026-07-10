@@ -4,6 +4,6 @@
   "author": "fnumatic",
   "description": "Export notes as self-contained HTML files with advanced features.",
   "minAppVersion": "1.9.0",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "isDesktopOnly": true
 }

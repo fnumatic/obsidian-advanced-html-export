@@ -1,5 +1,20 @@
 # Changelog
 
+# [0.8.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.7.0...0.8.0) (2026-07-10)
+
+
+### Bug Fixes
+
+* **deploy:** use manifest.json.id instead of package.json.name for plugin folder ([ec8985b](https://github.com/fnumatic/obsidian-advanced-html-export/commit/ec8985bb68214b4a01a2dddd93610f17ecc26686))
+* **wiki-export:** fetch blob: image sources via readImageSource helper ([61f465a](https://github.com/fnumatic/obsidian-advanced-html-export/commit/61f465a39faa0e7cb8772aca49944cf94c67fb7e))
+* **wiki-export:** isolate MarkdownRenderer crashes from foreign postprocessors ([79b90a5](https://github.com/fnumatic/obsidian-advanced-html-export/commit/79b90a5f8b3530e349e877ccef4cfde54b7f6fe9))
+
+
+### Features
+
+* **export:** add render timeout and consolidate content analysis ([0c323f7](https://github.com/fnumatic/obsidian-advanced-html-export/commit/0c323f71ad492396ff5701b482e03f10ff59ca2c))
+* **wiki-export:** convert Obsidian internal links to SPA links, add frontmatter depth override ([9f0d6a4](https://github.com/fnumatic/obsidian-advanced-html-export/commit/9f0d6a458af9e85f87fc21c2403d7f6ee4f415a6))
+
 # [0.7.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.10...0.7.0) (2026-07-07)
 
 
