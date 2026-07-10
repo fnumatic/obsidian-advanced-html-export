@@ -242,41 +242,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
         });
     }
 
-    private generateWikiHtml(centralFile: TFile, renderedPages: Map<string, string>): string {
-        const options = this.settings as WikiRenderOptions;
-        const wikiTitle = options.wikiTitle || centralFile.basename;
-        const defaultTheme = options.defaultTheme || 'light';
-        const centralSlug = this.pageList.length > 0 ? this.pageList[0].slug : 'central';
-        const pagesJson = JSON.stringify(this.pageList);
-        const imageRestoration = this.settings.enableImageDeduplication ? this.getImageRestorationScript() : '';
-        const exportManifestJson = this.buildExportManifest(centralFile);
-
-        const scripts = fillTemplate(appTemplate, {
-            CENTRAL_SLUG: centralSlug,
-            DEFAULT_THEME: defaultTheme,
-            WIKI_PAGES: pagesJson,
-            IMAGE_RESTORATION: imageRestoration
-        });
-
-        return fillTemplate(template, {
-            WIKI_TITLE: wikiTitle,
-            DEFAULT_THEME: defaultTheme,
-            STYLES: styles,
-            CONTENT: this.getWikiHtmlStructure(renderedPages),
-            SCRIPTS: signals + '\n' + helpers + '\n' + scripts,
-            EXPORT_MANIFEST: exportManifestJson
-        });
-    }
-
-    /**
-     * Generate wiki HTML from already rendered pages
-     * Used by the orchestrator when notes have been selected
-     */
-    generateWikiHtmlWithRenderedPages(
-        centralFile: TFile, 
-        renderedPages: Map<string, string>,
-        pageList: PageInfo[]
-    ): string {
+    private generateWikiHtml(centralFile: TFile, renderedPages: Map<string, string>, pageList = this.pageList): string {
         const options = this.settings as WikiRenderOptions;
         const wikiTitle = options.wikiTitle || centralFile.basename;
         const defaultTheme = options.defaultTheme || 'light';
@@ -292,30 +258,33 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             IMAGE_RESTORATION: imageRestoration
         });
 
-        // Temporarily set pageList for getWikiHtmlStructure
-        const originalPageList = this.pageList;
-        this.pageList = pageList;
-
-        const html = fillTemplate(template, {
+        return fillTemplate(template, {
             WIKI_TITLE: wikiTitle,
             DEFAULT_THEME: defaultTheme,
             STYLES: styles,
-            CONTENT: this.getWikiHtmlStructure(renderedPages),
+            CONTENT: this.getWikiHtmlStructure(renderedPages, pageList),
             SCRIPTS: signals + '\n' + helpers + '\n' + scripts,
             EXPORT_MANIFEST: exportManifestJson
         });
-
-        // Restore original pageList
-        this.pageList = originalPageList;
-
-        return html;
     }
 
-    private getWikiHtmlStructure(renderedPages: Map<string, string>): string {
+    /**
+     * Generate wiki HTML from already rendered pages
+     * Used by the orchestrator when notes have been selected
+     */
+    generateWikiHtmlWithRenderedPages(
+        centralFile: TFile,
+        renderedPages: Map<string, string>,
+        pageList: PageInfo[]
+    ): string {
+        return this.generateWikiHtml(centralFile, renderedPages, pageList);
+    }
+
+    private getWikiHtmlStructure(renderedPages: Map<string, string>, pageList = this.pageList): string {
         const options = this.settings as WikiRenderOptions;
-        const centralSlug = this.pageList.length > 0 ? this.pageList[0].slug : 'central';
-        const centralTitle = this.pageList.length > 0 ? this.pageList[0].title : 'Wiki';
-        const noteCount = this.pageList.length;
+        const centralSlug = pageList.length > 0 ? pageList[0].slug : 'central';
+        const centralTitle = pageList.length > 0 ? pageList[0].title : 'Wiki';
+        const noteCount = pageList.length;
         const showThemeToggle = options.enableThemeToggle !== false;
         const showInlineTOC = options.enableInlineTOC !== false;
 
@@ -401,7 +370,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                 ${showInlineTOC ? `
                 <div class="wiki-body-layout toc-collapsed" id="wiki-body-layout">
                     <div class="wiki-article">
-                        ${this.generatePageSections(renderedPages)}
+                        ${this.generatePageSections(renderedPages, pageList)}
                     </div>
  
                     <aside class="wiki-inline-toc collapsed" id="wiki-inline-toc">
@@ -416,7 +385,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
                 ` : `
                 <div class="wiki-body-layout">
                     <div class="wiki-article">
-                        ${this.generatePageSections(renderedPages)}
+                        ${this.generatePageSections(renderedPages, pageList)}
                     </div>
                 </div>
                 `}
@@ -425,10 +394,10 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     </div>`;
     }
 
-    private generatePageSections(renderedPages: Map<string, string>): string {
-        return this.pageList.map(page => {
+    private generatePageSections(renderedPages: Map<string, string>, pageList = this.pageList): string {
+        return pageList.map(page => {
             const html = renderedPages.get(page.slug) || '';
-            const isActive = page.slug === this.pageList[0].slug ? ' active' : '';
+            const isActive = page.slug === pageList[0].slug ? ' active' : '';
             return `<div id="page-${page.slug}" class="wiki-page markdown-body${isActive}" data-title="${page.title}">${html}</div>`;
         }).join('\n');
     }
