@@ -4,6 +4,7 @@ import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesStri
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
 const MARKDOWN_RENDER_TIMEOUT_MS = 30000;
+const TRANSPARENT_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 export interface RenderMarkdownResult {
   ok: boolean;
@@ -257,66 +258,65 @@ export default class HtmlRenderer {
   }
 
   /**
-   * Renders with image deduplication using JavaScript embedding
+   * Processes all images in an element, handling both dedup and non-dedup paths.
    */
-  protected async renderWithDeduplication(el: Element): Promise<string> {
+  protected async processImagesInElement(
+    el: Element,
+    onImageProcessed?: (dedup: boolean, cacheHit: boolean) => void,
+  ): Promise<void> {
     const imgElements = el.querySelectorAll('img');
     const imagePromises = Array.from(imgElements).map(async (img) => {
       const src = img.src;
-      if (src && src !== null && src !== undefined) {
+      if (!src) return;
+
+      if (this.settings.enableImageDeduplication) {
         const hash = await this.convertImageToHash(src);
         if (hash) {
+          const cacheHit = this.imageCache.has(hash);
           img.setAttribute('data-hash', hash);
-          // Replace src with placeholder to prevent browser errors
-          img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+          img.setAttribute('src', TRANSPARENT_IMAGE_PLACEHOLDER);
+          onImageProcessed?.(true, cacheHit);
         }
-        if (this.settings.enableLazyLoading) {
-          img.setAttribute('loading', 'lazy');
+      } else {
+        const base64 = await this.convertImageToBase64String(src);
+        if (base64) {
+          img.setAttribute('src', base64);
         }
+        onImageProcessed?.(false, false);
+      }
+
+      if (this.settings.enableLazyLoading) {
+        img.setAttribute('loading', 'lazy');
       }
     });
 
     await Promise.all(imagePromises);
+  }
 
-    // Get HTML with placeholders
-    let html = el.innerHTML;
+  /**
+   * Renders with image deduplication using JavaScript embedding
+   */
+  protected async renderWithDeduplication(el: Element): Promise<string> {
+    await this.processImagesInElement(el);
 
-    // Create images object
     const imagesObject: Record<string, string> = {};
     for (const [hash, base64] of this.imageCache) {
       imagesObject[hash] = base64;
     }
 
-    // Append script as string to avoid execution during export
     const scriptContent = `
       var images = ${JSON.stringify(imagesObject)};
       document.querySelectorAll('img[data-hash]').forEach(function(img) {
         img.src = images[img.dataset.hash];
       });
     `;
-    html += `<script>${scriptContent}</script>`;
-
-    return html;
+    return el.innerHTML + `<script>${scriptContent}</script>`;
   }
 
   /**
    * Renders without deduplication using direct base64 embedding
    */
   protected async renderWithoutDeduplication(el: Element): Promise<void> {
-    const imgElements = el.querySelectorAll('img');
-    const imagePromises = Array.from(imgElements).map(async (img) => {
-      const src = img.src;
-      if (src && src !== null && src !== undefined) {
-        const base64 = await this.convertImageToBase64String(src);
-        if (base64) {
-          img.setAttribute('src', base64);
-        }
-        if (this.settings.enableLazyLoading) {
-          img.setAttribute('loading', 'lazy');
-        }
-      }
-    });
-
-    await Promise.all(imagePromises);
+    await this.processImagesInElement(el);
   }
 }

@@ -209,37 +209,9 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             e.remove();
         });
 
-        const imgElements = el.querySelectorAll('img');
-
-        const imagePromises = Array.from(imgElements).map(async (img) => {
-            const src = img.src;
-            if (src) {
-                if (this.settings.enableImageDeduplication) {
-                    const hash = await this.convertImageToHash(src);
-                    if (hash) {
-                        // Log image processing for debug
-                        const isCacheHit = this.imageCache.has(hash);
-                        debugLogger.logImageProcessed(true, isCacheHit);
-                        img.setAttribute('data-hash', hash);
-                        img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
-                    }
-                    if (this.settings.enableLazyLoading) {
-                        img.setAttribute('loading', 'lazy');
-                    }
-                } else {
-                    debugLogger.logImageProcessed(false, false);
-                    const base64 = await this.convertImageToBase64String(src);
-                    if (base64) {
-                        img.setAttribute('src', base64);
-                    }
-                    if (this.settings.enableLazyLoading) {
-                        img.setAttribute('loading', 'lazy');
-                    }
-                }
-            }
+        await this.processImagesInElement(el, (dedup: boolean, cacheHit: boolean) => {
+            debugLogger.logImageProcessed(dedup, cacheHit);
         });
-
-        await Promise.all(imagePromises);
 
         this.normalizeRenderedLinks(el);
 
