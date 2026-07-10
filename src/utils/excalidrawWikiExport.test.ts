@@ -108,20 +108,54 @@ vi.mock('obsidian', async () => {
 // Minimal document mock (needed by renderPageWithProgress)
 // ---------------------------------------------------------------------------
 
+/** Extract attribute objects from <img> tags in HTML string */
+function parseImgAttributes(html: string): Array<Record<string, string>> {
+    const results: Array<Record<string, string>> = [];
+    const imgRe = /<img\s+([^>]*)>/g;
+    let im: RegExpExecArray | null;
+    while ((im = imgRe.exec(html)) !== null) {
+        const parsed: Record<string, string> = {};
+        const attrRe = /(\w[\w-]*)\s*=\s*["']([^"']*)["']/g;
+        let a: RegExpExecArray | null;
+        while ((a = attrRe.exec(im[1])) !== null) {
+            parsed[a[1]] = a[2];
+        }
+        results.push(parsed);
+    }
+    return results;
+}
+
+/** Update or add an attribute on the first <img> in an HTML string */
+function updateFirstImageAttribute(html: string, attrName: string, attrValue: string): string {
+    const re = new RegExp(`(${attrName}\\s*=\\s*)["'][^"']*["']`);
+    if (re.test(html)) {
+        return html.replace(re, `$1"${attrValue}"`);
+    }
+    return html.replace(/(<img[^>]*)>/, `$1 ${attrName}="${attrValue}">`);
+}
+
+/** Create a mock element for querySelectorAll('img') results */
+function createMockImageElement(
+    attrs: Record<string, string>,
+    updateHtml: (attrName: string, attrValue: string) => void,
+): Record<string, unknown> {
+    return {
+        tagName: 'IMG',
+        get src() { return attrs.src ?? ''; },
+        setAttribute: (name: string, value: string) => {
+            attrs[name] = value;
+            updateHtml(name, value);
+        },
+    };
+}
+
+/** Build a mock element whose querySelectorAll understands img/a[data-page]/a.internal-link */
 function mockEl() {
     let _html = '';
     const _imgAttrsList: Array<Record<string, string>> = [];
 
     const updateHtmlAttr = (attrName: string, attrValue: string) => {
-        const re = new RegExp(`\\s${attrName}\\s*=\\s*["'][^"']*["']`);
-        if (re.test(_html)) {
-            _html = _html.replace(
-                new RegExp(`(${attrName}\\s*=\\s*)["'][^"']*["']`),
-                `$1"${attrValue}"`,
-            );
-        } else {
-            _html = _html.replace(/(<img[^>]*)>/, `$1 ${attrName}="${attrValue}">`);
-        }
+        _html = updateFirstImageAttribute(_html, attrName, attrValue);
     };
 
     const _querySelectorAll = function (this: Record<string, unknown>, selector: string) {
@@ -132,14 +166,7 @@ function mockEl() {
 
         if (isImg) {
             for (const attrs of _imgAttrsList) {
-                results.push({
-                    tagName: 'IMG',
-                    get src() { return attrs.src ?? ''; },
-                    setAttribute: (name: string, value: string) => {
-                        attrs[name] = value;
-                        updateHtmlAttr(name, value);
-                    },
-                });
+                results.push(createMockImageElement(attrs, updateHtmlAttr));
             }
             return results;
         }
@@ -196,27 +223,12 @@ function mockEl() {
         return results;
     };
 
-    const parseHtml = (html: string) => {
-        _imgAttrsList.length = 0;
-        const imgRe = /<img\s+([^>]*)>/g;
-        let im: RegExpExecArray | null;
-        while ((im = imgRe.exec(html)) !== null) {
-            const attrs = im[1];
-            const parsed: Record<string, string> = {};
-            const attrRe = /(\w[\w-]*)\s*=\s*["']([^"']*)["']/g;
-            let a: RegExpExecArray | null;
-            while ((a = attrRe.exec(attrs)) !== null) {
-                parsed[a[1]] = a[2];
-            }
-            _imgAttrsList.push(parsed);
-        }
-    };
-
     const self: Record<string, unknown> = {
         get innerHTML() { return _html; },
         set innerHTML(v: string) {
             _html = v;
-            parseHtml(v);
+            _imgAttrsList.length = 0;
+            _imgAttrsList.push(...parseImgAttributes(v));
         },
         querySelectorAll: _querySelectorAll,
         querySelector(this: Record<string, unknown>, selector: string) {
