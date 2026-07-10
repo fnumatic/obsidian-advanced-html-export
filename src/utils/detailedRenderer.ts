@@ -1,8 +1,7 @@
 import { TFile } from 'obsidian';
-import WikiHtmlRenderer from './wikiHtmlRenderer';
+import WikiHtmlRenderer, { type RenderPipelineHooks } from './wikiHtmlRenderer';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
-import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
 
 export type RenderEventType = 
@@ -116,163 +115,126 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
         }
       });
 
-      // Phase 3: Render main content
+      // Phase 3: Render main content via shared pipeline
       token.throwIfCancelled();
-      const { content: resolvedContent } = this.linkResolver.resolveLinks(content);
 
-      // Pre-process: hide language identifiers to prevent syntax highlighting
-      const languages = parseLanguagesString(this.settings.syntaxHighlightLanguages || '');
-      const processedContent = this.settings.disableSyntaxHighlighting !== false
-        ? hideLanguageIdentifiers(resolvedContent, languages)
-        : resolvedContent;
-
-      const el = document.body.createDiv();
-
-      // Render markdown - this is the heavy operation
       const renderStartTime = performance.now();
-      const renderResult = await this.renderMarkdownSafely(processedContent, el, file.path);
-
-      if (!renderResult.ok) {
-        this.emit({
-          type: 'note_error',
-          timestamp: Date.now(),
-          notePath: file.path,
-          details: {
-            error: renderResult.error ?? 'MarkdownRenderer.render failed',
-            timedOut: renderResult.timedOut === true,
-          }
-        });
-      }
-
-      // Post-process: restore language identifiers
-      if (this.settings.disableSyntaxHighlighting !== false) {
-        restoreLanguageIdentifiers(el);
-      }
-
-      // Emit diagram_complete for each diagram (MarkdownRenderer processes them internally)
-      for (let i = 0; i < analysis.diagramCount; i++) {
-        this.emit({
-          type: 'diagram_complete',
-          timestamp: Date.now(),
-          notePath: file.path
-        });
-      }
-
-      // Emit codeblock_complete for each code block (MarkdownRenderer processes them internally)
-      for (let i = 0; i < analysis.codeBlockCount; i++) {
-        this.emit({
-          type: 'codeblock_complete',
-          timestamp: Date.now(),
-          notePath: file.path
-        });
-      }
-      
-      // Check if rendering took too long
-      const renderDuration = performance.now() - renderStartTime;
-      if (renderDuration > 5000) {
-        this.emit({
-          type: 'warning_slow_operation',
-          timestamp: Date.now(),
-          notePath: file.path,
-          details: {
-            operation: 'markdown_render',
-            duration: renderDuration,
-            noteName: file.basename
-          }
-        });
-      }
-
-      await this.yieldToUI();
-
-      // Remove copy-code buttons
-      el.querySelectorAll('.copy-code-button').forEach(e => e.remove());
-
-      // Phase 4: Process images one by one
-      token.throwIfCancelled();
-      const imgElements = el.querySelectorAll('img');
-      const totalImages = imgElements.length;
-
+      let totalImages = 0;
       let imageStartTime = 0;
 
-      await this.processImagesInElement(el, {
-        beforeImage: (ctx) => {
-          token.throwIfCancelled();
-          imageStartTime = performance.now();
-          const fileName = this.extractFileNameFromSrc(ctx.src);
-          this.emit({
-            type: 'image_start',
-            timestamp: Date.now(),
-            notePath: file.path,
-            details: { index: ctx.index, total: ctx.total, fileName }
-          });
-          this.emit({
-            type: 'image_phase',
-            timestamp: Date.now(),
-            notePath: file.path,
-            details: { phase: 'reading', index: ctx.index }
-          });
-          token.throwIfCancelled();
-        },
-        beforeHash: (ctx) => {
-          this.emit({
-            type: 'image_phase',
-            timestamp: Date.now(),
-            notePath: file.path,
-            details: { phase: 'hashing', index: ctx.index }
-          });
-        },
-        beforeOptimize: (ctx) => {
-          this.emit({
-            type: 'image_phase',
-            timestamp: Date.now(),
-            notePath: file.path,
-            details: { phase: 'optimizing', index: ctx.index }
-          });
-        },
-        afterImage: async (ctx) => {
-          const duration = performance.now() - imageStartTime;
-          const fileName = this.extractFileNameFromSrc(ctx.src);
+      const hooks: RenderPipelineHooks = {
+        afterMarkdownRender: (result) => {
+          if (!result.ok) {
+            this.emit({
+              type: 'note_error',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: {
+                error: result.error ?? 'MarkdownRenderer.render failed',
+                timedOut: result.timedOut === true,
+              }
+            });
+          }
 
-          if (duration > 5000) {
+          const renderDuration = performance.now() - renderStartTime;
+          if (renderDuration > 5000) {
             this.emit({
               type: 'warning_slow_operation',
               timestamp: Date.now(),
               notePath: file.path,
               details: {
-                operation: 'image_processing',
-                fileName,
-                duration,
-                index: ctx.index
+                operation: 'markdown_render',
+                duration: renderDuration,
+                noteName: file.basename
               }
             });
           }
-
-          this.emit({
-            type: 'image_complete',
-            timestamp: Date.now(),
-            notePath: file.path,
-            details: {
-              index: ctx.index,
-              total: ctx.total,
-              duration,
-              fileName
-            }
-          });
-
-          await this.yieldToUI();
         },
-      });
+        afterLanguageRestore: () => {
+          for (let i = 0; i < analysis.diagramCount; i++) {
+            this.emit({ type: 'diagram_complete', timestamp: Date.now(), notePath: file.path });
+          }
+          for (let i = 0; i < analysis.codeBlockCount; i++) {
+            this.emit({ type: 'codeblock_complete', timestamp: Date.now(), notePath: file.path });
+          }
+        },
+        beforeImageProcessing: (el) => {
+          token.throwIfCancelled();
+          totalImages = el.querySelectorAll('img').length;
+        },
+        imageHooks: {
+          beforeImage: (ctx) => {
+            token.throwIfCancelled();
+            imageStartTime = performance.now();
+            const fileName = this.extractFileNameFromSrc(ctx.src);
+            this.emit({
+              type: 'image_start',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: { index: ctx.index, total: ctx.total, fileName }
+            });
+            this.emit({
+              type: 'image_phase',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: { phase: 'reading', index: ctx.index }
+            });
+            token.throwIfCancelled();
+          },
+          beforeHash: (ctx) => {
+            this.emit({
+              type: 'image_phase',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: { phase: 'hashing', index: ctx.index }
+            });
+          },
+          beforeOptimize: (ctx) => {
+            this.emit({
+              type: 'image_phase',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: { phase: 'optimizing', index: ctx.index }
+            });
+          },
+          afterImage: async (ctx) => {
+            const duration = performance.now() - imageStartTime;
+            const fileName = this.extractFileNameFromSrc(ctx.src);
 
-      // Phase 5: Clean up links
-      token.throwIfCancelled();
-      this.normalizeRenderedLinks(el);
+            if (duration > 5000) {
+              this.emit({
+                type: 'warning_slow_operation',
+                timestamp: Date.now(),
+                notePath: file.path,
+                details: {
+                  operation: 'image_processing',
+                  fileName,
+                  duration,
+                  index: ctx.index
+                }
+              });
+            }
 
-      // Phase 6: Add heading IDs
-      token.throwIfCancelled();
-      let html = el.innerHTML;
-      html = this.addHeadingIds(html);
+            this.emit({
+              type: 'image_complete',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: {
+                index: ctx.index,
+                total: ctx.total,
+                duration,
+                fileName
+              }
+            });
 
-      // Note: Restoration script is added globally in generateWikiHtml, not per-page
+            await this.yieldToUI();
+          },
+        },
+      };
+
+      const html = await this.renderResolvedContent(content, file.path, hooks);
+
+      await this.yieldToUI();
 
       const noteDuration = performance.now() - this.currentNoteStartTime;
 
@@ -282,7 +244,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
         notePath: file.path,
         details: {
           duration: noteDuration,
-          totalImages: totalImages,
+          totalImages,
           totalDiagrams: analysis.diagramCount,
           totalCodeBlocks: analysis.codeBlockCount,
           linkCount: analysis.linkCount
