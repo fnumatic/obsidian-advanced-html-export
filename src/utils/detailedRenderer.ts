@@ -3,6 +3,7 @@ import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
+import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
 
 export type RenderEventType = 
   | 'note_start'
@@ -27,15 +28,7 @@ export interface RenderEvent {
 
 export type RenderEventHandler = (event: RenderEvent) => void;
 
-export interface NoteAnalysis {
-  diagramCount: number;
-  codeBlockCount: number;
-  imageCount: number;
-  linkCount: number;
-  diagrams: Array<{ type: string; content: string }>;
-  codeBlocks: Array<{ language: string; content: string }>;
-  images: Array<{ src: string; fileName: string }>;
-}
+export type { NoteAnalysis } from './contentAnalysis';
 
 export class DetailedWikiRenderer extends WikiHtmlRenderer {
   private eventHandlers: RenderEventHandler[] = [];
@@ -93,7 +86,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
         images: noteInfo.analysis.images
       };
     } else {
-      analysis = this.analyzeContent(content);
+      analysis = analyzeNoteContent(content);
     }
 
     // Emit note_start with correct totals
@@ -137,14 +130,17 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       // Render markdown - this is the heavy operation
       const renderStartTime = performance.now();
-      const renderOk = await this.renderMarkdownSafely(processedContent, el, file.path);
+      const renderResult = await this.renderMarkdownSafely(processedContent, el, file.path);
 
-      if (!renderOk) {
+      if (!renderResult.ok) {
         this.emit({
           type: 'note_error',
           timestamp: Date.now(),
           notePath: file.path,
-          details: { error: 'MarkdownRenderer.render failed (postprocessor error)' }
+          details: {
+            error: renderResult.error ?? 'MarkdownRenderer.render failed',
+            timedOut: renderResult.timedOut === true,
+          }
         });
       }
 
@@ -349,66 +345,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       throw error;
     }
-  }
-
-  private analyzeContent(content: string): NoteAnalysis {
-    // Count image references
-    const imageMatches = content.match(/!\[.*?\]\(.*?\)/g) || [];
-    
-    // Count mermaid diagrams
-    const mermaidMatches = content.match(/```mermaid[\s\S]*?```/g) || [];
-    
-    // Count other diagram types
-    const plantumlMatches = content.match(/```plantuml[\s\S]*?```/g) || [];
-    const graphMatches = content.match(/```graph[\s\S]*?```/g) || [];
-    
-    // Count all code blocks (excluding diagram blocks)
-    const allCodeBlocks = content.match(/```[\s\S]*?```/g) || [];
-    const diagramBlocks = mermaidMatches.length + plantumlMatches.length + graphMatches.length;
-    const codeBlockCount = allCodeBlocks.length - diagramBlocks;
-
-    const diagrams: Array<{ type: string; content: string }> = [
-      ...mermaidMatches.map(content => ({ type: 'mermaid', content })),
-      ...plantumlMatches.map(content => ({ type: 'plantuml', content })),
-      ...graphMatches.map(content => ({ type: 'graph', content }))
-    ];
-
-    const codeBlocks = allCodeBlocks
-      .filter(block => !block.startsWith('```mermaid') && !block.startsWith('```plantuml') && !block.startsWith('```graph'))
-      .map(block => {
-        const match = block.match(/```(\w+)/);
-        return {
-          language: match ? match[1] : 'text',
-          content: block
-        };
-      });
-
-    const images = imageMatches.map(match => {
-      const srcMatch = match.match(/!\[.*?\]\((.*?)\)/);
-      const src = srcMatch ? srcMatch[1] : '';
-      return {
-        src,
-        fileName: src.split('/').pop() || src
-      };
-    });
-
-    return {
-      diagramCount: diagramBlocks,
-      codeBlockCount,
-      imageCount: imageMatches.length,
-      linkCount: this.countLinks(content),
-      diagrams,
-      codeBlocks,
-      images
-    };
-  }
-
-  private countLinks(content: string): number {
-    // Count wiki links [[...]]
-    const wikiLinks = content.match(/\[\[[^\]]+\]\]/g) || [];
-    // Count markdown links [...]
-    const markdownLinks = content.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
-    return wikiLinks.length + markdownLinks.length;
   }
 
   private extractFileNameFromSrc(src: string): string {

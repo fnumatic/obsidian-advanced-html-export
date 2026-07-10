@@ -5,6 +5,7 @@ import { debugLogger } from './debugLogger';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
 import { DetailedWikiRenderer, RenderEvent } from './detailedRenderer';
+import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
 
 export interface PageFrontmatter {
   title?: string;
@@ -45,14 +46,7 @@ export interface NoteInfo {
   codeBlockCount: number;
   linkCount: number;
   frontmatter: PageFrontmatter;
-  analysis?: {
-    diagramCount: number;
-    codeBlockCount: number;
-    imageCount: number;
-    diagrams: Array<{ type: string; content: string }>;
-    codeBlocks: Array<{ language: string; content: string }>;
-    images: Array<{ src: string; fileName: string }>;
-  };
+  analysis?: NoteAnalysis;
 }
 
 export interface ExportMetrics {
@@ -166,7 +160,7 @@ export class WikiExportOrchestrator {
     this.collectedNotes = await Promise.all(
       collected.map(async ({ file, depth }) => {
         const content = await this.app.vault.cachedRead(file);
-        const analysis = this.analyzeNoteContent(content);
+        const analysis = analyzeNoteContent(content);
         const frontmatter = this.getPageFrontmatter(file);
         
         return {
@@ -179,14 +173,7 @@ export class WikiExportOrchestrator {
           codeBlockCount: analysis.codeBlockCount,
           linkCount: analysis.linkCount,
           frontmatter,
-          analysis: {
-            diagramCount: analysis.diagramCount,
-            codeBlockCount: analysis.codeBlockCount,
-            imageCount: analysis.images.length,
-            diagrams: analysis.diagrams,
-            codeBlocks: analysis.codeBlocks,
-            images: analysis.images
-          }
+          analysis,
         };
       })
     );
@@ -341,67 +328,6 @@ export class WikiExportOrchestrator {
       debugLogger.endPhase();
       throw error;
     }
-  }
-
-  /**
-   * Analyze note content to estimate complexity
-   */
-  private analyzeNoteContent(content: string): { 
-    diagramCount: number; 
-    codeBlockCount: number; 
-    linkCount: number;
-    diagrams: Array<{ type: string; content: string }>;
-    codeBlocks: Array<{ language: string; content: string }>;
-    images: Array<{ src: string; fileName: string }>;
-  } {
-    // Count image references
-    const imageMatches = content.match(/!\[.*?\]\(.*?\)/g) || [];
-    const images = imageMatches.map(match => {
-      const srcMatch = match.match(/!\[.*?\]\((.*?)\)/);
-      const src = srcMatch ? srcMatch[1] : '';
-      return {
-        src,
-        fileName: src.split('/').pop() || src
-      };
-    });
-    
-    // Count mermaid diagrams
-    const mermaidMatches = content.match(/```mermaid[\s\S]*?```/g) || [];
-    
-    // Count other diagram types
-    const plantumlMatches = content.match(/```plantuml[\s\S]*?```/g) || [];
-    const graphMatches = content.match(/```graph[\s\S]*?```/g) || [];
-    
-    // Count all code blocks (excluding diagram blocks)
-    const allCodeBlocks = content.match(/```[\s\S]*?```/g) || [];
-    const diagramBlocks = mermaidMatches.length + plantumlMatches.length + graphMatches.length;
-    const codeBlockCount = allCodeBlocks.length - diagramBlocks;
-    
-    // Build diagrams array
-    const diagrams = [
-      ...mermaidMatches.map(content => ({ type: 'mermaid', content })),
-      ...plantumlMatches.map(content => ({ type: 'plantuml', content })),
-      ...graphMatches.map(content => ({ type: 'graph', content }))
-    ];
-    
-    // Build codeBlocks array
-    const codeBlocks = allCodeBlocks
-      .filter(block => !block.startsWith('```mermaid') && !block.startsWith('```plantuml') && !block.startsWith('```graph'))
-      .map(block => {
-        const match = block.match(/```(\w+)/);
-        return {
-          language: match ? match[1] : 'text',
-          content: block
-        };
-      });
-    
-    // Count wikilinks
-    const linkMatches = content.match(/\[\[.*?\]\]/g) || [];
-
-    const diagramCount = imageMatches.length + diagramBlocks;
-    const linkCount = linkMatches.length;
-
-    return { diagramCount, codeBlockCount, linkCount, diagrams, codeBlocks, images };
   }
 
   /**

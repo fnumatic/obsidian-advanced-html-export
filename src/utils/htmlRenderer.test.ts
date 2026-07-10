@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import type { App, Component } from 'obsidian';
-import HtmlRenderer from './htmlRenderer';
+import HtmlRenderer, { type RenderMarkdownResult } from './htmlRenderer';
 
 // Mock ImageOptimizer
 vi.mock('./imageOptimizer', () => ({
@@ -503,5 +503,140 @@ describe('HtmlRenderer', () => {
       expect(result).toContain('Partial content before crash');
       expect(result).not.toContain('markdown-render-error-fallback');
     });
+
+    it('returns fallback when MarkdownRenderer.render times out', async () => {
+      vi.useFakeTimers();
+
+      const mockElement = {
+        innerHTML: '',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockReturnValue(new Promise(() => {}));
+
+      const renderPromise = renderer.render('# Timeout Content');
+
+      await vi.advanceTimersByTimeAsync(30000);
+
+      const result = await renderPromise;
+      expect(result).toContain('markdown-render-error-fallback');
+      expect(result).toContain('Timeout Content');
+
+      vi.useRealTimers();
+    });
+
+    it('produces partial HTML when render times out but el was partially filled', async () => {
+      vi.useFakeTimers();
+
+      const mockElement = {
+        innerHTML: '<p>Partial content before timeout</p>',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      Object.defineProperty(mockElement, 'innerHTML', {
+        get: () => '<p>Partial content before timeout</p>',
+        set: vi.fn(),
+      });
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockReturnValue(new Promise(() => {}));
+
+      const renderPromise = renderer.render('# Timeout');
+
+      await vi.advanceTimersByTimeAsync(30000);
+
+      const result = await renderPromise;
+      expect(result).toContain('Partial content before timeout');
+      expect(result).not.toContain('markdown-render-error-fallback');
+
+      vi.useRealTimers();
+    });
+
+    it('returns { ok: false, timedOut: true } directly from renderMarkdownSafely on timeout', async () => {
+      vi.useFakeTimers();
+
+      const mockElement = {
+        innerHTML: '',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockReturnValue(new Promise(() => {}));
+
+      const resultPromise = (renderer as unknown as { renderMarkdownSafely: (content: string, el: HTMLElement, sourcePath: string) => Promise<RenderMarkdownResult> })
+        .renderMarkdownSafely('# Timeout', mockElement as unknown as HTMLElement, '.');
+
+      await vi.advanceTimersByTimeAsync(30000);
+
+      const result = await resultPromise;
+      expect(result.ok).toBe(false);
+      expect(result.timedOut).toBe(true);
+      expect(result.error).toContain('timed out');
+
+      vi.useRealTimers();
+    });
+
+    it('returns { ok: false } when MarkdownRenderer.render throws', async () => {
+      const mockElement = {
+        innerHTML: '',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockRejectedValue(new Error('render crashed'));
+
+      const result = await (renderer as unknown as { renderMarkdownSafely: (content: string, el: HTMLElement, sourcePath: string) => Promise<RenderMarkdownResult> })
+        .renderMarkdownSafely('# Test', mockElement as unknown as HTMLElement, '.');
+
+      expect(result.ok).toBe(false);
+      expect(result.timedOut).toBeUndefined();
+      expect(result.error).toBe('render crashed');
+    });
+
+    it('returns { ok: true } when MarkdownRenderer.render succeeds', async () => {
+      const mockElement = {
+        innerHTML: '<p>Success</p>',
+        querySelectorAll: vi.fn().mockReturnValue([]),
+        remove: vi.fn(),
+        appendChild: vi.fn(),
+        insertBefore: vi.fn(),
+        firstChild: null as unknown as ChildNode,
+      };
+      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+
+      const { MarkdownRenderer } = await import('obsidian');
+      (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
+
+      const result = await (renderer as unknown as { renderMarkdownSafely: (content: string, el: HTMLElement, sourcePath: string) => Promise<RenderMarkdownResult> })
+        .renderMarkdownSafely('# Test', mockElement as unknown as HTMLElement, '.');
+
+      expect(result.ok).toBe(true);
+      expect(result.timedOut).toBeUndefined();
+      expect(result.error).toBeUndefined();
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 });

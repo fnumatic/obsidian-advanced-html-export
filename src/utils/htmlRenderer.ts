@@ -3,6 +3,13 @@ import { ImageOptimizer } from './imageOptimizer';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
+const MARKDOWN_RENDER_TIMEOUT_MS = 30000;
+
+export interface RenderMarkdownResult {
+  ok: boolean;
+  error?: string;
+  timedOut?: boolean;
+}
 
 interface HtmlRendererSettings {
   imageQuality: 'high' | 'medium' | 'low';
@@ -219,15 +226,28 @@ export default class HtmlRenderer {
    * Renders markdown safely – isolates foreign postprocessor errors
    * so a crashed plugin doesn't abort the entire export.
    */
-  protected async renderMarkdownSafely(content: string, el: HTMLElement, sourcePath: string): Promise<boolean> {
+  protected async renderMarkdownSafely(content: string, el: HTMLElement, sourcePath: string): Promise<RenderMarkdownResult> {
     try {
-      await MarkdownRenderer.render(this.app, content, el, sourcePath, this.component);
-      return true;
+      const renderPromise = MarkdownRenderer.render(this.app, content, el, sourcePath, this.component);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('timeout')), MARKDOWN_RENDER_TIMEOUT_MS);
+      });
+      await Promise.race([renderPromise, timeoutPromise]);
+      return { ok: true };
     } catch (error) {
-      console.warn(
-        `renderMarkdownSafely: MarkdownRenderer.render threw for sourcePath="${sourcePath}":`,
-        error instanceof Error ? error.message : String(error),
-      );
+      const isTimeout = error instanceof Error && error.message === 'timeout';
+
+      if (isTimeout) {
+        console.warn(
+          `renderMarkdownSafely: MarkdownRenderer.render timed out for sourcePath="${sourcePath}" after ${MARKDOWN_RENDER_TIMEOUT_MS}ms`,
+        );
+      } else {
+        console.warn(
+          `renderMarkdownSafely: MarkdownRenderer.render threw for sourcePath="${sourcePath}":`,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+
       if (!el.innerHTML || el.innerHTML.trim() === '') {
         const escaped = content
           .replace(/&/g, '&amp;')
@@ -235,10 +255,16 @@ export default class HtmlRenderer {
           .replace(/>/g, '&gt;');
         el.innerHTML = `<pre class="markdown-render-error-fallback">${escaped}</pre>`;
       }
-      return false;
+
+      return {
+        ok: false,
+        error: isTimeout
+          ? `MarkdownRenderer.render timed out after ${MARKDOWN_RENDER_TIMEOUT_MS}ms`
+          : error instanceof Error ? error.message : String(error),
+        ...(isTimeout ? { timedOut: true } : {}),
+      };
     }
   }
-
   /**
    * Renders markdown content to HTML with embedded images
    * @param markdownContent The markdown content to render
