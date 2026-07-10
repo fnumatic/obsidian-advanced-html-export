@@ -192,116 +192,76 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       const imgElements = el.querySelectorAll('img');
       const totalImages = imgElements.length;
 
-      for (let i = 0; i < imgElements.length; i++) {
-        token.throwIfCancelled();
+      let imageStartTime = 0;
 
-        const img = imgElements[i];
-        const src = img.src;
-
-        if (!src) {
-          continue;
-        }
-
-        const fileName = this.extractFileNameFromSrc(src);
-
-        this.emit({
-          type: 'image_start',
-          timestamp: Date.now(),
-          notePath: file.path,
-          details: {
-            index: i,
-            total: totalImages,
-            fileName: fileName
-          }
-        });
-
-        const imageStartTime = performance.now();
-
-        // Phase 4a: Reading
-        this.emit({
-          type: 'image_phase',
-          timestamp: Date.now(),
-          notePath: file.path,
-          details: { phase: 'reading', index: i }
-        });
-
-        token.throwIfCancelled();
-
-        // Phase 4b: Process image
-        if (this.settings.enableImageDeduplication) {
+      await this.processImagesInElement(el, {
+        beforeImage: (ctx) => {
+          token.throwIfCancelled();
+          imageStartTime = performance.now();
+          const fileName = this.extractFileNameFromSrc(ctx.src);
+          this.emit({
+            type: 'image_start',
+            timestamp: Date.now(),
+            notePath: file.path,
+            details: { index: ctx.index, total: ctx.total, fileName }
+          });
           this.emit({
             type: 'image_phase',
             timestamp: Date.now(),
             notePath: file.path,
-            details: { phase: 'hashing', index: i }
+            details: { phase: 'reading', index: ctx.index }
           });
-
-          const hash = await this.convertImageToHash(src);
-
+          token.throwIfCancelled();
+        },
+        beforeHash: (ctx) => {
           this.emit({
             type: 'image_phase',
             timestamp: Date.now(),
             notePath: file.path,
-            details: { phase: 'optimizing', index: i }
+            details: { phase: 'hashing', index: ctx.index }
           });
-
-          if (hash) {
-            img.setAttribute('data-hash', hash);
-            img.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
-          }
-
-          if (this.settings.enableLazyLoading) {
-            img.setAttribute('loading', 'lazy');
-          }
-        } else {
+        },
+        beforeOptimize: (ctx) => {
           this.emit({
             type: 'image_phase',
             timestamp: Date.now(),
             notePath: file.path,
-            details: { phase: 'optimizing', index: i }
+            details: { phase: 'optimizing', index: ctx.index }
           });
+        },
+        afterImage: async (ctx) => {
+          const duration = performance.now() - imageStartTime;
+          const fileName = this.extractFileNameFromSrc(ctx.src);
 
-          const base64 = await this.convertImageToBase64String(src);
-          if (base64) {
-            img.setAttribute('src', base64);
+          if (duration > 5000) {
+            this.emit({
+              type: 'warning_slow_operation',
+              timestamp: Date.now(),
+              notePath: file.path,
+              details: {
+                operation: 'image_processing',
+                fileName,
+                duration,
+                index: ctx.index
+              }
+            });
           }
-          
-          if (this.settings.enableLazyLoading) {
-            img.setAttribute('loading', 'lazy');
-          }
-        }
 
-        const imageDuration = performance.now() - imageStartTime;
-        
-        // Check if image processing was slow
-        if (imageDuration > 5000) {
           this.emit({
-            type: 'warning_slow_operation',
+            type: 'image_complete',
             timestamp: Date.now(),
             notePath: file.path,
             details: {
-              operation: 'image_processing',
-              fileName: fileName,
-              duration: imageDuration,
-              index: i
+              index: ctx.index,
+              total: ctx.total,
+              duration,
+              fileName
             }
           });
-        }
 
-        this.emit({
-          type: 'image_complete',
-          timestamp: Date.now(),
-          notePath: file.path,
-          details: { 
-            index: i,
-            total: totalImages,
-            duration: imageDuration,
-            fileName: fileName
-          }
-        });
-
-        await this.yieldToUI();
-      }
+          await this.yieldToUI();
+        },
+      });
 
       // Phase 5: Clean up links
       token.throwIfCancelled();

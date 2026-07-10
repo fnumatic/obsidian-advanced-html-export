@@ -209,7 +209,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             e.remove();
         });
 
-        await this.processImagesInElement(el, (dedup: boolean, cacheHit: boolean) => {
+        await this.processImagesInElement(el, undefined, (dedup, cacheHit) => {
             debugLogger.logImageProcessed(dedup, cacheHit);
         });
 

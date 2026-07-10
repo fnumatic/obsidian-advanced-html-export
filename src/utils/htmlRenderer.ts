@@ -12,6 +12,19 @@ export interface RenderMarkdownResult {
   timedOut?: boolean;
 }
 
+export interface ImageHookContext {
+  index: number;
+  total: number;
+  src: string;
+}
+
+export interface ImageProcessingHooks {
+  beforeImage?: (ctx: ImageHookContext) => Promise<void> | void;
+  beforeHash?: (ctx: ImageHookContext) => Promise<void> | void;
+  beforeOptimize?: (ctx: ImageHookContext) => Promise<void> | void;
+  afterImage?: (ctx: ImageHookContext) => Promise<void> | void;
+}
+
 interface ProcessedImage {
   hash: string;
   base64: string;
@@ -258,19 +271,28 @@ export default class HtmlRenderer {
   }
 
   /**
-   * Processes all images in an element, handling both dedup and non-dedup paths.
+   * Processes all images in an element sequentially, handling both dedup and non-dedup paths.
    */
   protected async processImagesInElement(
     el: Element,
+    hooks?: ImageProcessingHooks,
     onImageProcessed?: (dedup: boolean, cacheHit: boolean) => void,
   ): Promise<void> {
     const imgElements = el.querySelectorAll('img');
-    const imagePromises = Array.from(imgElements).map(async (img) => {
+    const total = imgElements.length;
+
+    for (let i = 0; i < total; i++) {
+      const img = imgElements[i];
       const src = img.src;
-      if (!src) return;
+      if (!src) continue;
+
+      const ctx: ImageHookContext = { index: i, total, src };
+      await hooks?.beforeImage?.(ctx);
 
       if (this.settings.enableImageDeduplication) {
+        await hooks?.beforeHash?.(ctx);
         const hash = await this.convertImageToHash(src);
+        await hooks?.beforeOptimize?.(ctx);
         if (hash) {
           const cacheHit = this.imageCache.has(hash);
           img.setAttribute('data-hash', hash);
@@ -278,6 +300,7 @@ export default class HtmlRenderer {
           onImageProcessed?.(true, cacheHit);
         }
       } else {
+        await hooks?.beforeOptimize?.(ctx);
         const base64 = await this.convertImageToBase64String(src);
         if (base64) {
           img.setAttribute('src', base64);
@@ -288,9 +311,9 @@ export default class HtmlRenderer {
       if (this.settings.enableLazyLoading) {
         img.setAttribute('loading', 'lazy');
       }
-    });
 
-    await Promise.all(imagePromises);
+      await hooks?.afterImage?.(ctx);
+    }
   }
 
   /**
