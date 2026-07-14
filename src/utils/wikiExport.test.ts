@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
-import { TFile } from 'obsidian';
 import { LinkResolver } from '../utils/linkResolver';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 import { createMockFile as bfsCreateFile, mockAppWithFiles as bfsMockApp } from './test-utils';

@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TFile } from 'obsidian';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { LinkResolver } from './linkResolver';
-import { createMockFile, mockAppWithFiles } from './test-utils';
+import { createMockFile as cf, mockAppWithFiles } from './test-utils';
 
 describe('WikiLinkCollector', () => {
     beforeEach(() => {
@@ -85,8 +84,6 @@ describe('WikiLinkCollector', () => {
         expect(found!.basename).toBe('image');
     });
 });
-
-const { createMockFile: cf } = await import('./test-utils');
 
 describe('Path-based slugs', () => {
     beforeEach(() => {

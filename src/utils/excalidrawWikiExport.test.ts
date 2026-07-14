@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { Component } from 'obsidian';
+import { App, Component } from 'obsidian';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 import { DetailedWikiRenderer } from './detailedRenderer';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken } from './cancellationToken';
 import { PauseController } from './pauseController';
-import { createMockFile as excCreateFile, mockAppWithFiles } from './test-utils';
+import { mockAppWithFiles } from './test-utils';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -168,8 +168,8 @@ function mockEl() {
                         if (name === 'class') return className;
                         return null;
                     },
-                    setAttribute: vi.fn((name: string, value: string) => {
-                        if (name === 'data-page') {
+                    setAttribute: vi.fn((_name: string, _value: string) => {
+                        if (_name === 'data-page') {
                             replaced.replaced = true;
                         }
                     }),
@@ -842,7 +842,7 @@ describe('O – Obsidian internal-link conversion', () => {
 
         vi.spyOn(renderer, 'callNormalizeRenderedLinks').mockRestore?.();
 
-        const el = document.createElement('div') as Record<string, unknown>;
+        const el = document.createElement('div') as unknown as Record<string, unknown>;
 
         const queryResults = [{
             tagName: 'A',
@@ -885,7 +885,7 @@ describe('O – Obsidian internal-link conversion', () => {
 
         const replaceWithSpy = vi.fn();
 
-        const el = document.createElement('div') as Record<string, unknown>;
+        const el = document.createElement('div') as unknown as Record<string, unknown>;
 
         const queryResults = [{
             tagName: 'A',
@@ -930,7 +930,7 @@ describe('O – Obsidian internal-link conversion', () => {
 
         const setAttrSpy = vi.fn();
 
-        const el = document.createElement('div') as Record<string, unknown>;
+        const el = document.createElement('div') as unknown as Record<string, unknown>;
 
         const queryResults = [{
             tagName: 'A',
@@ -970,7 +970,7 @@ describe('O – Obsidian internal-link conversion', () => {
 
         const replaceWithSpy = vi.fn();
 
-        const el = document.createElement('div') as Record<string, unknown>;
+        const el = document.createElement('div') as unknown as Record<string, unknown>;
 
         const queryResults = [{
             tagName: 'A',
@@ -1012,11 +1012,11 @@ describe('O – Obsidian internal-link conversion', () => {
 
         const removeAttrSpy = vi.fn();
 
-        const el = document.createElement('div') as Record<string, unknown>;
+        const el = document.createElement('div') as unknown as Record<string, unknown>;
 
         const queryResults = [{
             tagName: 'A',
-            getAttribute: (name: string) => null,
+            getAttribute: (_name: string) => null,
             setAttribute: vi.fn(),
             removeAttribute: removeAttrSpy,
             textContent: 'Central',

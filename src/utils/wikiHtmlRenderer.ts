@@ -38,6 +38,7 @@ export interface RenderPipelineHooks {
   afterMarkdownRender?: (result: RenderMarkdownResult, el: HTMLElement) => void | Promise<void>;
   afterLanguageRestore?: (el: HTMLElement) => void | Promise<void>;
   beforeImageProcessing?: (el: HTMLElement) => void | Promise<void>;
+  afterImageProcessing?: (el: HTMLElement) => void | Promise<void>;
   imageHooks?: ImageProcessingHooks;
   onImageProcessed?: (dedup: boolean, cacheHit: boolean) => void;
   beforeNormalizeLinks?: (el: HTMLElement) => void | Promise<void>;
