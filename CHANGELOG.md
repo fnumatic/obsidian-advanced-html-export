@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.8.0...0.9.0) (2026-09-28)
+
+
+### Features
+
+* **export:** add self-extracting gzip export compression ([86a5f49](https://github.com/fnumatic/obsidian-advanced-html-export/commit/86a5f49682c0721bc4ff595764755f298ef6c61c))
+
+
+### Bug Fixes
+
+* **ci:** attach release assets without clobbering notes ([d7f0ead](https://github.com/fnumatic/obsidian-advanced-html-export/commit/d7f0ead474fa346ea3a34b4708089fd84fa537b4))
+* resolve type-check errors from refactoring ([fc3cc1c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/fc3cc1c397986c602062c06d27c285ebcf1bb371))
+
 ## [0.8.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.7.0...0.8.0) (2026-07-10)
 
 
