@@ -455,180 +455,99 @@ describe('HtmlRenderer', () => {
   });
 
   describe('renderMarkdownSafely', () => {
-    it('returns fallback HTML when MarkdownRenderer.render throws', async () => {
-      const mockElement = {
-        innerHTML: '',
+    function makeElement(innerHTML = '', frozen = false): HTMLElement {
+      const el: Record<string, unknown> = {
+        innerHTML,
         querySelectorAll: vi.fn().mockReturnValue([]),
         remove: vi.fn(),
         appendChild: vi.fn(),
         insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
+        firstChild: null,
       };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+      if (frozen) {
+        Object.defineProperty(el, 'innerHTML', { get: () => innerHTML, set: vi.fn() });
+      }
+      return el as unknown as HTMLElement;
+    }
 
+    async function markdownRenderer(): Promise<Mock> {
       const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockRejectedValue(
-        new Error("Cannot destructure property 'headings' of 's' as it is null"),
-      );
+      return MarkdownRenderer.render as unknown as Mock;
+    }
+
+    function safely(content: string, el: HTMLElement): Promise<RenderMarkdownResult> {
+      return (renderer as unknown as {
+        renderMarkdownSafely: (c: string, e: HTMLElement, p: string) => Promise<RenderMarkdownResult>;
+      }).renderMarkdownSafely(content, el, '.');
+    }
+
+    it.each([
+      { label: 'throws', partial: '' },
+      { label: 'throws after a partial fill', partial: '<p>Partial content before crash</p>' },
+    ])('falls back with error HTML when MarkdownRenderer.render $label', async ({ partial }) => {
+      mockBody.createDiv.mockReturnValue(makeElement(partial, partial !== ''));
+      (await markdownRenderer()).mockRejectedValue(new Error('postprocessor error'));
 
       const result = await renderer.render('# Test Content');
 
-      expect(result).toContain('markdown-render-error-fallback');
-      expect(result).toContain('Test Content');
+      if (partial) {
+        expect(result).toContain('Partial content before crash');
+        expect(result).not.toContain('markdown-render-error-fallback');
+      } else {
+        expect(result).toContain('markdown-render-error-fallback');
+        expect(result).toContain('Test Content');
+      }
     });
 
-    it('produces partial HTML when render throws but el was partially filled', async () => {
-      const mockElement = {
-        innerHTML: '<p>Partial content before crash</p>',
-        querySelectorAll: vi.fn().mockReturnValue([]),
-        remove: vi.fn(),
-        appendChild: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
-      };
-      Object.defineProperty(mockElement, 'innerHTML', {
-        get: () => '<p>Partial content before crash</p>',
-        set: vi.fn(),
-      });
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
-
-      const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockRejectedValue(
-        new Error('some postprocessor error'),
-      );
-
-      const result = await renderer.render('# Hello');
-
-      // Partial content is preserved, no fallback wrapper needed
-      expect(result).toContain('Partial content before crash');
-      expect(result).not.toContain('markdown-render-error-fallback');
-    });
-
-    it('returns fallback when MarkdownRenderer.render times out', async () => {
+    it.each([
+      { label: 'times out', partial: '' },
+      { label: 'times out after a partial fill', partial: '<p>Partial content before timeout</p>' },
+    ])('falls back when MarkdownRenderer.render $label', async ({ partial }) => {
       vi.useFakeTimers();
-
-      const mockElement = {
-        innerHTML: '',
-        querySelectorAll: vi.fn().mockReturnValue([]),
-        remove: vi.fn(),
-        appendChild: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
-      };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
-
-      const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockReturnValue(new Promise(() => {}));
+      mockBody.createDiv.mockReturnValue(makeElement(partial, partial !== ''));
+      (await markdownRenderer()).mockReturnValue(new Promise(() => {}));
 
       const renderPromise = renderer.render('# Timeout Content');
-
       await vi.advanceTimersByTimeAsync(30000);
-
       const result = await renderPromise;
-      expect(result).toContain('markdown-render-error-fallback');
-      expect(result).toContain('Timeout Content');
 
+      if (partial) {
+        expect(result).toContain('Partial content before timeout');
+        expect(result).not.toContain('markdown-render-error-fallback');
+      } else {
+        expect(result).toContain('markdown-render-error-fallback');
+      }
       vi.useRealTimers();
     });
 
-    it('produces partial HTML when render times out but el was partially filled', async () => {
+    it('reports a timeout result directly', async () => {
       vi.useFakeTimers();
+      (await markdownRenderer()).mockReturnValue(new Promise(() => {}));
 
-      const mockElement = {
-        innerHTML: '<p>Partial content before timeout</p>',
-        querySelectorAll: vi.fn().mockReturnValue([]),
-        remove: vi.fn(),
-        appendChild: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
-      };
-      Object.defineProperty(mockElement, 'innerHTML', {
-        get: () => '<p>Partial content before timeout</p>',
-        set: vi.fn(),
-      });
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
-
-      const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockReturnValue(new Promise(() => {}));
-
-      const renderPromise = renderer.render('# Timeout');
-
+      const promise = safely('# Timeout', makeElement());
       await vi.advanceTimersByTimeAsync(30000);
+      const result = await promise;
 
-      const result = await renderPromise;
-      expect(result).toContain('Partial content before timeout');
-      expect(result).not.toContain('markdown-render-error-fallback');
-
-      vi.useRealTimers();
-    });
-
-    it('returns { ok: false, timedOut: true } directly from renderMarkdownSafely on timeout', async () => {
-      vi.useFakeTimers();
-
-      const mockElement = {
-        innerHTML: '',
-        querySelectorAll: vi.fn().mockReturnValue([]),
-        remove: vi.fn(),
-        appendChild: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
-      };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
-
-      const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockReturnValue(new Promise(() => {}));
-
-      const resultPromise = (renderer as unknown as { renderMarkdownSafely: (content: string, el: HTMLElement, sourcePath: string) => Promise<RenderMarkdownResult> })
-        .renderMarkdownSafely('# Timeout', mockElement as unknown as HTMLElement, '.');
-
-      await vi.advanceTimersByTimeAsync(30000);
-
-      const result = await resultPromise;
       expect(result.ok).toBe(false);
       expect(result.timedOut).toBe(true);
       expect(result.error).toContain('timed out');
-
       vi.useRealTimers();
     });
 
-    it('returns { ok: false } when MarkdownRenderer.render throws', async () => {
-      const mockElement = {
-        innerHTML: '',
-        querySelectorAll: vi.fn().mockReturnValue([]),
-        remove: vi.fn(),
-        appendChild: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
-      };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+    it('reports an error result when MarkdownRenderer.render throws', async () => {
+      (await markdownRenderer()).mockRejectedValue(new Error('render crashed'));
 
-      const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockRejectedValue(new Error('render crashed'));
-
-      const result = await (renderer as unknown as { renderMarkdownSafely: (content: string, el: HTMLElement, sourcePath: string) => Promise<RenderMarkdownResult> })
-        .renderMarkdownSafely('# Test', mockElement as unknown as HTMLElement, '.');
+      const result = await safely('# Test', makeElement());
 
       expect(result.ok).toBe(false);
       expect(result.timedOut).toBeUndefined();
       expect(result.error).toBe('render crashed');
     });
 
-    it('returns { ok: true } when MarkdownRenderer.render succeeds', async () => {
-      const mockElement = {
-        innerHTML: '<p>Success</p>',
-        querySelectorAll: vi.fn().mockReturnValue([]),
-        remove: vi.fn(),
-        appendChild: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null as unknown as ChildNode,
-      };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+    it('reports success when MarkdownRenderer.render succeeds', async () => {
+      (await markdownRenderer()).mockResolvedValue(undefined);
 
-      const { MarkdownRenderer } = await import('obsidian');
-      (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
-
-      const result = await (renderer as unknown as { renderMarkdownSafely: (content: string, el: HTMLElement, sourcePath: string) => Promise<RenderMarkdownResult> })
-        .renderMarkdownSafely('# Test', mockElement as unknown as HTMLElement, '.');
+      const result = await safely('# Test', makeElement('<p>Success</p>'));
 
       expect(result.ok).toBe(true);
       expect(result.timedOut).toBeUndefined();

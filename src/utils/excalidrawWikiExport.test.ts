@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, Component } from 'obsidian';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
@@ -5,20 +6,16 @@ import { DetailedWikiRenderer } from './detailedRenderer';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken } from './cancellationToken';
 import { PauseController } from './pauseController';
-import { mockAppWithFiles } from './test-utils';
+import { installObsidianDom, mockAppWithFiles } from './test-utils';
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Fixtures
 // ---------------------------------------------------------------------------
 
 const SVG_EXAMPLE = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
 const SVG_RECT = '<svg viewBox="0 0 200 200"><rect width="100" height="100"/></svg>';
 const EXCALIDRAW_JSON = JSON.stringify({ source: SVG_EXAMPLE, elements: [] });
 const PNG_VIEWABLE = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>';
-
-function buildVault(entries: Record<string, string>) {
-    return mockAppWithFiles(entries);
-}
 
 const defaultOptions: WikiExportOptions = {
     imageQuality: 'high',
@@ -35,10 +32,7 @@ const defaultOptions: WikiExportOptions = {
 const token = new CancellationToken();
 const pauseController = new PauseController();
 
-// ---------------------------------------------------------------------------
-// Module-level state for the MarkdownRenderer mock
-// ---------------------------------------------------------------------------
-
+/** Viewable file contents keyed by embed target, consumed by the renderer mock below. */
 const viewableContent = new Map<string, string>();
 
 vi.mock('obsidian', async () => {
@@ -53,171 +47,33 @@ vi.mock('obsidian', async () => {
                 _sourcePath: string,
                 _component: unknown,
             ) => {
-                let html = markdown;
-                html = html.replace(
+                el.innerHTML = markdown.replace(
                     /!\[\[([^\]]+\.(?:png|jpg|jpeg|gif|svg|webp|bmp|excalidraw))\]\]/g,
                     (_match: string, relPath: string) => {
                         const content = viewableContent.get(relPath) ?? '<viewable-mock>fallback</viewable-mock>';
                         return `<div class="viewable-embed" data-path="${relPath}">${content}</div>`;
                     },
                 );
-                el.innerHTML = html;
             },
         },
     };
 });
 
-// ---------------------------------------------------------------------------
-// Minimal document mock (needed by renderPageWithProgress)
-// ---------------------------------------------------------------------------
-
-/** Extract attribute objects from <img> tags in HTML string */
-function parseImgAttributes(html: string): Array<Record<string, string>> {
-    const results: Array<Record<string, string>> = [];
-    const imgRe = /<img\s+([^>]*)>/g;
-    let im: RegExpExecArray | null;
-    while ((im = imgRe.exec(html)) !== null) {
-        const parsed: Record<string, string> = {};
-        const attrRe = /(\w[\w-]*)\s*=\s*["']([^"']*)["']/g;
-        let a: RegExpExecArray | null;
-        while ((a = attrRe.exec(im[1])) !== null) {
-            parsed[a[1]] = a[2];
-        }
-        results.push(parsed);
-    }
-    return results;
-}
-
-/** Update or add an attribute on the first <img> in an HTML string */
-function updateFirstImageAttribute(html: string, attrName: string, attrValue: string): string {
-    const re = new RegExp(`(${attrName}\\s*=\\s*)["'][^"']*["']`);
-    if (re.test(html)) {
-        return html.replace(re, `$1"${attrValue}"`);
-    }
-    return html.replace(/(<img[^>]*)>/, `$1 ${attrName}="${attrValue}">`);
-}
-
-/** Create a mock element for querySelectorAll('img') results */
-function createMockImageElement(
-    attrs: Record<string, string>,
-    updateHtml: (attrName: string, attrValue: string) => void,
-): Record<string, unknown> {
-    return {
-        tagName: 'IMG',
-        get src() { return attrs.src ?? ''; },
-        setAttribute: (name: string, value: string) => {
-            attrs[name] = value;
-            updateHtml(name, value);
-        },
-    };
-}
-
-/** Build a mock element whose querySelectorAll understands img/a[data-page]/a.internal-link */
-function mockEl() {
-    let _html = '';
-    const _imgAttrsList: Array<Record<string, string>> = [];
-
-    const updateHtmlAttr = (attrName: string, attrValue: string) => {
-        _html = updateFirstImageAttribute(_html, attrName, attrValue);
-    };
-
-    const _querySelectorAll = function (this: Record<string, unknown>, selector: string) {
-        const isDataPage = selector === 'a[data-page]';
-        const isInternalLink = selector === 'a.internal-link[data-href]';
-        const isImg = selector === 'img';
-        const results: Array<Record<string, unknown>> = [];
-
-        if (isImg) {
-            for (const attrs of _imgAttrsList) {
-                results.push(createMockImageElement(attrs, updateHtmlAttr));
-            }
-            return results;
-        }
-
-        const tagRe = /<a\s+([^>]*)>/g;
-        let m: RegExpExecArray | null;
-        while ((m = tagRe.exec(_html)) !== null) {
-            const attrs = m[1];
-            const hasDataPage = /data-page\s*=\s*["']([^"']*)["']/.test(attrs);
-            const hasDataHref = /data-href\s*=\s*["']([^"']*)["']/.test(attrs);
-            const hasInternalLink = /\binternal-link\b/.test(attrs);
-            if (isDataPage && hasDataPage) {
-                const dataPage = attrs.match(/data-page\s*=\s*["']([^"']*)["']/)?.[1] || '';
-                const href = attrs.match(/href\s*=\s*["']([^"']*)["']/)?.[1] || '';
-                results.push({
-                    tagName: 'A',
-                    getAttribute: (name: string) => {
-                        if (name === 'data-page') return dataPage;
-                        if (name === 'href') return href;
-                        return null;
-                    },
-                    setAttribute: vi.fn(),
-                    removeAttribute: vi.fn(),
-                    textContent: '',
-                });
-            } else if (isInternalLink && hasInternalLink && hasDataHref) {
-                const dataHref = attrs.match(/data-href\s*=\s*["']([^"']*)["']/)?.[1] || '';
-                const href = attrs.match(/href\s*=\s*["']([^"']*)["']/)?.[1] || '';
-                const className = attrs.match(/class\s*=\s*["']([^"']*)["']/)?.[1] || '';
-                const replaced = { replaced: false };
-                results.push({
-                    tagName: 'A',
-                    className,
-                    textContent: '',
-                    getAttribute: (name: string) => {
-                        if (name === 'data-href') return dataHref;
-                        if (name === 'href') return href;
-                        if (name === 'class') return className;
-                        return null;
-                    },
-                    setAttribute: vi.fn((_name: string, _value: string) => {
-                        if (_name === 'data-page') {
-                            replaced.replaced = true;
-                        }
-                    }),
-                    removeAttribute: vi.fn(() => {}),
-                    replaceWith: vi.fn((_el: unknown) => {
-                        replaced.replaced = true;
-                    }),
-                    _replaced: replaced,
-                });
-            }
-        }
-        return results;
-    };
-
-    const self: Record<string, unknown> = {
-        get innerHTML() { return _html; },
-        set innerHTML(v: string) {
-            _html = v;
-            _imgAttrsList.length = 0;
-            _imgAttrsList.push(...parseImgAttributes(v));
-        },
-        querySelectorAll: _querySelectorAll,
-        querySelector(this: Record<string, unknown>, selector: string) {
-            const results = _querySelectorAll.call(this, selector);
-            return results.length > 0 ? results[0] : null;
-        },
-        getAttribute: vi.fn(() => null),
-        setAttribute: vi.fn(),
-        removeAttribute: vi.fn(),
-        appendChild: vi.fn(),
-        remove: vi.fn(),
-        insertBefore: vi.fn(),
-        firstChild: null,
-    };
-    return self;
-}
+// Image optimization needs a real canvas, which the DOM environment does not
+// provide; the export scenarios here do not test optimization itself.
+vi.mock('./imageOptimizer', () => ({
+    ImageOptimizer: {
+        optimizeImage: vi.fn(async (buffer: ArrayBuffer) => buffer),
+        getMimeType: vi.fn(() => 'image/webp'),
+        generateImageHash: vi.fn(async (buffer: ArrayBuffer) => `hash-${buffer.byteLength}`),
+        isWebPSupported: vi.fn(() => true),
+    },
+}));
 
 beforeEach(() => {
     viewableContent.clear();
-
-    const body = { createDiv: vi.fn(() => mockEl()) };
-    Object.defineProperty(globalThis, 'document', {
-        value: { body, createElement: vi.fn(() => mockEl()) },
-        writable: true,
-        configurable: true,
-    });
+    installObsidianDom();
+    document.body.innerHTML = '';
 });
 
 // ---------------------------------------------------------------------------
@@ -230,7 +86,7 @@ async function collectFrom(
     rootPath = 'central.md',
     options: WikiExportOptions = defaultOptions,
 ) {
-    const { app, byPath } = buildVault(entries);
+    const { app, byPath } = mockAppWithFiles(entries);
     const orch = new WikiExportOrchestrator(app, new Component(), options);
     await orch.collectNotes(byPath.get(rootPath)!);
     return { app, byPath, orch };
@@ -243,7 +99,7 @@ async function renderFrom(
     rootPath = 'central.md',
     options: WikiExportOptions = defaultOptions,
 ) {
-    const { app, byPath } = buildVault(entries);
+    const { app, byPath } = mockAppWithFiles(entries);
     for (const [key, value] of Object.entries(viewable)) {
         viewableContent.set(key, value);
     }
@@ -264,7 +120,7 @@ async function renderFrom(
 const slugsOf = (orch: WikiExportOrchestrator): string[] => orch.getCollectedNotes().map((n) => n.slug);
 
 // ===========================================================================
-// A/I/N – Embeds never create wiki pages
+// Embeds never create wiki pages
 // ===========================================================================
 
 interface EmbedOnlyCase {
@@ -306,7 +162,7 @@ describe('Embed only', () => {
 });
 
 // ===========================================================================
-// B/J/K/L – Direct links to viewable files
+// Direct links to viewable files
 // ===========================================================================
 
 interface DirectLinkCase {
@@ -396,7 +252,7 @@ describe('Direct links to viewable files', () => {
 });
 
 // ===========================================================================
-// C – Both embed and direct link
+// Both embed and direct link
 // ===========================================================================
 
 describe('Both embed and direct link', () => {
@@ -426,12 +282,12 @@ describe('Both embed and direct link', () => {
 });
 
 // ===========================================================================
-// D – Excalidraw page rendering via detailed renderer
+// Detailed renderer direct
 // ===========================================================================
 
 describe('Detailed renderer direct', () => {
     it('renders an excalidraw file without exposing JSON', async () => {
-        const { app, byPath } = buildVault({ 'drawing.excalidraw': EXCALIDRAW_JSON });
+        const { app, byPath } = mockAppWithFiles({ 'drawing.excalidraw': EXCALIDRAW_JSON });
         viewableContent.set('drawing.excalidraw', SVG_RECT);
 
         const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
@@ -450,7 +306,7 @@ describe('Detailed renderer direct', () => {
 });
 
 // ===========================================================================
-// E – Link without extension
+// Link without extension
 // ===========================================================================
 
 describe('Link without extension', () => {
@@ -464,7 +320,7 @@ describe('Link without extension', () => {
 });
 
 // ===========================================================================
-// F/M – Extension collision: markdown wins
+// Extension collision: markdown wins
 // ===========================================================================
 
 interface CollisionCase {
@@ -502,7 +358,7 @@ describe('Extension collision', () => {
 });
 
 // ===========================================================================
-// G – Slug correctness
+// Slug correctness
 // ===========================================================================
 
 describe('Slug correctness', () => {
@@ -515,7 +371,7 @@ describe('Slug correctness', () => {
 });
 
 // ===========================================================================
-// H – Special characters in filename
+// Special characters in filename
 // ===========================================================================
 
 describe('Special characters in filenames', () => {
@@ -544,7 +400,7 @@ describe('Special characters in filenames', () => {
 });
 
 // ===========================================================================
-// O – Obsidian internal-link conversion
+// Obsidian internal-link conversion
 // ===========================================================================
 
 class ExposedRenderer extends WikiHtmlRenderer {
@@ -557,110 +413,72 @@ class ExposedRenderer extends WikiHtmlRenderer {
     }
 }
 
-interface LinkElementOptions {
-    dataHref?: string;
-    href?: string;
-}
-
-function normalizeLink(renderer: ExposedRenderer, options: LinkElementOptions) {
-    const setAttrSpy = vi.fn();
-    const removeAttrSpy = vi.fn();
-    const replaceWithSpy = vi.fn();
-
-    const anchor = {
-        tagName: 'A',
-        getAttribute: (name: string) => {
-            if (name === 'data-href') return options.dataHref ?? null;
-            if (name === 'href') return options.href ?? null;
-            if (name === 'class') return 'internal-link';
-            return null;
-        },
-        setAttribute: setAttrSpy,
-        removeAttribute: removeAttrSpy,
-        replaceWith: replaceWithSpy,
-        textContent: 'Link',
-    };
-
-    const el = document.createElement('div') as unknown as Record<string, unknown>;
-    el.querySelectorAll = vi.fn((selector: string) =>
-        selector === 'a.internal-link[data-href]' ? [anchor] : [],
+function rendererWith(pages: Array<{ slug: string; path: string }>): ExposedRenderer {
+    const { app } = mockAppWithFiles(
+        Object.fromEntries([['central.md', '# Central'], ...pages.map((p) => [p.path, '# Page'])]),
     );
-
-    renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
-    return { setAttrSpy, removeAttrSpy, replaceWithSpy };
+    const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+    renderer.setResolvablePages(pages.map((p) => ({ slug: p.slug, title: p.slug, path: p.path })));
+    return renderer;
 }
 
 describe('Obsidian internal-link conversion', () => {
-    it('converts internal-link to data-page when target is exported', async () => {
-        const { app } = buildVault({ 'central.md': '# Central', 'detail.md': '# Detail' });
-        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-        renderer.setResolvablePages([
-            { slug: 'central', title: 'Central', path: 'central.md' },
-            { slug: 'detail', title: 'Detail', path: 'detail.md' },
+    it('converts internal-link to data-page when target is exported', () => {
+        const renderer = rendererWith([
+            { slug: 'central', path: 'central.md' },
+            { slug: 'detail', path: 'detail.md' },
         ]);
+        const el = document.createElement('div');
+        el.innerHTML = '<a class="internal-link" data-href="detail" href="detail" target="_blank">Detail</a>';
 
-        const { setAttrSpy, removeAttrSpy } = normalizeLink(renderer, { dataHref: 'detail', href: 'detail' });
+        renderer.callNormalizeRenderedLinks(el);
 
-        expect(setAttrSpy).toHaveBeenCalledWith('data-page', 'detail');
-        expect(removeAttrSpy).toHaveBeenCalledWith('data-href');
-        expect(removeAttrSpy).toHaveBeenCalledWith('target');
+        const anchor = el.querySelector('a')!;
+        expect(anchor.getAttribute('data-page')).toBe('detail');
+        expect(anchor.getAttribute('href')).toBe('javascript:void(0)');
+        expect(anchor.hasAttribute('data-href')).toBe(false);
+        expect(anchor.hasAttribute('target')).toBe(false);
     });
 
-    it('strips subpath references from heading refs', async () => {
-        const { app } = buildVault({ 'central.md': '# Central', 'detail.md': '# Detail' });
-        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-        renderer.setResolvablePages([
-            { slug: 'central', title: 'Central', path: 'central.md' },
-            { slug: 'detail', title: 'Detail', path: 'detail.md' },
+    it('strips subpath references from heading refs', () => {
+        const renderer = rendererWith([
+            { slug: 'central', path: 'central.md' },
+            { slug: 'detail', path: 'detail.md' },
         ]);
+        const el = document.createElement('div');
+        el.innerHTML = '<a class="internal-link" data-href="detail#Heading">Detail</a>';
 
-        const { setAttrSpy } = normalizeLink(renderer, { dataHref: 'detail#Heading', href: 'detail#Heading' });
+        renderer.callNormalizeRenderedLinks(el);
 
-        expect(setAttrSpy).toHaveBeenCalledWith('data-page', 'detail');
+        expect(el.querySelector('a')!.getAttribute('data-page')).toBe('detail');
     });
 
-    it('replaces internal-link with a missing span when the target is not exported', async () => {
-        const { app } = buildVault({ 'central.md': '# Central' });
-        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-        renderer.setResolvablePages([{ slug: 'central', title: 'Central', path: 'central.md' }]);
+    it.each([
+        { label: 'target not exported', dataHref: 'secret' },
+        { label: 'file not found', dataHref: 'nonexistent' },
+    ])('replaces internal-link with a missing span when $label', ({ dataHref }) => {
+        const renderer = rendererWith([{ slug: 'central', path: 'central.md' }]);
+        const el = document.createElement('div');
+        el.innerHTML = `<a class="internal-link" data-href="${dataHref}">Link</a>`;
 
-        const { replaceWithSpy } = normalizeLink(renderer, { dataHref: 'secret', href: 'secret' });
+        renderer.callNormalizeRenderedLinks(el);
 
-        expect(replaceWithSpy).toHaveBeenCalled();
-        expect((replaceWithSpy.mock.calls[0][0] as Record<string, unknown>).className).toBe('wiki-link-missing');
+        const span = el.querySelector('.wiki-link-missing');
+        expect(span).not.toBeNull();
+        expect(span!.getAttribute('data-missing-target')).toBe(dataHref);
+        expect(el.querySelector('a')).toBeNull();
     });
 
-    it('replaces internal-link with a missing span when the file is not found', async () => {
-        const { app } = buildVault({ 'central.md': '# Central' });
-        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-        renderer.setResolvablePages([{ slug: 'central', title: 'Central', path: 'central.md' }]);
+    it('cleans up existing data-page links', () => {
+        const el = document.createElement('div');
+        el.innerHTML = '<a data-page="central" target="_blank" rel="noopener" style="color:red">Central</a>';
 
-        const { replaceWithSpy } = normalizeLink(renderer, { dataHref: 'nonexistent', href: 'nonexistent' });
+        rendererWith([{ slug: 'central', path: 'central.md' }]).callNormalizeRenderedLinks(el);
 
-        expect(replaceWithSpy).toHaveBeenCalled();
-        expect((replaceWithSpy.mock.calls[0][0] as Record<string, unknown>).className).toBe('wiki-link-missing');
-    });
-
-    it('cleans up existing data-page links', async () => {
-        const { app } = buildVault({ 'central.md': '# Central' });
-        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-
-        const removeAttrSpy = vi.fn();
-        const anchor = {
-            tagName: 'A',
-            getAttribute: () => null,
-            setAttribute: vi.fn(),
-            removeAttribute: removeAttrSpy,
-            textContent: 'Central',
-        };
-        const el = document.createElement('div') as unknown as Record<string, unknown>;
-        el.querySelectorAll = vi.fn((selector: string) => (selector === 'a[data-page]' ? [anchor] : []));
-
-        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
-
-        expect(removeAttrSpy).toHaveBeenCalledWith('target');
-        expect(removeAttrSpy).toHaveBeenCalledWith('rel');
-        expect(removeAttrSpy).toHaveBeenCalledWith('style');
+        const anchor = el.querySelector('a')!;
+        expect(anchor.hasAttribute('target')).toBe(false);
+        expect(anchor.hasAttribute('rel')).toBe(false);
+        expect(anchor.hasAttribute('style')).toBe(false);
     });
 });
 
