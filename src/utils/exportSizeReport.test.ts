@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ARTIFACT_KIND_LABELS,
   computeShares,
+  createNoteArtifact,
   formatBytes,
   inlineDataUriBytes,
   utf8ByteLength,
@@ -76,5 +77,23 @@ describe('inlineDataUriBytes', () => {
 
   it('returns zero when there is no data URI', () => {
     expect(inlineDataUriBytes('<p>no images here</p>')).toBe(0);
+  });
+});
+
+describe('createNoteArtifact', () => {
+  it('builds a note artifact with HTML as export type', () => {
+    const artifact = createNoteArtifact('My Note', '<p>hello</p>');
+    expect(artifact).toEqual({
+      kind: 'note',
+      original: 'My Note',
+      exportType: 'HTML',
+      bytes: utf8ByteLength('<p>hello</p>'),
+    });
+  });
+
+  it('excludes inline image data URIs from the note size', () => {
+    const dataUri = 'data:image/png;base64,AAAA';
+    const artifact = createNoteArtifact('My Note', `<p>x</p><img src="${dataUri}">`);
+    expect(artifact.bytes).toBe(utf8ByteLength('<p>x</p>') + utf8ByteLength('<img src="">'));
   });
 });

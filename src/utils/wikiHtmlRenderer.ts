@@ -1,10 +1,6 @@
 import { App, Component, TFile } from 'obsidian';
-import HtmlRenderer, {
-    extractDiagramSources,
-    noteLabelFromPath,
-    type ImageProcessingHooks,
-    type RenderMarkdownResult,
-} from './htmlRenderer';
+import HtmlRenderer, { type ImageProcessingHooks, type RenderMarkdownResult } from './htmlRenderer';
+import { extractDiagramSources, noteLabelFromPath } from './exportSizeInstrumentation';
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { fillTemplate } from './templateUtils';

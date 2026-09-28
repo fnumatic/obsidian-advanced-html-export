@@ -155,6 +155,22 @@ export function inlineDataUriBytes(html: string): number {
 }
 
 /**
+ * Builds the size artifact for a note page. The rendered page bytes exclude
+ * inline image data URIs so embedded images are not counted twice.
+ * @param title Note title used as the original name
+ * @param pageHtml Rendered HTML of the note page
+ * @returns A note size artifact
+ */
+export function createNoteArtifact(title: string, pageHtml: string): SizeArtifact {
+  return {
+    kind: 'note',
+    original: title,
+    exportType: 'HTML',
+    bytes: Math.max(0, utf8ByteLength(pageHtml) - inlineDataUriBytes(pageHtml)),
+  };
+}
+
+/**
  * Computes the share of each category relative to a total.
  * @param values Category byte values
  * @param total Total byte count

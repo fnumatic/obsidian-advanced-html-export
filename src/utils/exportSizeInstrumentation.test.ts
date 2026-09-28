@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import type { App, Component } from 'obsidian';
-import HtmlRenderer, { extractDiagramSources } from './htmlRenderer';
+import HtmlRenderer from './htmlRenderer';
+import {
+  codeLabelFromNode,
+  diagramLabelFromNode,
+  extractDiagramSources,
+  imageLabelFromPath,
+  noteLabelFromPath,
+} from './exportSizeInstrumentation';
 import { ExportSizeLedger } from './exportSizeLedger';
 import { utf8ByteLength } from './exportSizeReport';
 
@@ -267,5 +274,42 @@ describe('size instrumentation', () => {
       (renderer as unknown as { measureContentSizes: (el: Element) => void })
         .measureContentSizes(element as unknown as Element),
     ).not.toThrow();
+  });
+});
+
+describe('size instrumentation helpers', () => {
+  const classElement = (className: string): Element =>
+    ({ getAttribute: (name: string) => (name === 'class' ? className : null) }) as unknown as Element;
+
+  it('labels diagram types from the container class list', () => {
+    expect(diagramLabelFromNode(classElement('mermaid'))).toBe('Mermaid');
+    expect(diagramLabelFromNode(classElement('block-language-plantuml'))).toBe('PlantUML');
+    expect(diagramLabelFromNode(classElement('excalidraw'))).toBe('Excalidraw');
+    expect(diagramLabelFromNode(classElement('block-language-graph'))).toBe('Graph');
+    expect(diagramLabelFromNode(classElement('unknown'))).toBe('Diagram');
+  });
+
+  it('derives image labels from source paths', () => {
+    expect(imageLabelFromPath('folder/photo.png')).toBe('photo.png');
+    expect(imageLabelFromPath('app://photo.png?123')).toBe('photo.png');
+    expect(imageLabelFromPath('my%20image.png')).toBe('my image.png');
+    expect(imageLabelFromPath('data:image/png;base64,AAAA')).toBe('embedded image');
+    expect(imageLabelFromPath('blob:abc')).toBe('embedded asset');
+  });
+
+  it('derives code languages from the nested code element', () => {
+    const node = {
+      querySelector: () => ({ getAttribute: () => 'language-ts' }),
+    } as unknown as Element;
+    const plain = { querySelector: () => null } as unknown as Element;
+    expect(codeLabelFromNode(node)).toBe('ts');
+    expect(codeLabelFromNode(plain)).toBe('Code');
+  });
+
+  it('derives note labels from source paths', () => {
+    expect(noteLabelFromPath('folder/My Note.md')).toBe('My Note');
+    expect(noteLabelFromPath('My Note')).toBe('My Note');
+    expect(noteLabelFromPath('.')).toBeUndefined();
+    expect(noteLabelFromPath(undefined)).toBeUndefined();
   });
 });

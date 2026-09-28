@@ -142,4 +142,22 @@ describe('ExportSizeLedger', () => {
 
     expect(ledger.finalize().compression).toEqual(meta);
   });
+
+  it('records raw, output and compression metadata in one step', () => {
+    const meta: CompressionMeta = {
+      mode: 'gzipb64',
+      rawBytes: 2048,
+      compressedBytes: 512,
+      encodedBytes: 700,
+      outputBytes: 900,
+      encodingOverheadBytes: 188,
+    };
+    const ledger = new ExportSizeLedger();
+    ledger.applyCompression(meta);
+
+    const report = ledger.finalize();
+    expect(report.rawBytes).toBe(2048);
+    expect(report.outputBytes).toBe(900);
+    expect(report.compression).toEqual(meta);
+  });
 });

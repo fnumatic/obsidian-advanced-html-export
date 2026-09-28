@@ -123,3 +123,46 @@
     </button>
   </footer>
 </div>
+
+<style>
+  /* Artifact table - fills the full available width */
+  .artifact-table {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
+    column-gap: 1rem;
+    row-gap: 0.4rem;
+    align-items: baseline;
+    width: 100%;
+    font-size: var(--font-ui-smaller, 12px);
+  }
+
+  .artifact-table__header {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 0.25rem;
+  }
+
+  .artifact-table__kind {
+    color: var(--text-muted);
+  }
+
+  .artifact-table__original {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .artifact-table__export {
+    color: var(--text-muted);
+  }
+
+  .artifact-table__size {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+</style>

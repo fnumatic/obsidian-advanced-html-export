@@ -131,6 +131,16 @@ export class ExportSizeLedger {
   }
 
   /**
+   * Records the sizes and metadata reported by the export wrapper in one step.
+   * @param meta Compression metadata for the written document
+   */
+  applyCompression(meta: CompressionMeta): void {
+    this.setRawBytes(meta.rawBytes);
+    this.setOutputBytes(meta.outputBytes);
+    this.setCompression(meta);
+  }
+
+  /**
    * Records one individual size contributor for the "largest artifacts" list.
    * Only used for ranking; it does not affect the category totals.
    * @param artifact The artifact to record

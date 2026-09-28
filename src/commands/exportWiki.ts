@@ -8,7 +8,7 @@ import { RenderingProgressModal } from '../ui/modals/RenderingProgressModal';
 import { downloadBlob, sanitizeFilename } from '../utils/fileUtils';
 import { wrapHtmlForExportWithMeta, resolveCompressionMode } from '../utils/selfExtract';
 import { ExportSizeLedger } from '../utils/exportSizeLedger';
-import { inlineDataUriBytes, utf8ByteLength } from '../utils/exportSizeReport';
+import { createNoteArtifact } from '../utils/exportSizeReport';
 import { ExportStatisticsModal } from '../ui/modals/ExportStatisticsModal';
 import { debugLogger } from '../utils/debugLogger';
 import { CancellationToken, CancellationError } from '../utils/cancellationToken';
@@ -148,12 +148,7 @@ export class ExportWikiCommand {
             for (const note of selectedNotes) {
                 const pageHtml = renderedPages.get(note.slug);
                 if (pageHtml !== undefined) {
-                    ledger.recordArtifact({
-                        kind: 'note',
-                        original: note.title,
-                        exportType: 'HTML',
-                        bytes: Math.max(0, utf8ByteLength(pageHtml) - inlineDataUriBytes(pageHtml)),
-                    });
+                    ledger.recordArtifact(createNoteArtifact(note.title, pageHtml));
                 }
             }
 
@@ -178,9 +173,7 @@ export class ExportWikiCommand {
                 compression,
                 containerTitle
             );
-            ledger.setRawBytes(meta.rawBytes);
-            ledger.setOutputBytes(meta.outputBytes);
-            ledger.setCompression(meta);
+            ledger.applyCompression(meta);
             const blob = new Blob([outputHtml], { type: 'text/html' });
             const filename = this.generateWikiFilename(file.path);
 
