@@ -409,7 +409,8 @@ Phase 4: RENDER
 | `pnpm test` | `vitest run` |
 | `pnpm test:watch` | `vitest` (watch mode) |
 | `pnpm type-check` | `tsc --noEmit` |
-| `pnpm release` | Automated release with changelog |
+
+Releases are managed by [release-please](https://github.com/googleapis/release-please) through the `Release Please` GitHub workflow instead of a local command.
 
 ### TypeScript Configuration (`tsconfig.json`)
 

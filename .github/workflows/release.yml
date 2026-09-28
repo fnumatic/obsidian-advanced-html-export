@@ -9,6 +9,9 @@ on:
 env:
   PLUGIN_NAME: obsidian-advanced-html-export # Plugin ID from manifest.json
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest

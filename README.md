@@ -179,7 +179,15 @@ For automatic plugin reloading in Obsidian without restarting the app, install t
 
 ## Release procedure
 
-The release process uses release-it for automated versioning and publishing.
+Releases are managed by [release-please](https://github.com/googleapis/release-please). Commits to `main` are analyzed by the `Release Please` workflow, which opens or updates a release pull request containing the version bump and the `CHANGELOG.md` changes.
+
+To release:
+
+1. Merge the `chore(release): release X.Y.Z` pull request.
+2. release-please creates the git tag and the GitHub release.
+3. The `release.yml` workflow builds the plugin and attaches the assets.
+
+Versions follow Conventional Commits (`fix` → patch, `feat` → minor; pre-1.0 features bump the minor version). release-please updates the version in `manifest.json`; `versions.json` is synced automatically once the release has been created.
 
 ### Artifacts generated
 
@@ -190,8 +198,8 @@ The release process uses release-it for automated versioning and publishing.
 
 ### GitHub Actions
 
-- `release.yml`: Triggers on version tags, builds and releases to GitHub
-- `beta-release.yml`: Triggers on beta branches/tags for pre-releases
+- `release-please.yml`: Creates/updates the release PR and, on release, the tag and GitHub release
+- `release.yml`: Triggers on version tags, builds the plugin and attaches the release assets
 
 ### Local testing of GitHub Actions
 
@@ -202,13 +210,10 @@ curl https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
 
 # Test release workflow
 act -j release
-
-# Test beta release
-act -j beta-release
 ```
 
 ## Standing on shoulders of giants
 
 - https://github.com/obsidian-tools/obsidian-tools
-- https://github.com/release-it/release-it
+- https://github.com/googleapis/release-please
 - https://github.com/aidenlx
