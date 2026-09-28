@@ -29,6 +29,8 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "22.x"
+      - name: Update npm
+        run: npm install -g npm@11
       - name: Build
         run: |
           npm install
