@@ -1,6 +1,6 @@
 # Changelog
 
-# [0.8.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.7.0...0.8.0) (2026-07-10)
+## [0.8.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.7.0...0.8.0) (2026-07-10)
 
 
 ### Bug Fixes
@@ -15,7 +15,7 @@
 * **export:** add render timeout and consolidate content analysis ([0c323f7](https://github.com/fnumatic/obsidian-advanced-html-export/commit/0c323f71ad492396ff5701b482e03f10ff59ca2c))
 * **wiki-export:** convert Obsidian internal links to SPA links, add frontmatter depth override ([9f0d6a4](https://github.com/fnumatic/obsidian-advanced-html-export/commit/9f0d6a458af9e85f87fc21c2403d7f6ee4f415a6))
 
-# [0.7.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.10...0.7.0) (2026-07-07)
+## [0.7.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.10...0.7.0) (2026-07-07)
 
 
 ### Bug Fixes
@@ -99,7 +99,7 @@
 * **refactor:** remove debug console.log statements ([381be0c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/381be0c0fc4bf7e6743eb76d4a9f16ddb0a3a8e4))
 
 
-# [0.6.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.3.0...0.6.0) (2026-02-11)
+## [0.6.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.3.0...0.6.0) (2026-02-11)
 
 
 ### Bug Fixes
@@ -124,16 +124,16 @@
 * **wiki-export:** add detailed rendering progress with pause and cancel support ([148465e](https://github.com/fnumatic/obsidian-advanced-html-export/commit/148465eca88ce1943796c939811bd006e58a3be7))
 
 
-# [0.3.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.2.0...0.3.0) (2026-02-03)
+## [0.3.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.2.0...0.3.0) (2026-02-03)
 
-# [0.2.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.6...0.2.0) (2026-02-03)
+## [0.2.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.6...0.2.0) (2026-02-03)
 
 
 ### Features
 
 * **wiki:** add bulk wiki export with single-page navigation UI ([51dccb5](https://github.com/fnumatic/obsidian-advanced-html-export/commit/51dccb5f6412f98c7925bab7d757a42b9fab9a5b))
 
-# [0.1.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.6...0.1.0) (2026-02-03)
+## [0.1.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.0.6...0.1.0) (2026-02-03)
 
 
 ### Features
