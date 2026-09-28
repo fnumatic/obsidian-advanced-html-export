@@ -1,5 +1,20 @@
 import { TFile } from 'obsidian';
 
+/**
+ * Installs a minimal `document` mock on `globalThis` for tests that only need
+ * `document.body.createDiv()` to exist (renderers called outside a real DOM).
+ */
+export function installMockDocument(): void {
+  const body = {
+    createDiv: () => ({ innerHTML: '', querySelectorAll: () => [], setAttribute: () => {} }),
+  };
+  Object.defineProperty(globalThis, 'document', {
+    value: { body, createElement: () => ({ innerHTML: '' }) },
+    writable: true,
+    configurable: true,
+  });
+}
+
 export function createMockFile(path: string, content: string): TFile {
   const name = path.split('/').pop() || path;
   const dot = name.lastIndexOf('.');

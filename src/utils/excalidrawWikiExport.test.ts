@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, Component } from 'obsidian';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
 import { DetailedWikiRenderer } from './detailedRenderer';
@@ -13,6 +13,8 @@ import { mockAppWithFiles } from './test-utils';
 
 const SVG_EXAMPLE = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
 const SVG_RECT = '<svg viewBox="0 0 200 200"><rect width="100" height="100"/></svg>';
+const EXCALIDRAW_JSON = JSON.stringify({ source: SVG_EXAMPLE, elements: [] });
+const PNG_VIEWABLE = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>';
 
 function buildVault(entries: Record<string, string>) {
     return mockAppWithFiles(entries);
@@ -218,157 +220,207 @@ beforeEach(() => {
     });
 });
 
+// ---------------------------------------------------------------------------
+// Scan / render helpers
+// ---------------------------------------------------------------------------
+
+/** Collects notes from the given root and returns the orchestrator. */
+async function collectFrom(
+    entries: Record<string, string>,
+    rootPath = 'central.md',
+    options: WikiExportOptions = defaultOptions,
+) {
+    const { app, byPath } = buildVault(entries);
+    const orch = new WikiExportOrchestrator(app, new Component(), options);
+    await orch.collectNotes(byPath.get(rootPath)!);
+    return { app, byPath, orch };
+}
+
+/** Collects and fully renders the export, returning the rendered pages and final HTML. */
+async function renderFrom(
+    entries: Record<string, string>,
+    viewable: Record<string, string> = {},
+    rootPath = 'central.md',
+    options: WikiExportOptions = defaultOptions,
+) {
+    const { app, byPath } = buildVault(entries);
+    for (const [key, value] of Object.entries(viewable)) {
+        viewableContent.set(key, value);
+    }
+
+    const orch = new WikiExportOrchestrator(app, new Component(), options);
+    await orch.collectNotes(byPath.get(rootPath)!);
+    orch.setSelectedNotes(orch.getCollectedNotes());
+
+    const renderer = new DetailedWikiRenderer(app, new Component(), options);
+    const rendered = await orch.renderNotesWithProgress(renderer, token, pauseController, () => {});
+
+    const pageList = orch.getSelectedNotes().map((n) => ({ slug: n.slug, title: n.title, path: n.path }));
+    const finalHtml = renderer.generateWikiHtmlWithRenderedPages(byPath.get(rootPath)!, rendered, pageList);
+
+    return { app, byPath, orch, renderer, rendered, finalHtml };
+}
+
+const slugsOf = (orch: WikiExportOrchestrator): string[] => orch.getCollectedNotes().map((n) => n.slug);
+
 // ===========================================================================
-// A – Embed only  (![[diagram.excalidraw]])
+// A/I/N – Embeds never create wiki pages
 // ===========================================================================
 
-describe('A – Embed only', () => {
-    it('does not collect the excalidraw file', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n![[diagram.excalidraw]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
+interface EmbedOnlyCase {
+    label: string;
+    embed: string;
+    files: Record<string, string>;
+    viewable: Record<string, string>;
+}
 
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        const notes = await orch.collectNotes(byPath.get('central.md')!);
+const embedOnlyCases: EmbedOnlyCase[] = [
+    {
+        label: 'excalidraw',
+        embed: '![[diagram.excalidraw]]',
+        files: { 'diagram.excalidraw': EXCALIDRAW_JSON },
+        viewable: { 'diagram.excalidraw': SVG_EXAMPLE },
+    },
+    {
+        label: '.excalidraw.md',
+        embed: '![[diagram.excalidraw]]',
+        files: { 'diagram.excalidraw.md': EXCALIDRAW_JSON },
+        viewable: { 'diagram.excalidraw': SVG_EXAMPLE },
+    },
+    {
+        label: 'image',
+        embed: '![[photo.png]]',
+        files: { 'photo.png': '<binary>' },
+        viewable: { 'photo.png': '<svg>photo-mock</svg>' },
+    },
+];
 
-        expect(notes.length).toBe(1);
-        expect(notes[0].slug).toBe('central');
+describe('Embed only', () => {
+    it.each(embedOnlyCases)('does not collect the $label file', async ({ embed, files, viewable }) => {
+        const { orch } = await renderFrom(
+            { 'central.md': `# Central\n\n${embed}`, ...files },
+            viewable,
+        );
+        expect(slugsOf(orch)).toEqual(['central']);
     });
 });
 
 // ===========================================================================
-// B – Direct link only  ([[diagram.excalidraw]])
+// B/J/K/L – Direct links to viewable files
 // ===========================================================================
 
-describe('B – Direct link only', () => {
-    it('collects the excalidraw file as a wiki page', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
+interface DirectLinkCase {
+    label: string;
+    link: string;
+    file: string;
+    fileContent: string;
+    viewable: string;
+    slug: string;
+    marker: string;
+    rawMarker?: string;
+    leftoverSlug?: string;
+}
 
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
+const directLinkCases: DirectLinkCase[] = [
+    {
+        label: 'Excalidraw',
+        link: '[[diagram.excalidraw]]',
+        file: 'diagram.excalidraw',
+        fileContent: EXCALIDRAW_JSON,
+        viewable: SVG_EXAMPLE,
+        slug: 'diagram',
+        marker: 'circle',
+        rawMarker: '{"source"',
+        leftoverSlug: 'diagramexcalidraw',
+    },
+    {
+        label: '.excalidraw.md',
+        link: '[[diagram.excalidraw]]',
+        file: 'diagram.excalidraw.md',
+        fileContent: EXCALIDRAW_JSON,
+        viewable: SVG_EXAMPLE,
+        slug: 'diagram',
+        marker: 'circle',
+        rawMarker: 'elements',
+        leftoverSlug: 'diagramexcalidraw',
+    },
+    {
+        label: 'PNG',
+        link: '[[diagram.png]]',
+        file: 'diagram.png',
+        fileContent: '<binary png data>',
+        viewable: PNG_VIEWABLE,
+        slug: 'diagram',
+        marker: 'circle',
+        rawMarker: 'binary png data',
+    },
+    {
+        label: 'SVG',
+        link: '[[icon.svg]]',
+        file: 'icon.svg',
+        fileContent: '<svg><rect width="50" height="50"/></svg>',
+        viewable: '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>',
+        slug: 'icon',
+        marker: 'rect',
+    },
+];
 
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('central');
-        expect(slugs).toContain('diagram');
-        expect(slugs.length).toBe(2);
-    });
+describe('Direct links to viewable files', () => {
+    it.each(directLinkCases)(
+        '$label: collects, renders and links the $slug page',
+        async ({ link, file, fileContent, viewable, slug, marker, rawMarker, leftoverSlug }) => {
+            const target = link.slice(2, -2);
+            const { orch, rendered, finalHtml } = await renderFrom(
+                { 'central.md': `# Central\n\n${link}`, [file]: fileContent },
+                { [target]: viewable },
+            );
 
-    it('renders the excalidraw page via embed, not raw JSON', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
+            const slugs = slugsOf(orch);
+            expect(slugs.sort()).toEqual(['central', slug].sort());
 
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
+            const page = rendered.get(slug);
+            expect(page).toBeDefined();
+            expect(page!).toContain('viewable-embed');
+            expect(page!).toContain(marker);
+            if (rawMarker) {
+                expect(page!).not.toContain(rawMarker);
+            }
 
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        const diagramPage = rendered.get('diagram');
-        expect(diagramPage).toBeDefined();
-        expect(diagramPage!).not.toContain('{"source"');
-        expect(diagramPage!).toContain('viewable-embed');
-        expect(diagramPage!).toContain('circle');
-    });
-
-    it('produces correct data-page and page-id in final wiki HTML', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        const centralFile = byPath.get('central.md')!;
-        const pageList = orch.getSelectedNotes().map((n) => ({
-            slug: n.slug,
-            title: n.title,
-            path: n.path,
-        }));
-        const finalHtml = renderer.generateWikiHtmlWithRenderedPages(
-            centralFile,
-            rendered,
-            pageList,
-        );
-
-        expect(finalHtml).toContain('id="page-diagram"');
-        expect(finalHtml).toContain('data-page="diagram"');
-        expect(finalHtml).not.toContain('data-page="diagramexcalidraw"');
-        expect(finalHtml).not.toContain('diagramexcalidraw');
-    });
+            expect(finalHtml).toContain(`data-page="${slug}"`);
+            expect(finalHtml).toContain(`id="page-${slug}"`);
+            if (leftoverSlug) {
+                expect(finalHtml).not.toContain(leftoverSlug);
+            }
+        },
+    );
 });
 
 // ===========================================================================
 // C – Both embed and direct link
 // ===========================================================================
 
-describe('C – Both embed and direct link', () => {
-    it('collects only one excalidraw page (no duplicate)', async () => {
-        const { app, byPath } = buildVault({
-            'central.md':
-                '# Central\n\n![[diagram.excalidraw]]\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
+describe('Both embed and direct link', () => {
+    it('collects the diagram page only once', async () => {
+        const { orch } = await collectFrom({
+            'central.md': '# Central\n\n![[diagram.excalidraw]]\n\n[[diagram.excalidraw]]',
+            'diagram.excalidraw': EXCALIDRAW_JSON,
         });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
 
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs.length).toBe(2);
-        expect(slugs.filter((s) => s === 'diagram').length).toBe(1);
+        const slugs = slugsOf(orch);
+        expect(slugs).toHaveLength(2);
+        expect(slugs.filter((s) => s === 'diagram')).toHaveLength(1);
     });
 
-    it('embed renders inline and direct link creates a separate page', async () => {
-        const { app, byPath } = buildVault({
-            'central.md':
-                '# Central\n\n![[diagram.excalidraw]]\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
+    it('renders the embed inline and the diagram as a separate page', async () => {
+        const { rendered } = await renderFrom(
+            {
+                'central.md': '# Central\n\n![[diagram.excalidraw]]\n\n[[diagram.excalidraw]]',
+                'diagram.excalidraw': EXCALIDRAW_JSON,
+            },
+            { 'diagram.excalidraw': SVG_EXAMPLE },
         );
 
-        // Central page contains the embed
-        const centralPage = rendered.get('central')!;
-        expect(centralPage).toContain('viewable-embed');
-
-        // Diagram page is separate
+        expect(rendered.get('central')).toContain('viewable-embed');
         expect(rendered.has('diagram')).toBe(true);
     });
 });
@@ -377,11 +429,9 @@ describe('C – Both embed and direct link', () => {
 // D – Excalidraw page rendering via detailed renderer
 // ===========================================================================
 
-describe('D – Detailed renderer direct', () => {
+describe('Detailed renderer direct', () => {
     it('renders an excalidraw file without exposing JSON', async () => {
-        const { app, byPath } = buildVault({
-            'drawing.excalidraw': JSON.stringify({ source: SVG_RECT, elements: [] }),
-        });
+        const { app, byPath } = buildVault({ 'drawing.excalidraw': EXCALIDRAW_JSON });
         viewableContent.set('drawing.excalidraw', SVG_RECT);
 
         const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
@@ -400,49 +450,54 @@ describe('D – Detailed renderer direct', () => {
 });
 
 // ===========================================================================
-// E – Direct link without .excalidraw extension  ([[diagram]])
+// E – Link without extension
 // ===========================================================================
 
-describe('E – Link without extension', () => {
+describe('Link without extension', () => {
     it('resolves [[diagram]] to diagram.excalidraw when no diagram.md exists', async () => {
-        const { app, byPath } = buildVault({
+        const { orch } = await collectFrom({
             'central.md': '# Central\n\n[[diagram]]',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
+            'diagram.excalidraw': EXCALIDRAW_JSON,
         });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('diagram');
+        expect(slugsOf(orch)).toContain('diagram');
     });
 });
 
 // ===========================================================================
-// F – Extension collision: .md wins over .excalidraw
+// F/M – Extension collision: markdown wins
 // ===========================================================================
 
-describe('F – Extension collision', () => {
-    it('resolves [[diagram]] to diagram.md when both exist', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram]]',
-            'diagram.md': '# Diagram note',
-            'diagram.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
+interface CollisionCase {
+    label: string;
+    other: string;
+    otherContent: string;
+    viewable: Record<string, string>;
+}
 
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
+const collisionCases: CollisionCase[] = [
+    {
+        label: '.md over .excalidraw',
+        other: 'diagram.excalidraw',
+        otherContent: EXCALIDRAW_JSON,
+        viewable: { 'diagram.excalidraw': SVG_EXAMPLE },
+    },
+    {
+        label: '.md over .png',
+        other: 'diagram.png',
+        otherContent: '<binary png data>',
+        viewable: { 'diagram.png': '<svg>png-mock</svg>' },
+    },
+];
 
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('diagram');
-        expect(slugs.length).toBe(2); // central + diagram.md only
-        // diagram.excalidraw should NOT be collected separately
-        const collectedMd = orch
-            .getCollectedNotes()
-            .filter((n) => n.file.extension === 'md');
-        expect(collectedMd.length).toBe(2);
+describe('Extension collision', () => {
+    it.each(collisionCases)('resolves [[diagram]] to diagram.md ($label)', async ({ other, otherContent, viewable }) => {
+        const { orch } = await renderFrom(
+            { 'central.md': '# Central\n\n[[diagram]]', 'diagram.md': '# Diagram note', [other]: otherContent },
+            viewable,
+        );
+        const notes = orch.getCollectedNotes();
+        expect(notes).toHaveLength(2);
+        expect(notes.filter((n) => n.file.extension === 'md')).toHaveLength(2);
     });
 });
 
@@ -450,13 +505,11 @@ describe('F – Extension collision', () => {
 // G – Slug correctness
 // ===========================================================================
 
-describe('G – Slug correctness', () => {
-    it('generates correct slug for [[diagram.excalidraw]]', async () => {
+describe('Slug correctness', () => {
+    it('keeps the extension characters in the raw target', async () => {
         const { LinkResolver } = await import('./linkResolver');
-        const resolver = new LinkResolver();
-
-        const links = resolver.extractLinks('[[diagram.excalidraw]]');
-        expect(links[0].target).not.toBe('diagram'); // slugified version keeps the extension chars
+        const links = new LinkResolver().extractLinks('[[diagram.excalidraw]]');
+        expect(links[0].target).not.toBe('diagram');
         expect(links[0].rawTarget).toBe('diagram.excalidraw');
     });
 });
@@ -465,55 +518,25 @@ describe('G – Slug correctness', () => {
 // H – Special characters in filename
 // ===========================================================================
 
-describe('H – Special characters', () => {
+describe('Special characters in filenames', () => {
     it('handles excalidraw filenames with spaces', async () => {
-        const { app, byPath } = buildVault({
+        const { orch } = await collectFrom({
             'central.md': '# Central\n\n[[My Drawing.excalidraw]]',
-            'My Drawing.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
+            'My Drawing.excalidraw': EXCALIDRAW_JSON,
         });
-        viewableContent.set('My Drawing.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
+        const slugs = slugsOf(orch);
         expect(slugs).toContain('my-drawing');
-
-        // The slug is my-drawing, not my-drawingexcalidraw
         expect(slugs).not.toContain('my-drawingexcalidraw');
     });
 
-    it('resolved data-page uses basename slug not raw slug', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[My Drawing.excalidraw|My Drawing]]',
-            'My Drawing.excalidraw': JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set('My Drawing.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
+    it('uses the basename slug, not the raw slug, for data-page', async () => {
+        const { finalHtml } = await renderFrom(
+            {
+                'central.md': '# Central\n\n[[My Drawing.excalidraw|My Drawing]]',
+                'My Drawing.excalidraw': EXCALIDRAW_JSON,
+            },
+            { 'My Drawing.excalidraw': SVG_EXAMPLE },
         );
-
-        const centralFile = byPath.get('central.md')!;
-        const pageList = orch.getSelectedNotes().map((n) => ({
-            slug: n.slug,
-            title: n.title,
-            path: n.path,
-        }));
-        const finalHtml = renderer.generateWikiHtmlWithRenderedPages(
-            centralFile,
-            rendered,
-            pageList,
-        );
-
         expect(finalHtml).toContain('data-page="my-drawing"');
         expect(finalHtml).not.toContain('data-page="my-drawingexcalidraw"');
         expect(finalHtml).not.toContain('data-page="my-drawing%');
@@ -521,300 +544,7 @@ describe('H – Special characters', () => {
 });
 
 // ===========================================================================
-// I – .excalidraw.md embed (no direct link)
-// ===========================================================================
-
-describe('I – .excalidraw.md embed only', () => {
-    const excalidrawJson = JSON.stringify({ source: SVG_EXAMPLE, elements: [] });
-
-    it('does not collect the .excalidraw.md file from embeds', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n![[diagram.excalidraw]]',
-            'diagram.excalidraw.md': excalidrawJson,
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        expect(orch.getCollectedNotes().length).toBe(1);
-        expect(orch.getCollectedNotes()[0].slug).toBe('central');
-    });
-});
-
-// ===========================================================================
-// J – .excalidraw.md direct link
-// ===========================================================================
-
-describe('J – .excalidraw.md direct link', () => {
-    const excalidrawJson = JSON.stringify({ source: SVG_EXAMPLE, elements: [] });
-
-    it('collects the .excalidraw.md file as a wiki page', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw.md': excalidrawJson,
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('central');
-        expect(slugs).toContain('diagram');
-        expect(slugs.length).toBe(2);
-    });
-
-    it('renders the .excalidraw.md page via embed, not raw JSON', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw.md': excalidrawJson,
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        // diagram page must not contain raw JSON
-        const diagramPage = rendered.get('diagram');
-        expect(diagramPage).toBeDefined();
-        expect(diagramPage!).not.toContain('{"source"');
-        expect(diagramPage!).not.toContain('elements');
-        // must contain rendered excalidraw embed
-        expect(diagramPage!).toContain('viewable-embed');
-        expect(diagramPage!).toContain('circle');
-    });
-
-    it('produces correct slug for .excalidraw.md in final HTML', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.excalidraw]]',
-            'diagram.excalidraw.md': excalidrawJson,
-        });
-        viewableContent.set('diagram.excalidraw', SVG_EXAMPLE);
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        const centralFile = byPath.get('central.md')!;
-        const pageList = orch.getSelectedNotes().map((n) => ({
-            slug: n.slug,
-            title: n.title,
-            path: n.path,
-        }));
-        const finalHtml = renderer.generateWikiHtmlWithRenderedPages(
-            centralFile,
-            rendered,
-            pageList,
-        );
-
-        // slug is 'diagram' not 'diagramexcalidraw'
-        expect(finalHtml).toContain('data-page="diagram"');
-        expect(finalHtml).toContain('id="page-diagram"');
-        expect(finalHtml).not.toContain('data-page="diagramexcalidraw"');
-        expect(finalHtml).not.toContain('id="page-diagramexcalidraw"');
-    });
-});
-
-// ===========================================================================
-// K – PNG as wiki page
-// ===========================================================================
-
-describe('K – PNG direct link', () => {
-    it('collects a .png file as a wiki page', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.png]]',
-            'diagram.png': '<binary png data>',
-        });
-        viewableContent.set('diagram.png', '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('central');
-        expect(slugs).toContain('diagram');
-        expect(slugs.length).toBe(2);
-    });
-
-    it('renders a .png page via embed, not raw content', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.png]]',
-            'diagram.png': '<binary png data>',
-        });
-        viewableContent.set('diagram.png', '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        const page = rendered.get('diagram');
-        expect(page).toBeDefined();
-        expect(page!).toContain('viewable-embed');
-        expect(page!).toContain('circle');
-        expect(page!).not.toContain('binary png data');
-    });
-
-    it('produces correct slug for .png in final HTML', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram.png]]',
-            'diagram.png': '<binary png data>',
-        });
-        viewableContent.set('diagram.png', '<svg>png-mock</svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        const centralFile = byPath.get('central.md')!;
-        const pageList = orch.getSelectedNotes().map((n) => ({
-            slug: n.slug,
-            title: n.title,
-            path: n.path,
-        }));
-        const finalHtml = renderer.generateWikiHtmlWithRenderedPages(
-            centralFile,
-            rendered,
-            pageList,
-        );
-
-        expect(finalHtml).toContain('data-page="diagram"');
-        expect(finalHtml).toContain('id="page-diagram"');
-    });
-});
-
-// ===========================================================================
-// L – SVG as wiki page
-// ===========================================================================
-
-describe('L – SVG direct link', () => {
-    it('collects an .svg file as a wiki page', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[icon.svg]]',
-            'icon.svg': '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>',
-        });
-        viewableContent.set('icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('central');
-        expect(slugs).toContain('icon');
-    });
-
-    it('renders .svg page content', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[icon.svg]]',
-            'icon.svg': '<svg><rect width="50" height="50"/></svg>',
-        });
-        viewableContent.set('icon.svg', '<svg xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50"/></svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer,
-            token,
-            pauseController,
-            () => {},
-        );
-
-        const page = rendered.get('icon');
-        expect(page).toBeDefined();
-        expect(page!).toContain('viewable-embed');
-        expect(page!).toContain('rect');
-    });
-});
-
-// ===========================================================================
-// M – MD wins over PNG collision
-// ===========================================================================
-
-describe('M – Extension collision: .md wins over .png', () => {
-    it('resolves [[diagram]] to diagram.md when both diagram.md and diagram.png exist', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[diagram]]',
-            'diagram.md': '# Diagram note',
-            'diagram.png': '<binary png data>',
-        });
-        viewableContent.set('diagram.png', '<svg>png-mock</svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        const slugs = orch.getCollectedNotes().map((n) => n.slug);
-        expect(slugs).toContain('diagram');
-        expect(slugs.length).toBe(2); // central + diagram.md only
-        const collectedMd = orch
-            .getCollectedNotes()
-            .filter((n) => n.file.extension === 'md');
-        expect(collectedMd.length).toBe(2);
-    });
-});
-
-// ===========================================================================
-// N – Embed of image does not create a wiki page
-// ===========================================================================
-
-describe('N – Image embed only', () => {
-    it('does not collect image files from embeds', async () => {
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n![[photo.png]]',
-            'photo.png': '<binary>',
-        });
-        viewableContent.set('photo.png', '<svg>photo-mock</svg>');
-
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-
-        expect(orch.getCollectedNotes().length).toBe(1);
-        expect(orch.getCollectedNotes()[0].slug).toBe('central');
-    });
-});
-
-// ===========================================================================
 // O – Obsidian internal-link conversion
-// ===========================================================================
-//
-// Tests for normalizeRenderedLinks: after MarkdownRenderer.render produces
-// <a class="internal-link" data-href="..."> elements (from embedded content),
-// they must be converted to SPA data-page links or wiki-link-missing spans.
 // ===========================================================================
 
 class ExposedRenderer extends WikiHtmlRenderer {
@@ -827,206 +557,104 @@ class ExposedRenderer extends WikiHtmlRenderer {
     }
 }
 
-describe('O – Obsidian internal-link conversion', () => {
+interface LinkElementOptions {
+    dataHref?: string;
+    href?: string;
+}
+
+function normalizeLink(renderer: ExposedRenderer, options: LinkElementOptions) {
+    const setAttrSpy = vi.fn();
+    const removeAttrSpy = vi.fn();
+    const replaceWithSpy = vi.fn();
+
+    const anchor = {
+        tagName: 'A',
+        getAttribute: (name: string) => {
+            if (name === 'data-href') return options.dataHref ?? null;
+            if (name === 'href') return options.href ?? null;
+            if (name === 'class') return 'internal-link';
+            return null;
+        },
+        setAttribute: setAttrSpy,
+        removeAttribute: removeAttrSpy,
+        replaceWith: replaceWithSpy,
+        textContent: 'Link',
+    };
+
+    const el = document.createElement('div') as unknown as Record<string, unknown>;
+    el.querySelectorAll = vi.fn((selector: string) =>
+        selector === 'a.internal-link[data-href]' ? [anchor] : [],
+    );
+
+    renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+    return { setAttrSpy, removeAttrSpy, replaceWithSpy };
+}
+
+describe('Obsidian internal-link conversion', () => {
     it('converts internal-link to data-page when target is exported', async () => {
-        const { app } = buildVault({
-            'central.md': '# Central',
-            'detail.md': '# Detail',
-        });
-
+        const { app } = buildVault({ 'central.md': '# Central', 'detail.md': '# Detail' });
         const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-
-        // Track setAttribute calls
-        const setAttrSpy = vi.fn();
-        const removeAttrSpy = vi.fn();
-
-        vi.spyOn(renderer, 'callNormalizeRenderedLinks').mockRestore?.();
-
-        const el = document.createElement('div') as unknown as Record<string, unknown>;
-
-        const queryResults = [{
-            tagName: 'A',
-            getAttribute: (name: string) => {
-                if (name === 'data-href') return 'detail';
-                if (name === 'href') return 'detail';
-                if (name === 'class') return 'internal-link';
-                return null;
-            },
-            setAttribute: setAttrSpy,
-            removeAttribute: removeAttrSpy,
-            textContent: 'Detail',
-            href: 'detail',
-        }];
-
-        el.querySelectorAll = vi.fn((selector: string) => {
-            if (selector === 'a.internal-link[data-href]') return queryResults;
-            return [];
-        });
-
         renderer.setResolvablePages([
             { slug: 'central', title: 'Central', path: 'central.md' },
             { slug: 'detail', title: 'Detail', path: 'detail.md' },
         ]);
 
-        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+        const { setAttrSpy, removeAttrSpy } = normalizeLink(renderer, { dataHref: 'detail', href: 'detail' });
 
         expect(setAttrSpy).toHaveBeenCalledWith('data-page', 'detail');
         expect(removeAttrSpy).toHaveBeenCalledWith('data-href');
         expect(removeAttrSpy).toHaveBeenCalledWith('target');
-        expect(queryResults[0].href).toBe('javascript:void(0)');
     });
 
-    it('replaces internal-link with missing span when target not exported', async () => {
-        const { app } = buildVault({
-            'central.md': '# Central',
-        });
-
+    it('strips subpath references from heading refs', async () => {
+        const { app } = buildVault({ 'central.md': '# Central', 'detail.md': '# Detail' });
         const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-
-        const replaceWithSpy = vi.fn();
-
-        const el = document.createElement('div') as unknown as Record<string, unknown>;
-
-        const queryResults = [{
-            tagName: 'A',
-            getAttribute: (name: string) => {
-                if (name === 'data-href') return 'secret';
-                if (name === 'href') return 'secret';
-                if (name === 'class') return 'internal-link';
-                return null;
-            },
-            setAttribute: vi.fn(),
-            removeAttribute: vi.fn(),
-            textContent: 'Secret',
-            href: 'secret',
-            replaceWith: replaceWithSpy,
-        }];
-
-        el.querySelectorAll = vi.fn((selector: string) => {
-            if (selector === 'a.internal-link[data-href]') return queryResults;
-            return [];
-        });
-
-        renderer.setResolvablePages([
-            { slug: 'central', title: 'Central', path: 'central.md' },
-        ]);
-
-        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
-
-        expect(replaceWithSpy).toHaveBeenCalled();
-        const spanArg = replaceWithSpy.mock.calls[0][0] as Record<string, unknown>;
-        expect(spanArg.className).toBe('wiki-link-missing');
-        // data-missing-target is set via setAttribute (mocked to no-op);
-        // verify via spy if needed: setAttribute.mock.calls
-    });
-
-    it('strips subpath references from data-href heading refs', async () => {
-        const { app } = buildVault({
-            'central.md': '# Central',
-            'detail.md': '# Detail',
-        });
-
-        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
-
-        const setAttrSpy = vi.fn();
-
-        const el = document.createElement('div') as unknown as Record<string, unknown>;
-
-        const queryResults = [{
-            tagName: 'A',
-            getAttribute: (name: string) => {
-                if (name === 'data-href') return 'detail#Heading';
-                if (name === 'href') return 'detail#Heading';
-                if (name === 'class') return 'internal-link';
-                return null;
-            },
-            setAttribute: setAttrSpy,
-            removeAttribute: vi.fn(),
-            textContent: 'Detail Section',
-            href: 'detail#Heading',
-        }];
-
-        el.querySelectorAll = vi.fn((selector: string) => {
-            if (selector === 'a.internal-link[data-href]') return queryResults;
-            return [];
-        });
-
         renderer.setResolvablePages([
             { slug: 'central', title: 'Central', path: 'central.md' },
             { slug: 'detail', title: 'Detail', path: 'detail.md' },
         ]);
 
-        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+        const { setAttrSpy } = normalizeLink(renderer, { dataHref: 'detail#Heading', href: 'detail#Heading' });
 
         expect(setAttrSpy).toHaveBeenCalledWith('data-page', 'detail');
     });
 
-    it('replaces internal-link with missing span when file not found', async () => {
-        const { app } = buildVault({
-            'central.md': '# Central',
-        });
-
+    it('replaces internal-link with a missing span when the target is not exported', async () => {
+        const { app } = buildVault({ 'central.md': '# Central' });
         const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+        renderer.setResolvablePages([{ slug: 'central', title: 'Central', path: 'central.md' }]);
 
-        const replaceWithSpy = vi.fn();
-
-        const el = document.createElement('div') as unknown as Record<string, unknown>;
-
-        const queryResults = [{
-            tagName: 'A',
-            getAttribute: (name: string) => {
-                if (name === 'data-href') return 'nonexistent';
-                if (name === 'href') return 'nonexistent';
-                if (name === 'class') return 'internal-link';
-                return null;
-            },
-            setAttribute: vi.fn(),
-            removeAttribute: vi.fn(),
-            textContent: 'Missing',
-            href: 'nonexistent',
-            replaceWith: replaceWithSpy,
-        }];
-
-        el.querySelectorAll = vi.fn((selector: string) => {
-            if (selector === 'a.internal-link[data-href]') return queryResults;
-            return [];
-        });
-
-        renderer.setResolvablePages([
-            { slug: 'central', title: 'Central', path: 'central.md' },
-        ]);
-
-        renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
+        const { replaceWithSpy } = normalizeLink(renderer, { dataHref: 'secret', href: 'secret' });
 
         expect(replaceWithSpy).toHaveBeenCalled();
-        const spanArg = replaceWithSpy.mock.calls[0][0] as Record<string, unknown>;
-        expect(spanArg.className).toBe('wiki-link-missing');
+        expect((replaceWithSpy.mock.calls[0][0] as Record<string, unknown>).className).toBe('wiki-link-missing');
+    });
+
+    it('replaces internal-link with a missing span when the file is not found', async () => {
+        const { app } = buildVault({ 'central.md': '# Central' });
+        const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
+        renderer.setResolvablePages([{ slug: 'central', title: 'Central', path: 'central.md' }]);
+
+        const { replaceWithSpy } = normalizeLink(renderer, { dataHref: 'nonexistent', href: 'nonexistent' });
+
+        expect(replaceWithSpy).toHaveBeenCalled();
+        expect((replaceWithSpy.mock.calls[0][0] as Record<string, unknown>).className).toBe('wiki-link-missing');
     });
 
     it('cleans up existing data-page links', async () => {
-        const { app } = buildVault({
-            'central.md': '# Central',
-        });
-
+        const { app } = buildVault({ 'central.md': '# Central' });
         const renderer = new ExposedRenderer(app, new Component(), defaultOptions);
 
         const removeAttrSpy = vi.fn();
-
-        const el = document.createElement('div') as unknown as Record<string, unknown>;
-
-        const queryResults = [{
+        const anchor = {
             tagName: 'A',
-            getAttribute: (_name: string) => null,
+            getAttribute: () => null,
             setAttribute: vi.fn(),
             removeAttribute: removeAttrSpy,
             textContent: 'Central',
-            href: 'javascript:void(0)',
-        }];
-
-        el.querySelectorAll = vi.fn((selector: string) => {
-            if (selector === 'a[data-page]') return queryResults;
-            return [];
-        });
+        };
+        const el = document.createElement('div') as unknown as Record<string, unknown>;
+        el.querySelectorAll = vi.fn((selector: string) => (selector === 'a[data-page]' ? [anchor] : []));
 
         renderer.callNormalizeRenderedLinks(el as unknown as HTMLElement);
 
@@ -1037,78 +665,37 @@ describe('O – Obsidian internal-link conversion', () => {
 });
 
 // ===========================================================================
-// F – Direct link to excalidraw with blob image source (regression)
+// Excalidraw page with a blob image source (regression)
 // ===========================================================================
 
-describe('F – Direct link to excalidraw with blob image source', () => {
+const BLOB_FILE = 'Deployment und Virtualisierung.excalidraw';
+const BLOB_SLUG = 'deployment-und-virtualisierung';
+
+describe('Excalidraw page with blob image source', () => {
     beforeEach(() => {
-        globalThis.fetch = vi.fn();
+        globalThis.fetch = vi.fn().mockResolvedValue({
+            blob: () => Promise.resolve(new Blob([SVG_EXAMPLE], { type: 'image/svg+xml' })),
+        });
     });
 
-    it('converts blob image to base64 on the excalidraw page (non-dedup)', async () => {
-        const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
-        fetchMock.mockResolvedValue({
-            blob: () =>
-                Promise.resolve(new Blob([SVG_EXAMPLE], { type: 'image/svg+xml' })),
-        });
-
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[Deployment und Virtualisierung.excalidraw]]',
-            'Deployment und Virtualisierung.excalidraw':
-                JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        // Mock MarkdownRenderer to produce blob img (as Excalidraw plugin does)
-        viewableContent.set(
-            'Deployment und Virtualisierung.excalidraw',
-            '<img src="blob:excalidraw-diagram">',
+    it.each([
+        { label: 'without deduplication', dedup: false, expected: 'data:image/' },
+        { label: 'with deduplication', dedup: true, expected: 'data-hash=' },
+    ])('converts the blob image to an embedded source ($label)', async ({ dedup, expected }) => {
+        const options = { ...defaultOptions, enableImageDeduplication: dedup };
+        const { rendered } = await renderFrom(
+            {
+                'central.md': `# Central\n\n[[${BLOB_FILE}]]`,
+                [BLOB_FILE]: EXCALIDRAW_JSON,
+            },
+            { [BLOB_FILE]: '<img src="blob:excalidraw-diagram">' },
+            'central.md',
+            options,
         );
 
-        const orch = new WikiExportOrchestrator(app, new Component(), defaultOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), defaultOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer, token, pauseController, () => {},
-        );
-
-        const diagramPage = rendered.get('deployment-und-virtualisierung');
-        expect(diagramPage).toBeDefined();
-        expect(diagramPage!).not.toContain('blob:');
-        expect(diagramPage!).toContain('<img');
-        expect(diagramPage!).toContain('data:image/');
-    });
-
-    it('converts blob image with deduplication enabled', async () => {
-        const fetchMock = vi.mocked(globalThis.fetch as unknown as Mock);
-        fetchMock.mockResolvedValue({
-            blob: () =>
-                Promise.resolve(new Blob([SVG_EXAMPLE], { type: 'image/svg+xml' })),
-        });
-
-        const dedupOptions = { ...defaultOptions, enableImageDeduplication: true };
-        const { app, byPath } = buildVault({
-            'central.md': '# Central\n\n[[Deployment und Virtualisierung.excalidraw]]',
-            'Deployment und Virtualisierung.excalidraw':
-                JSON.stringify({ source: SVG_EXAMPLE, elements: [] }),
-        });
-        viewableContent.set(
-            'Deployment und Virtualisierung.excalidraw',
-            '<img src="blob:excalidraw-diagram">',
-        );
-
-        const orch = new WikiExportOrchestrator(app, new Component(), dedupOptions);
-        await orch.collectNotes(byPath.get('central.md')!);
-        orch.setSelectedNotes(orch.getCollectedNotes());
-
-        const renderer = new DetailedWikiRenderer(app, new Component(), dedupOptions);
-        const rendered = await orch.renderNotesWithProgress(
-            renderer, token, pauseController, () => {},
-        );
-
-        const diagramPage = rendered.get('deployment-und-virtualisierung');
-        expect(diagramPage).toBeDefined();
-        expect(diagramPage!).not.toContain('blob:');
-        expect(diagramPage!).toContain('data-hash=');
+        const page = rendered.get(BLOB_SLUG);
+        expect(page).toBeDefined();
+        expect(page!).not.toContain('blob:');
+        expect(page!).toContain(expected);
     });
 });
