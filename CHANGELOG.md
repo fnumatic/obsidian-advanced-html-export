@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.9.0...0.10.0) (2026-09-28)
+
+
+### Features
+
+* **export:** add export size statistics overview ([9352500](https://github.com/fnumatic/obsidian-advanced-html-export/commit/935250002aaa23173a2320c5acd8fe31c1e2968a))
+
+
+### Bug Fixes
+
+* **ci:** pin npm 11 for release build ([7891bec](https://github.com/fnumatic/obsidian-advanced-html-export/commit/7891bec7aaa3265401298ecd35d0eac00bc49033))
+
 ## [0.9.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.8.0...0.9.0) (2026-09-28)
 
 
