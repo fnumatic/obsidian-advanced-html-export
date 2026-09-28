@@ -35,6 +35,8 @@ jobs:
         id: ref
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No checkout in this job, so tell gh which repository to query.
+          GH_REPO: ${{ github.repository }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             # release-please also runs for pull-request-only updates, so use the
