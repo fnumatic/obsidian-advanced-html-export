@@ -1,18 +1,11 @@
 <script lang="ts">
-  import type { RenderingProgressProps, CompletedNote, CurrentNoteProgress } from './types';
+  import type { RenderingProgressProps } from './types';
   import type { RenderEvent } from '../utils/detailedRenderer';
   import DetailRow from './DetailRow.svelte';
   import ProgressBar from './ProgressBar.svelte';
   import Icon from './Icon.svelte';
-  import {
-    calculateCurrentNoteProgress,
-    completedNoteFrom,
-    currentNoteFromEvent,
-    formatDuration,
-    truncateTitle,
-    updateNoteProgress,
-    warningMessage,
-  } from '../utils/renderProgress';
+  import { truncateTitle } from '../utils/renderProgress';
+  import { RenderingProgressStore } from './renderingProgress.svelte';
 
   let {
     metrics,
@@ -22,202 +15,21 @@
     onCancel
   }: RenderingProgressProps = $props();
 
-  let completedNotes = $state<CompletedNote[]>([]);
-  let currentNote = $state<CurrentNoteProgress | null>(null);
-  let isPaused = $state(false);
-  let isCancelled = $state(false);
-  let isCompleted = $state(false);
-  let startTime = $state(Date.now());
-  let totalNotesRendered = $state(0);
-  let warning = $state<string | null>(null);
-  let completedOpen = $state(true);
-
-  let overallProgress = $derived(() => {
-    if (!currentNote) return Math.round((completedNotes.length / metrics.totalNotes) * 100);
-
-    const notesProgress = completedNotes.length / metrics.totalNotes;
-    const currentNoteProgress = calculateCurrentNoteProgress(currentNote);
-    const totalProgress = (notesProgress * 100) + (currentNoteProgress * (100 / metrics.totalNotes));
-    return Math.min(100, Math.round(totalProgress));
-  });
-
-  let elapsedTime = $state(0);
-  let remainingTime = $state<number | null>(null);
-  let speed = $state<string>('Starting...');
-
-  $effect(() => {
-    const interval = setInterval(() => {
-      if (isCancelled || isCompleted) return;
-
-      elapsedTime = Date.now() - startTime;
-
-      if (totalNotesRendered > 0) {
-        const avgTimePerNote = elapsedTime / totalNotesRendered;
-        const remainingNotes = metrics.totalNotes - totalNotesRendered;
-        remainingTime = avgTimePerNote * remainingNotes;
-        speed = `${(totalNotesRendered / (elapsedTime / 60000)).toFixed(1)} notes/min`;
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
+  const store = new RenderingProgressStore({
+    get metrics() { return metrics; },
+    get token() { return token; },
+    get pauseController() { return pauseController; },
+    get onComplete() { return onComplete; },
+    get onCancel() { return onCancel; },
   });
 
   $effect(() => {
-    if (warning) {
-      const timeout = setTimeout(() => {
-        warning = null;
-      }, 5000);
-      return () => clearTimeout(timeout);
-    }
+    store.start();
+    return () => store.dispose();
   });
-
-  function handlePauseToggle() {
-    if (isPaused) {
-      pauseController.resume();
-      isPaused = false;
-    } else {
-      pauseController.pause();
-      isPaused = true;
-    }
-  }
-
-  function handleCancel() {
-    isCancelled = true;
-    token.cancel();
-    warning = 'Cancelling... Please wait for current operation to complete.';
-
-    setTimeout(() => {
-      onCancel();
-    }, 500);
-  }
 
   export function handleEvent(event: RenderEvent): void {
-    if (isCancelled) return;
-
-    switch (event.type) {
-      case 'note_start':
-        handleNoteStart(event);
-        break;
-      case 'note_complete':
-        handleNoteComplete(event);
-        break;
-      case 'note_error':
-        handleNoteError(event);
-        break;
-      case 'diagram_start':
-        handleDiagramStart(event);
-        break;
-      case 'diagram_complete':
-        handleDiagramComplete();
-        break;
-      case 'codeblock_start':
-        handleCodeBlockStart(event);
-        break;
-      case 'codeblock_complete':
-        handleCodeBlockComplete();
-        break;
-      case 'image_start':
-        handleImageStart(event);
-        break;
-      case 'image_phase':
-        handleImagePhase(event);
-        break;
-      case 'image_complete':
-        handleImageComplete();
-        break;
-      case 'warning_slow_operation':
-        handleWarning(event);
-        break;
-    }
-  }
-
-  function handleNoteStart(event: RenderEvent) {
-    currentNote = currentNoteFromEvent(event, completedNotes.length, metrics.totalNotes);
-  }
-
-  function handleNoteComplete(event: RenderEvent) {
-    if (!currentNote) return;
-
-    const completed = completedNoteFrom(currentNote, event);
-
-    completedNotes = [...completedNotes, completed];
-    totalNotesRendered++;
-    currentNote = null;
-
-    if (completedNotes.length === metrics.totalNotes && !isCancelled) {
-      isCompleted = true;
-      setTimeout(() => {
-        onComplete();
-      }, 1000);
-    }
-  }
-
-  function handleNoteError(event: RenderEvent) {
-    warning = `Error rendering ${event.noteTitle}: ${event.details?.error}`;
-  }
-
-  // Helper function for immutable progress updates
-  function updateProgress(
-    type: 'diagrams' | 'codeBlocks' | 'images',
-    updates: Partial<{ total: number; processed: number; currentFileName?: string; currentPhase?: string }>
-  ) {
-    if (!currentNote) {
-      return;
-    }
-    currentNote = updateNoteProgress(currentNote, type, updates);
-  }
-
-  function handleImageStart(event: RenderEvent) {
-    updateProgress('images', {
-      total: (event.details?.total as number) || 0,
-      currentFileName: (event.details?.fileName as string) || ''
-    });
-  }
-
-  function handleImagePhase(event: RenderEvent) {
-    updateProgress('images', {
-      currentPhase: (event.details?.phase as string) || ''
-    });
-  }
-
-  function handleImageComplete() {
-    if (!currentNote) return;
-    updateProgress('images', {
-      processed: currentNote.images.processed + 1
-    });
-  }
-
-  function handleDiagramStart(event: RenderEvent) {
-    updateProgress('diagrams', {
-      total: (event.details?.totalDiagrams as number) || 0
-    });
-  }
-
-  function handleDiagramComplete() {
-    if (!currentNote) return;
-    updateProgress('diagrams', {
-      processed: currentNote.diagrams.processed + 1
-    });
-  }
-
-  function handleCodeBlockStart(event: RenderEvent) {
-    updateProgress('codeBlocks', {
-      total: (event.details?.totalCodeBlocks as number) || 0
-    });
-  }
-
-  function handleCodeBlockComplete() {
-    if (!currentNote) return;
-    updateProgress('codeBlocks', {
-      processed: currentNote.codeBlocks.processed + 1
-    });
-  }
-
-  function handleWarning(event: RenderEvent) {
-    const message = warningMessage(event);
-    if (message) {
-      warning = message;
-    }
+    store.handleEvent(event);
   }
 </script>
 
@@ -226,12 +38,12 @@
     Rendering wiki export
   </header>
 
-<details data-tags="rp-completed" open={completedOpen} class="mb-3">
+<details data-tags="rp-completed" open={store.completedOpen} class="mb-3">
     <summary class="font-semibold text-obsidian cursor-pointer py-2">
-      Completed notes ({completedNotes.length})
+      Completed notes ({store.completedNotes.length})
     </summary>
     <div class="min-h-[114px] max-h-[114px] overflow-y-auto border border-obsidian rounded p-1.5 mt-2">
-      {#each completedNotes as note}
+      {#each store.completedNotes as note}
         <div class="note-list-item">
           <span class="text-obsidian-muted shrink-0">✓</span>
           <span class="flex-1 ml-2 mr-4 max-w-[calc(100%-160px)] whitespace-nowrap overflow-hidden text-ellipsis text-left">
@@ -268,59 +80,59 @@
 
   <section data-tags="rp-current" class="mt-3 p-2.5 bg-obsidian-alt rounded">
     <div class="font-semibold text-obsidian mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
-      {#if isCompleted}
+      {#if store.isCompleted}
         ✅ Rendering complete!
-      {:else if currentNote}
-        Rendering {currentNote.index + 1}/{metrics.totalNotes}: {truncateTitle(currentNote.title, 40)}
+      {:else if store.currentNote}
+        Rendering {store.currentNote.index + 1}/{metrics.totalNotes}: {truncateTitle(store.currentNote.title, 40)}
       {:else}
         Preparing...
       {/if}
     </div>
 
-    <ProgressBar progress={overallProgress()} />
+    <ProgressBar progress={store.overallProgress} />
 
     <div class="flex flex-col gap-1.5 mt-2">
       <DetailRow
         icon="chart-bar"
         label="Diagrams"
-        processed={currentNote?.diagrams.processed ?? 0}
-        total={currentNote?.diagrams.total ?? 0}
-        isPlaceholder={!currentNote}
+        processed={store.currentNote?.diagrams.processed ?? 0}
+        total={store.currentNote?.diagrams.total ?? 0}
+        isPlaceholder={!store.currentNote}
       />
       <DetailRow
         icon="code-block"
         label="Code blocks"
-        processed={currentNote?.codeBlocks.processed ?? 0}
-        total={currentNote?.codeBlocks.total ?? 0}
-        isPlaceholder={!currentNote}
+        processed={store.currentNote?.codeBlocks.processed ?? 0}
+        total={store.currentNote?.codeBlocks.total ?? 0}
+        isPlaceholder={!store.currentNote}
       />
       <DetailRow
         icon="image"
         label="images"
-        processed={currentNote?.images.processed ?? 0}
-        total={currentNote?.images.total ?? 0}
-        currentPhase={currentNote?.images.currentPhase}
-        currentFileName={currentNote?.images.currentFileName}
-        isPlaceholder={!currentNote}
+        processed={store.currentNote?.images.processed ?? 0}
+        total={store.currentNote?.images.total ?? 0}
+        currentPhase={store.currentNote?.images.currentPhase}
+        currentFileName={store.currentNote?.images.currentFileName}
+        isPlaceholder={!store.currentNote}
       />
     </div>
 
-    <div class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg h-[28px]" class:invisible={!warning}>
-      {warning || ' '}
+    <div class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg h-[28px]" class:invisible={!store.warning}>
+      {store.warning || ' '}
     </div>
   </section>
 
   <div data-tags="rp-time-stats" class="mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-obsidian-sm">
     <div class="flex flex-col items-center gap-1">
-      <span class="font-semibold">{formatDuration(elapsedTime)}</span>
+      <span class="font-semibold">{store.elapsedLabel}</span>
       <span class="text-obsidian-xs text-obsidian-muted"><Icon name="timer" size="1em" /> Elapsed</span>
     </div>
     <div class="flex flex-col items-center gap-1">
-      <span class="font-semibold">{remainingTime ? `~${formatDuration(remainingTime)}` : 'Calculating...'}</span>
+      <span class="font-semibold">{store.remainingLabel}</span>
       <span class="text-obsidian-xs text-obsidian-muted"><Icon name="hourglass" size="1em" /> Remaining</span>
     </div>
     <div class="flex flex-col items-center gap-1">
-      <span class="font-semibold">{speed}</span>
+      <span class="font-semibold">{store.speed}</span>
       <span class="text-obsidian-xs text-obsidian-muted"><Icon name="lightning" size="1em" /> Speed</span>
     </div>
   </div>
@@ -328,18 +140,18 @@
   <footer data-tags="rp-footer" class="mt-4 flex justify-between items-center gap-3">
     <div
       class="font-semibold text-obsidian-sm"
-      class:visible={isPaused}
-      class:invisible={!isPaused}
+      class:visible={store.isPaused}
+      class:invisible={!store.isPaused}
     >
       <Icon name="pause" size="1em" /> PAUSED
     </div>
     <div class="flex gap-3 ml-auto">
       <button
         class="obsidian-btn"
-        onclick={handlePauseToggle}
-        disabled={isCompleted || isCancelled}
+        onclick={() => store.togglePause()}
+        disabled={store.isCompleted || store.isCancelled}
       >
-        {#if isPaused}
+        {#if store.isPaused}
           <Icon name="play" size="1em" /> Resume
         {:else}
           <Icon name="pause" size="1em" /> Pause
@@ -347,8 +159,8 @@
       </button>
       <button
         class="obsidian-btn-danger"
-        onclick={handleCancel}
-        disabled={isCompleted}
+        onclick={() => store.cancel()}
+        disabled={store.isCompleted}
       >
         Cancel export
       </button>
