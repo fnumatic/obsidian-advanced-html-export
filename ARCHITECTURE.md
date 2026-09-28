@@ -27,15 +27,14 @@ Obsidian plugin that exports notes as self-contained HTML files. Supports both s
 │   │   ├── RenderingProgress.svelte
 │   │   └── TimeStats.svelte
 │   ├── ui/
-│   │   ├── components/
-│   │   │   └── Button.svelte
 │   │   ├── modals/                      # Bridge: Obsidian Modal → Svelte
+│   │   │   ├── SvelteModal.ts           # Base class for Svelte-backed modals
 │   │   │   ├── ExportPreviewModal.ts
+│   │   │   ├── ExportStatisticsModal.ts
 │   │   │   ├── NoteSelectionModal.ts
 │   │   │   └── RenderingProgressModal.ts
 │   │   └── styles/
-│   │       ├── obsidian-tokens.css
-│   │       └── uno-shortcuts.css        # UnoCSS fallback CSS classes
+│   │       └── plugin-styles.css        # Shared component + effect styles
 │   ├── utils/
 │   │   ├── htmlRenderer.ts              # Base HTML renderer
 │   │   ├── htmlRenderer.test.ts
@@ -245,8 +244,7 @@ main.ts
  ├── obsidian (external)
  ├── 'virtual:uno.css' (UnoCSS)
  ├── './styles.css'
- ├── './ui/styles/uno-shortcuts.css'
- ├── './ui/styles/obsidian-tokens.css'
+ ├── './ui/styles/plugin-styles.css'
  ├── commands/exportSingleFile.ts
  │    ├── obsidian
  │    ├── type main.ts (AdvancedHtmlExportPlugin)

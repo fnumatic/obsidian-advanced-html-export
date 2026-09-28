@@ -44,21 +44,15 @@ export default defineConfig({
     [/^hover:text-obsidian-accent$/, () => ({ color: 'var(--interactive-accent)' })],
   ],
 shortcuts: {
-    'obsidian-btn': 'px-3 py-1.5 rounded cursor-pointer transition-colors',
-    'obsidian-btn-primary': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--interactive-accent)] text-[var(--text-on-accent)]',
-    'obsidian-btn-danger': 'px-3 py-1.5 rounded cursor-pointer transition-opacity bg-[var(--text-error)] text-white',
-    'obsidian-modal': 'bg-[var(--background-primary)] border-[var(--background-modifier-border)] rounded-lg shadow-xl p-4 h-[620px] w-[700px] max-h-[90vh] max-w-[90vw]',
-    'obsidian-input': 'w-full px-3 py-1.5 rounded outline-none bg-[var(--background-primary)] border-[var(--background-modifier-border)] text-[var(--text-normal)]',
+    // Obsidian-themed utilities not covered by the rules above.
     // Fixed pixel font sizes (no zoom scaling)
     'text-obsidian': 'text-14px',
     'text-obsidian-sm': 'text-12px',
     'text-obsidian-xs': 'text-11px',
-    // Document list item styling
-    'note-list-item': 'py-1 px-2 flex justify-between items-center text-obsidian-xs',
+    // Document list item statistics (number/icon columns)
     'note-list-item-left': 'py-1 px-2 flex items-center',
-     // Stats columns for double-digit alignment (number left/right-aligned, icon right)
-      'note-list-stats': 'flex gap-1',
-      'note-list-stat': 'flex items-center gap-0.5',
-      'note-list-stat-number': 'text-right tabular-nums min-w-[2ch] w-[2ch]',
+    'note-list-stats': 'flex gap-1',
+    'note-list-stat': 'flex items-center gap-0.5',
+    'note-list-stat-number': 'text-right tabular-nums min-w-[2ch] w-[2ch]',
   }
 })

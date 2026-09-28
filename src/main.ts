@@ -1,8 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import "virtual:uno.css";
 import "./styles.css";
-import "./ui/styles/uno-shortcuts.css";
-import "./ui/styles/obsidian-tokens.css";
+import "./ui/styles/plugin-styles.css";
 import { ExportSingleFileCommand } from "./commands/exportSingleFile";
 import { ExportWikiCommand } from "./commands/exportWiki";
 import { DEFAULT_SETTINGS, type AdvancedHtmlExportSettings } from "./settings";
