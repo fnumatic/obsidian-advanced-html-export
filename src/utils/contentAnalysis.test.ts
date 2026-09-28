@@ -66,7 +66,7 @@ describe('analyzeNoteContent', () => {
     expect(result.imageCount).toBe(0);
   });
 
-  it('counts wiki links and markdown links', () => {
+  it('counts internal wiki and markdown links, ignoring external ones', () => {
     const content = [
       'See [[Note A]] and [[Note B]] for details.',
       '',
@@ -74,7 +74,15 @@ describe('analyzeNoteContent', () => {
     ].join('\n');
 
     const result = analyzeNoteContent(content);
-    expect(result.linkCount).toBe(3);
+    expect(result.linkCount).toBe(2);
+  });
+
+  it('counts image embeds as links but not as markdown images', () => {
+    const content = '![[diagram.png]] and [[Note]]';
+
+    const result = analyzeNoteContent(content);
+    expect(result.imageCount).toBe(0);
+    expect(result.linkCount).toBe(2);
   });
 
   it('populates diagrams array with type and content', () => {

@@ -1,4 +1,7 @@
 import { DIAGRAM_LANGUAGES } from './diagramTypes';
+import { LinkResolver } from './linkResolver';
+import { markdownImageTargetPattern } from './linkSyntax';
+import { lastPathSegment } from './pathUtils';
 
 export interface NoteAnalysis {
   diagramCount: number;
@@ -10,12 +13,18 @@ export interface NoteAnalysis {
   images: Array<{ src: string; fileName: string }>;
 }
 
+// Link parsing is shared with the export so it cannot drift from the resolver.
+const linkResolver = new LinkResolver();
+
 function isDiagramBlock(block: string): boolean {
   return DIAGRAM_LANGUAGES.some((language) => block.startsWith('```' + language));
 }
 
 export function analyzeNoteContent(content: string): NoteAnalysis {
-  const imageMatches = content.match(/!\[.*?\]\(.*?\)/g) || [];
+  const images = [...content.matchAll(markdownImageTargetPattern())].map((match) => {
+    const src = match[1] ?? '';
+    return { src, fileName: lastPathSegment(src) || src };
+  });
 
   const diagramMatches = DIAGRAM_LANGUAGES.flatMap((language) =>
     (content.match(new RegExp('```' + language + '[\\s\\S]*?```', 'g')) || []).map((block) => ({
@@ -40,23 +49,12 @@ export function analyzeNoteContent(content: string): NoteAnalysis {
       };
     });
 
-  const images = imageMatches.map(match => {
-    const srcMatch = match.match(/!\[.*?\]\((.*?)\)/);
-    const src = srcMatch ? srcMatch[1] : '';
-    return {
-      src,
-      fileName: src.split('/').pop() || src,
-    };
-  });
-
-  const wikiLinks = content.match(/\[\[.*?\]\]/g) || [];
-  const markdownLinks = content.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
-  const linkCount = wikiLinks.length + markdownLinks.length;
+  const linkCount = linkResolver.extractLinks(content).length;
 
   return {
     diagramCount: diagramBlocks,
     codeBlockCount,
-    imageCount: imageMatches.length,
+    imageCount: images.length,
     linkCount,
     diagrams,
     codeBlocks,

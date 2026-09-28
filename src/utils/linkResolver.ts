@@ -1,4 +1,5 @@
 import { escapeHtml } from './htmlUtils';
+import { isExternalLink, markdownLinkPattern, wikiLinkPattern } from './linkSyntax';
 
 export interface LinkInfo {
     original: string;
@@ -90,7 +91,7 @@ export class LinkResolver {
         const links: LinkInfo[] = [];
 
         // Match wiki links: both [[...]] and ![[...]]
-        const wikiLinkRegex = /!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
+        const wikiLinkRegex = wikiLinkPattern();
         let match;
 
         while ((match = wikiLinkRegex.exec(content)) !== null) {
@@ -110,14 +111,14 @@ export class LinkResolver {
             });
         }
 
-        const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        const markdownLinkRegex = markdownLinkPattern();
 
         while ((match = markdownLinkRegex.exec(content)) !== null) {
             const fullMatch = match[0];
             const alias = match[1].trim();
             const href = match[2].trim();
 
-            if (href.startsWith('#') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+            if (isExternalLink(href)) {
                 continue;
             }
 
