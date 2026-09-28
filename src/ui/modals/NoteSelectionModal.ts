@@ -1,80 +1,32 @@
 // src/ui/modals/NoteSelectionModal.ts
-// Wrapper class that bridges Svelte NoteSelection component with Obsidian's Modal API
+// Wrapper class that bridges the Svelte NoteSelection component with Obsidian's Modal API
 
-import { App, Modal } from 'obsidian';
-import { mount, unmount } from 'svelte';
+import { App } from 'obsidian';
+import { mount } from 'svelte';
 import NoteSelection from '../../components/NoteSelection.svelte';
 import type { NoteInfo } from '../../utils/wikiExportOrchestrator';
+import { SvelteModal } from './SvelteModal';
 
-export class NoteSelectionModal extends Modal {
+export class NoteSelectionModal extends SvelteModal<NoteInfo[] | null> {
   private notes: NoteInfo[];
-  private resolvePromise: ((selected: NoteInfo[] | null) => void) | null = null;
-  private component: ReturnType<typeof mount> | null = null;
 
   constructor(app: App, notes: NoteInfo[]) {
     super(app);
     this.notes = notes;
   }
 
-  async openAndAwait(): Promise<NoteInfo[] | null> {
-    return new Promise((resolve) => {
-      this.resolvePromise = resolve;
-      this.open();
-    });
-  }
-
-  onOpen(): void {
-    const { contentEl } = this;
-    contentEl.empty();
-
-    // Add scoped class for modal dimension overrides
-    this.modalEl.addClass('advanced-html-export-modal');
-
-    // Mount Svelte component
-    this.component = mount(NoteSelection, {
-      target: contentEl,
+  protected mountComponent(target: HTMLElement): ReturnType<typeof mount> {
+    return mount(NoteSelection, {
+      target,
       props: {
         notes: this.notes,
-        onConfirm: (selected: NoteInfo[]) => {
-          this.handleConfirm(selected);
-        },
-        onCancel: () => {
-          this.handleCancel();
-        }
-      }
+        onConfirm: (selected: NoteInfo[]) => this.finish(selected),
+        onCancel: () => this.finish(null),
+      },
     });
   }
 
-  private handleConfirm(selected: NoteInfo[]): void {
-    if (this.resolvePromise) {
-      this.resolvePromise(selected);
-      this.resolvePromise = null;
-    }
-    this.close();
-  }
-
-  private handleCancel(): void {
-    if (this.resolvePromise) {
-      this.resolvePromise(null);
-      this.resolvePromise = null;
-    }
-    this.close();
-  }
-
-  onClose(): void {
-    // Unmount Svelte component
-    if (this.component) {
-      void unmount(this.component);
-      this.component = null;
-    }
-
-    const { contentEl } = this;
-    contentEl.empty();
-
-    // Ensure we resolve if closed unexpectedly (e.g., Escape key)
-    if (this.resolvePromise) {
-      this.resolvePromise(null);
-      this.resolvePromise = null;
-    }
+  protected getFallbackResult(): NoteInfo[] | null {
+    return null;
   }
 }

@@ -3,6 +3,7 @@ import { ImageOptimizer } from './imageOptimizer';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 import { ExportSizeLedger } from './exportSizeLedger';
 import { utf8ByteLength } from './exportSizeReport';
+import type { AdvancedHtmlExportSettings } from '../settings';
 import {
   codeLabelFromNode,
   diagramLabelFromNode,
@@ -41,13 +42,11 @@ interface ProcessedImage {
   base64: string;
 }
 
-interface HtmlRendererSettings {
-  imageQuality: 'high' | 'medium' | 'low';
-  enableLazyLoading: boolean;
-  enableImageDeduplication: boolean;
-  disableSyntaxHighlighting?: boolean;
-  syntaxHighlightLanguages?: string;
-}
+type HtmlRendererSettings = Pick<
+  AdvancedHtmlExportSettings,
+  'imageQuality' | 'enableLazyLoading' | 'enableImageDeduplication'
+> &
+  Partial<Pick<AdvancedHtmlExportSettings, 'disableSyntaxHighlighting' | 'syntaxHighlightLanguages'>>;
 
 export default class HtmlRenderer {
   protected app: App;

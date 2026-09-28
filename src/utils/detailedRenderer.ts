@@ -53,7 +53,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     file: TFile,
     token: CancellationToken,
     pauseController?: PauseController,
-    noteInfo?: { analysis?: { diagramCount: number; codeBlockCount: number; imageCount: number; linkCount: number; diagrams: Array<{ type: string; content: string }>; codeBlocks: Array<{ language: string; content: string }>; images: Array<{ src: string; fileName: string }>; } }
+    noteInfo?: { analysis?: NoteAnalysis }
   ): Promise<string> {
     // Wait if paused (between notes)
     if (pauseController) {
@@ -71,20 +71,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
     // Phase 2: Parsing content (use pre-analyzed data if available)
     token.throwIfCancelled();
-    let analysis: NoteAnalysis;
-    if (noteInfo?.analysis) {
-      analysis = {
-        diagramCount: noteInfo.analysis.diagramCount,
-        codeBlockCount: noteInfo.analysis.codeBlockCount,
-        imageCount: noteInfo.analysis.imageCount,
-        linkCount: noteInfo.analysis.linkCount,
-        diagrams: noteInfo.analysis.diagrams,
-        codeBlocks: noteInfo.analysis.codeBlocks,
-        images: noteInfo.analysis.images
-      };
-    } else {
-      analysis = analyzeNoteContent(content);
-    }
+    const analysis: NoteAnalysis = noteInfo?.analysis ?? analyzeNoteContent(content);
 
     // Emit note_start with correct totals
     this.emit({

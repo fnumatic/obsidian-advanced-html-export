@@ -1,20 +1,19 @@
 // src/ui/modals/RenderingProgressModal.ts
-// Wrapper class that bridges Svelte RenderingProgress component with Obsidian's Modal API
+// Wrapper class that bridges the Svelte RenderingProgress component with Obsidian's Modal API
 
-import { App, Modal } from 'obsidian';
-import { mount, unmount } from 'svelte';
+import { App } from 'obsidian';
+import { mount } from 'svelte';
 import RenderingProgress from '../../components/RenderingProgress.svelte';
 import type { ExportMetrics, NoteInfo } from '../../utils/wikiExportOrchestrator';
 import type { CancellationToken } from '../../utils/cancellationToken';
 import type { PauseController } from '../../utils/pauseController';
 import type { RenderEvent } from '../../utils/detailedRenderer';
+import { SvelteModal } from './SvelteModal';
 
-export class RenderingProgressModal extends Modal {
+export class RenderingProgressModal extends SvelteModal<boolean> {
   private token: CancellationToken;
   private pauseController: PauseController;
   private metrics: ExportMetrics;
-  private resolvePromise: ((result: boolean) => void) | null = null;
-  private component: ReturnType<typeof mount> | null = null;
 
   constructor(
     app: App,
@@ -29,79 +28,26 @@ export class RenderingProgressModal extends Modal {
     this.metrics = metrics;
   }
 
-  async openAndAwait(): Promise<boolean> {
-    return new Promise((resolve) => {
-      this.resolvePromise = resolve;
-      this.open();
-    });
-  }
-
-  onOpen(): void {
-    const { contentEl } = this;
-    contentEl.empty();
-
-    // Add scoped class for modal dimension overrides (includes pointer-events: auto)
-    this.modalEl.addClass('advanced-html-export-modal');
-
-    // Create container for Svelte component
-    const container = contentEl.createDiv();
-    
-    // Mount Svelte component
-    this.component = mount(RenderingProgress, {
-      target: container,
+  protected mountComponent(target: HTMLElement): ReturnType<typeof mount> {
+    return mount(RenderingProgress, {
+      target,
       props: {
         metrics: this.metrics,
         token: this.token,
         pauseController: this.pauseController,
-        onComplete: () => {
-          this.handleComplete();
-        },
-        onCancel: () => {
-          this.handleCancel();
-        }
-      }
+        onComplete: () => this.finish(true),
+        onCancel: () => this.finish(false),
+      },
     });
   }
 
   // Public method called by exportWiki to forward events
   handleEvent(event: RenderEvent): void {
-    // Access the component's handleEvent method through the mounted instance
-    const comp = this.component as unknown as { handleEvent?: (event: RenderEvent) => void };
-    if (comp && comp.handleEvent) {
-      comp.handleEvent(event);
-    }
+    const comp = this.getMountedComponent() as unknown as { handleEvent?: (event: RenderEvent) => void } | null;
+    comp?.handleEvent?.(event);
   }
 
-  private handleComplete(): void {
-    if (this.resolvePromise) {
-      this.resolvePromise(true);
-      this.resolvePromise = null;
-    }
-    this.close();
-  }
-
-  private handleCancel(): void {
-    if (this.resolvePromise) {
-      this.resolvePromise(false);
-      this.resolvePromise = null;
-    }
-    this.close();
-  }
-
-  onClose(): void {
-    // Unmount Svelte component
-    if (this.component) {
-      void unmount(this.component);
-      this.component = null;
-    }
-
-    const { contentEl } = this;
-    contentEl.empty();
-
-    // Ensure we resolve if closed unexpectedly
-    if (this.resolvePromise) {
-      this.resolvePromise(false);
-      this.resolvePromise = null;
-    }
+  protected getFallbackResult(): boolean {
+    return false;
   }
 }

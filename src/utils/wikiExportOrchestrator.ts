@@ -1,6 +1,7 @@
 import { App, Component, TFile } from 'obsidian';
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
+import type { WikiRenderOptions } from './wikiHtmlRenderer';
 import { debugLogger } from './debugLogger';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
@@ -23,19 +24,7 @@ export interface PageFrontmatter {
   };
 }
 
-export interface WikiExportOptions {
-  imageQuality: 'high' | 'medium' | 'low';
-  enableLazyLoading: boolean;
-  enableImageDeduplication: boolean;
-  linkDepth: number;
-  includeUnlinked: boolean;
-  wikiTitle?: string;
-  enableThemeToggle?: boolean;
-  enableInlineTOC?: boolean;
-  defaultTheme?: 'light' | 'dark';
-  exportAuthor?: string;
-  exportVersion?: string;
-}
+export type WikiExportOptions = WikiRenderOptions;
 
 export interface NoteInfo {
   file: TFile;
