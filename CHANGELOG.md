@@ -37,6 +37,19 @@
 * **wiki-export:** support all viewable file types as internal wiki pages ([990b27c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/990b27cbcfb838e55576d5fb6861c440b10aa3e7))
 * **wiki-export:** support excalidraw files as internal wiki pages ([b8fb759](https://github.com/fnumatic/obsidian-advanced-html-export/commit/b8fb759ef09d5d1ab533613bd101ed2de799216f))
 
+## [0.9.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.8.0...0.9.0) (2026-09-28)
+
+
+### Features
+
+* **export:** add self-extracting gzip export compression ([86a5f49](https://github.com/fnumatic/obsidian-advanced-html-export/commit/86a5f49682c0721bc4ff595764755f298ef6c61c))
+
+
+### Bug Fixes
+
+* **ci:** attach release assets without clobbering notes ([d7f0ead](https://github.com/fnumatic/obsidian-advanced-html-export/commit/d7f0ead474fa346ea3a34b4708089fd84fa537b4))
+* resolve type-check errors from refactoring ([fc3cc1c](https://github.com/fnumatic/obsidian-advanced-html-export/commit/fc3cc1c397986c602062c06d27c285ebcf1bb371))
+
 ## [0.6.10](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.6.9...0.6.10) (2026-07-06)
 
 
