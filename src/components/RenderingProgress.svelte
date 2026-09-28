@@ -4,6 +4,15 @@
   import DetailRow from './DetailRow.svelte';
   import ProgressBar from './ProgressBar.svelte';
   import Icon from './Icon.svelte';
+  import {
+    calculateCurrentNoteProgress,
+    completedNoteFrom,
+    currentNoteFromEvent,
+    formatDuration,
+    truncateTitle,
+    updateNoteProgress,
+    warningMessage,
+  } from '../utils/renderProgress';
 
   let {
     metrics,
@@ -27,7 +36,7 @@
     if (!currentNote) return Math.round((completedNotes.length / metrics.totalNotes) * 100);
 
     const notesProgress = completedNotes.length / metrics.totalNotes;
-    const currentNoteProgress = calculateCurrentNoteProgress();
+    const currentNoteProgress = calculateCurrentNoteProgress(currentNote);
     const totalProgress = (notesProgress * 100) + (currentNoteProgress * (100 / metrics.totalNotes));
     return Math.min(100, Math.round(totalProgress));
   });
@@ -61,45 +70,6 @@
       return () => clearTimeout(timeout);
     }
   });
-
-  function calculateCurrentNoteProgress(): number {
-    if (!currentNote) return 0;
-
-    const diagramWeight = 0.3;
-    const codeblockWeight = 0.2;
-    const imageWeight = 0.5;
-
-    const diagramProgress = currentNote.diagrams.total > 0
-      ? currentNote.diagrams.processed / currentNote.diagrams.total
-      : 0;
-
-    const codeblockProgress = currentNote.codeBlocks.total > 0
-      ? currentNote.codeBlocks.processed / currentNote.codeBlocks.total
-      : 0;
-
-    const imageProgress = currentNote.images.total > 0
-      ? currentNote.images.processed / currentNote.images.total
-      : 0;
-
-    return (diagramProgress * diagramWeight) +
-           (codeblockProgress * codeblockWeight) +
-           (imageProgress * imageWeight);
-  }
-
-  function formatDuration(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`;
-  }
-
-  function truncateTitle(title: string, maxLength: number): string {
-    return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
-  }
 
   function handlePauseToggle() {
     if (isPaused) {
@@ -162,31 +132,13 @@
   }
 
   function handleNoteStart(event: RenderEvent) {
-    const index = completedNotes.length;
-    currentNote = {
-      title: event.noteTitle || 'Unknown',
-      path: event.notePath || '',
-      index: index,
-      total: metrics.totalNotes,
-      diagrams: { total: (event.details?.totalDiagrams as number) || 0, processed: 0 },
-      codeBlocks: { total: (event.details?.totalCodeBlocks as number) || 0, processed: 0 },
-      images: { total: (event.details?.totalImages as number) || 0, processed: 0 },
-      overallProgress: 0
-    };
+    currentNote = currentNoteFromEvent(event, completedNotes.length, metrics.totalNotes);
   }
 
   function handleNoteComplete(event: RenderEvent) {
     if (!currentNote) return;
 
-    const completed: CompletedNote = {
-      title: currentNote.title,
-      path: currentNote.path,
-      duration: (event.details?.duration as number) || 0,
-      totalDiagrams: (event.details?.totalDiagrams as number) || 0,
-      totalCodeBlocks: (event.details?.totalCodeBlocks as number) || 0,
-      totalImages: (event.details?.totalImages as number) || 0,
-      linkCount: (event.details?.linkCount as number) || 0
-    };
+    const completed = completedNoteFrom(currentNote, event);
 
     completedNotes = [...completedNotes, completed];
     totalNotesRendered++;
@@ -212,13 +164,7 @@
     if (!currentNote) {
       return;
     }
-    currentNote = {
-      ...currentNote,
-      [type]: {
-        ...currentNote[type],
-        ...updates
-      }
-    };
+    currentNote = updateNoteProgress(currentNote, type, updates);
   }
 
   function handleImageStart(event: RenderEvent) {
@@ -268,13 +214,9 @@
   }
 
   function handleWarning(event: RenderEvent) {
-    const details = event.details;
-    if (details?.operation === 'image_processing') {
-      const duration = typeof details.duration === 'number' ? details.duration : 0;
-      warning = `⚠️ Slow operation: ${details.fileName} (${(duration / 1000).toFixed(1)}s)`;
-    } else if (details?.operation === 'markdown_render') {
-      const duration = typeof details.duration === 'number' ? details.duration : 0;
-      warning = `⚠️ Note is taking long to render: ${details.noteName} (${(duration / 1000).toFixed(1)}s)`;
+    const message = warningMessage(event);
+    if (message) {
+      warning = message;
     }
   }
 </script>

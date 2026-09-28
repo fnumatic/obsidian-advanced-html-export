@@ -7,6 +7,7 @@
  */
 
 import { lastPathSegment } from './pathUtils';
+import { diagramLabelFromClassName } from './diagramTypes';
 
 /**
  * Recognized diagram containers rendered by Obsidian or its diagram plugins.
@@ -43,12 +44,7 @@ export function imageLabelFromPath(imagePath: string): string {
 
 /** Derives a diagram type label from a container's class list. */
 export function diagramLabelFromNode(node: Element): string {
-  const className = node.getAttribute?.('class') ?? '';
-  if (className.includes('mermaid')) return 'Mermaid';
-  if (className.includes('plantuml')) return 'PlantUML';
-  if (className.includes('excalidraw')) return 'Excalidraw';
-  if (className.includes('graph')) return 'Graph';
-  return 'Diagram';
+  return diagramLabelFromClassName(node.getAttribute?.('class') ?? '');
 }
 
 /** Derives a language label from a code block element. */

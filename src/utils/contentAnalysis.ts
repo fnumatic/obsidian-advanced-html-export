@@ -1,3 +1,5 @@
+import { DIAGRAM_LANGUAGES } from './diagramTypes';
+
 export interface NoteAnalysis {
   diagramCount: number;
   codeBlockCount: number;
@@ -8,26 +10,28 @@ export interface NoteAnalysis {
   images: Array<{ src: string; fileName: string }>;
 }
 
+function isDiagramBlock(block: string): boolean {
+  return DIAGRAM_LANGUAGES.some((language) => block.startsWith('```' + language));
+}
+
 export function analyzeNoteContent(content: string): NoteAnalysis {
   const imageMatches = content.match(/!\[.*?\]\(.*?\)/g) || [];
 
-  const mermaidMatches = content.match(/```mermaid[\s\S]*?```/g) || [];
-  const plantumlMatches = content.match(/```plantuml[\s\S]*?```/g) || [];
-  const graphMatches = content.match(/```graph[\s\S]*?```/g) || [];
-
-  const diagramBlocks = mermaidMatches.length + plantumlMatches.length + graphMatches.length;
+  const diagramMatches = DIAGRAM_LANGUAGES.flatMap((language) =>
+    (content.match(new RegExp('```' + language + '[\\s\\S]*?```', 'g')) || []).map((block) => ({
+      type: language,
+      content: block,
+    })),
+  );
+  const diagramBlocks = diagramMatches.length;
 
   const allCodeBlocks = content.match(/```[\s\S]*?```/g) || [];
   const codeBlockCount = allCodeBlocks.length - diagramBlocks;
 
-  const diagrams = [
-    ...mermaidMatches.map(content => ({ type: 'mermaid' as const, content })),
-    ...plantumlMatches.map(content => ({ type: 'plantuml' as const, content })),
-    ...graphMatches.map(content => ({ type: 'graph' as const, content })),
-  ];
+  const diagrams = diagramMatches.map((diagram) => ({ type: diagram.type as string, content: diagram.content }));
 
   const codeBlocks = allCodeBlocks
-    .filter(block => !block.startsWith('```mermaid') && !block.startsWith('```plantuml') && !block.startsWith('```graph'))
+    .filter(block => !isDiagramBlock(block))
     .map(block => {
       const match = block.match(/```(\w+)/);
       return {
