@@ -1,4 +1,5 @@
 import { gzipSync } from 'zlib';
+import { escapeHtml } from './htmlUtils';
 
 /**
  * Compression applied to an exported HTML file before it is delivered.
@@ -86,15 +87,6 @@ function encodeBase85(bytes: Uint8Array): string {
     return output;
 }
 
-/** Escapes a string for safe use inside an HTML text node or attribute. */
-function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
 const CONTAINER_STYLE = 'html,body{margin:0;height:100%}'
     + '#zz-loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;'
     + 'font:14px/1.5 system-ui,sans-serif;color:#444;background:#fff}';
@@ -178,20 +170,9 @@ ${body}
 }
 
 /**
- * Wraps an HTML document into a gzip self-extracting container.
- * No extra decoder is required: browsers inflate it natively.
- * @param html The full HTML document to wrap
- * @param title Title used for the container document
- * @param encoding Encoding of the compressed payload (base64 or base85)
- * @returns The self-extracting HTML document
- */
-export function buildGzipSelfExtract(html: string, title: string, encoding: PayloadEncoding): string {
-    return buildGzipSelfExtractWithMeta(html, title, encoding).html;
-}
-
-/**
  * Wraps an HTML document into a gzip self-extracting container and reports the
  * sizes involved.
+ * No extra decoder is required: browsers inflate it natively.
  * @param html The full HTML document to wrap
  * @param title Title used for the container document
  * @param encoding Encoding of the compressed payload (base64 or base85)
@@ -220,17 +201,6 @@ export function buildGzipSelfExtractWithMeta(
             encodingOverheadBytes: encodedBytes - compressed.length,
         },
     };
-}
-
-/**
- * Applies the configured compression to an exported HTML document.
- * @param html The full HTML document
- * @param mode Compression mode from the plugin settings
- * @param title Title used for the self-extracting container
- * @returns The (possibly wrapped) HTML document
- */
-export function wrapHtmlForExport(html: string, mode: CompressionMode, title: string): string {
-    return wrapHtmlForExportWithMeta(html, mode, title).html;
 }
 
 /**

@@ -30,6 +30,18 @@ interface AdvancedHtmlExportSettings {
   exportAuthor: string;
 }
 
+type BooleanSettingKey =
+  | 'enableLazyLoading'
+  | 'enableImageDeduplication'
+  | 'showExportStatistics'
+  | 'enableThemeToggle'
+  | 'enableInlineTOC'
+  | 'disableSyntaxHighlighting';
+
+type TextSettingKey = 'wikiTitle' | 'exportAuthor' | 'syntaxHighlightLanguages';
+
+type DropdownSettingKey = 'imageQuality' | 'exportCompression' | 'defaultTheme';
+
 const DEFAULT_LANGUAGES = 'javascript,typescript,jsx,tsx,html,xml,css,scss,sass,c,cpp,c++,h,hpp,c#,csharp,cs,java,rust,go,ruby,swift,kotlin,scala,objective-c,objectivec,objc,python,py,perl,php,lua,raku,bash,sh,shell,powershell,ps1,cmd,batch,awk,tcl,json,jsonc,json5,yaml,yml,ini,toml,sql,pgsql,postgresql,mysql,sqlite,haskell,ocaml,fsharp,erlang,elixir,clojure,dart,flutter,groovy,gradle,maven,dockerfile,docker,cmake,makefile,markdown,md,latex,tex,asciidoc,adoc,protobuf,proto,thrift,graphql,diff,patch,vim,nginx,apache,apacheconf,lighttpd,terraform,hcl,ansible,puppet,r,julia,matlab,octave,vb,vbnet,vba,vbscript,basic,pascal,delphi,lazarus,fpc';
 
 const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
@@ -101,161 +113,51 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
   }
 
   display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
+    this.containerEl.empty();
 
-    new Setting(containerEl)
-      .setName('Export options')
-      .setHeading();
+    this.addHeading('Export options');
 
-    new Setting(containerEl)
-      .setName('Image quality')
-      .setDesc('Quality level for image optimization (higher quality = larger file size)')
-      .addDropdown(dropdown => dropdown
-        .addOption('high', 'High (90%)')
-        .addOption('medium', 'Medium (80%)')
-        .addOption('low', 'Low (70%)')
-        .setValue(this.plugin.settings.imageQuality)
-        .onChange(async (value: string) => {
-          this.plugin.settings.imageQuality = value as 'high' | 'medium' | 'low';
-          await this.plugin.saveSettings();
-        }));
+    this.addDropdown('Image quality', 'Quality level for image optimization (higher quality = larger file size)', 'imageQuality', [
+      ['high', 'High (90%)'],
+      ['medium', 'Medium (80%)'],
+      ['low', 'Low (70%)'],
+    ]);
 
-    new Setting(containerEl)
-      .setName('Enable lazy loading')
-      .setDesc('Defer loading of images that are not immediately visible')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.enableLazyLoading)
-        .onChange(async (value) => {
-          this.plugin.settings.enableLazyLoading = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addToggle('Enable lazy loading', 'Defer loading of images that are not immediately visible', 'enableLazyLoading');
 
-    new Setting(containerEl)
-      .setName('Enable image deduplication')
-      .setDesc('Reduce file size by embedding identical images only once using JavaScript (recommended)')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.enableImageDeduplication)
-        .onChange(async (value) => {
-          this.plugin.settings.enableImageDeduplication = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addToggle('Enable image deduplication', 'Reduce file size by embedding identical images only once using JavaScript (recommended)', 'enableImageDeduplication');
 
-    new Setting(containerEl)
-      .setName('Export compression')
-      .setDesc('Wrap the exported HTML in a self-extracting gzip container that unpacks itself when opened. gzip + base85 is about 6% smaller than gzip + base64. Can be overridden per start note via the "export.compression" frontmatter (none, gzipb64, gzipb85).')
-      .addDropdown(dropdown => dropdown
-        .addOption('none', 'None (plain HTML)')
-        .addOption('gzipb64', 'gzip + base64')
-        .addOption('gzipb85', 'gzip + base85 (smaller)')
-        .setValue(this.plugin.settings.exportCompression)
-        .onChange(async (value: string) => {
-          this.plugin.settings.exportCompression = value as 'none' | 'gzipb64' | 'gzipb85';
-          await this.plugin.saveSettings();
-        }));
+    this.addDropdown('Export compression', 'Wrap the exported HTML in a self-extracting gzip container that unpacks itself when opened. gzip + base85 is about 6% smaller than gzip + base64. Can be overridden per start note via the "export.compression" frontmatter (none, gzipb64, gzipb85).', 'exportCompression', [
+      ['none', 'None (plain HTML)'],
+      ['gzipb64', 'gzip + base64'],
+      ['gzipb85', 'gzip + base85 (smaller)'],
+    ]);
 
-    new Setting(containerEl)
-      .setName('Show export statistics')
-      .setDesc('Show a size breakdown of the generated file after each export (what data uses how much space)')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.showExportStatistics)
-        .onChange(async (value) => {
-          this.plugin.settings.showExportStatistics = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addToggle('Show export statistics', 'Show a size breakdown of the generated file after each export (what data uses how much space)', 'showExportStatistics');
 
-    new Setting(containerEl)
-      .setName('Wiki link depth')
-      .setDesc('How many levels of links to include in wiki export (1 = direct links only)')
-      .addSlider(slider => slider
-        .setLimits(1, 10, 1)
-        .setValue(this.plugin.settings.linkDepth)
-        .onChange(async (value) => {
-          this.plugin.settings.linkDepth = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addSlider('Wiki link depth', 'How many levels of links to include in wiki export (1 = direct links only)', 'linkDepth', [1, 10, 1]);
 
-    new Setting(containerEl)
-      .setName('Wiki title')
-      .setDesc('Custom title for wiki export (leave empty to use note title)')
-      .addText(text => text
-        .setPlaceholder('My Wiki')
-        .setValue(this.plugin.settings.wikiTitle)
-        .onChange(async (value) => {
-          this.plugin.settings.wikiTitle = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addText('Wiki title', 'Custom title for wiki export (leave empty to use note title)', 'wikiTitle', 'My Wiki');
 
-    new Setting(containerEl)
-      .setName('Export author')
-      .setDesc('Default author for exported wiki manifest. Can be overridden per note via frontmatter.')
-      .addText(text => text
-        .setPlaceholder('Author name')
-        .setValue(this.plugin.settings.exportAuthor)
-        .onChange(async (value) => {
-          this.plugin.settings.exportAuthor = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addText('Export author', 'Default author for exported wiki manifest. Can be overridden per note via frontmatter.', 'exportAuthor', 'Author name');
 
-    new Setting(containerEl)
-      .setName('Enable theme toggle')
-      .setDesc('Show theme toggle button to switch between light and dark mode')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.enableThemeToggle)
-        .onChange(async (value) => {
-          this.plugin.settings.enableThemeToggle = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addToggle('Enable theme toggle', 'Show theme toggle button to switch between light and dark mode', 'enableThemeToggle');
 
-    new Setting(containerEl)
-      .setName('Enable inline table of contents')
-      .setDesc('Show inline TOC on the right side of the content')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.enableInlineTOC)
-        .onChange(async (value) => {
-          this.plugin.settings.enableInlineTOC = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addToggle('Enable inline table of contents', 'Show inline TOC on the right side of the content', 'enableInlineTOC');
 
-    new Setting(containerEl)
-      .setName('Default theme')
-      .setDesc('Default theme for wiki export')
-      .addDropdown(dropdown => dropdown
-        .addOption('light', 'Light')
-        .addOption('dark', 'Dark')
-        .setValue(this.plugin.settings.defaultTheme)
-        .onChange(async (value: string) => {
-          this.plugin.settings.defaultTheme = value as 'light' | 'dark';
-          await this.plugin.saveSettings();
-        }));
+    this.addDropdown('Default theme', 'Default theme for wiki export', 'defaultTheme', [
+      ['light', 'Light'],
+      ['dark', 'Dark'],
+    ]);
 
-    new Setting(containerEl)
-      .setName('Disable syntax highlighting')
-      .setDesc('Export code blocks as plain text without syntax highlighting (faster export, smaller file size)')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.disableSyntaxHighlighting)
-        .onChange(async (value) => {
-          this.plugin.settings.disableSyntaxHighlighting = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addToggle('Disable syntax highlighting', 'Export code blocks as plain text without syntax highlighting (faster export, smaller file size)', 'disableSyntaxHighlighting');
 
-    new Setting(containerEl)
-      .setName('Languages for syntax highlighting')
-      .setDesc('Comma-separated list of language identifiers to process. Custom blocks (mermaid, plantuml, etc.) are NOT affected.')
-      .addText(text => text
-        .setPlaceholder('javascript, typescript, python, ...')
-        .setValue(this.plugin.settings.syntaxHighlightLanguages)
-        .onChange(async (value) => {
-          this.plugin.settings.syntaxHighlightLanguages = value;
-          await this.plugin.saveSettings();
-        }));
+    this.addText('Languages for syntax highlighting', 'Comma-separated list of language identifiers to process. Custom blocks (mermaid, plantuml, etc.) are NOT affected.', 'syntaxHighlightLanguages', 'javascript, typescript, python, ...');
 
     // Debug section
-    new Setting(containerEl)
-      .setName('Developer options')
-      .setHeading();
+    this.addHeading('Developer options');
 
-    new Setting(containerEl)
+    new Setting(this.containerEl)
       .setName('Debug mode')
       .setDesc('Enable detailed performance logging and timing measurements for exports (reload required)')
       .addToggle(toggle => toggle
@@ -265,6 +167,70 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
           // Set global flag for debugLogger
           window.ADVANCED_HTML_EXPORT_DEBUG = value;
+        }));
+  }
+
+  private addHeading(name: string): void {
+    new Setting(this.containerEl).setName(name).setHeading();
+  }
+
+  private addToggle(name: string, desc: string, key: BooleanSettingKey): void {
+    new Setting(this.containerEl)
+      .setName(name)
+      .setDesc(desc)
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings[key])
+        .onChange(async (value) => {
+          this.plugin.settings[key] = value;
+          await this.plugin.saveSettings();
+        }));
+  }
+
+  private addText(name: string, desc: string, key: TextSettingKey, placeholder = ''): void {
+    new Setting(this.containerEl)
+      .setName(name)
+      .setDesc(desc)
+      .addText(text => text
+        .setPlaceholder(placeholder)
+        .setValue(this.plugin.settings[key])
+        .onChange(async (value) => {
+          this.plugin.settings[key] = value;
+          await this.plugin.saveSettings();
+        }));
+  }
+
+  private addDropdown(
+    name: string,
+    desc: string,
+    key: DropdownSettingKey,
+    options: ReadonlyArray<readonly [string, string]>,
+  ): void {
+    new Setting(this.containerEl)
+      .setName(name)
+      .setDesc(desc)
+      .addDropdown(dropdown => {
+        for (const [value, label] of options) {
+          dropdown.addOption(value, label);
+        }
+        return dropdown
+          .setValue(this.plugin.settings[key])
+          .onChange(async (value) => {
+            (this.plugin.settings as Record<DropdownSettingKey, string>)[key] = value;
+            await this.plugin.saveSettings();
+          });
+      });
+  }
+
+  private addSlider(name: string, desc: string, key: 'linkDepth', limits: readonly [number, number, number]): void {
+    new Setting(this.containerEl)
+      .setName(name)
+      .setDesc(desc)
+      .addSlider(slider => slider
+        .setLimits(limits[0], limits[1], limits[2])
+        .setValue(this.plugin.settings[key])
+        .onChange(async (value) => {
+          this.plugin.settings[key] = value;
+          await this.plugin.saveSettings();
         }));
   }
 }

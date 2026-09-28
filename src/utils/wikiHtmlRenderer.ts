@@ -4,7 +4,6 @@ import { extractDiagramSources, noteLabelFromPath } from './exportSizeInstrument
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { fillTemplate } from './templateUtils';
-import { debugLogger } from './debugLogger';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
 import { utf8ByteLength } from './exportSizeReport';
 import template from './wikiTemplates/template.html?raw';
@@ -122,68 +121,6 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     }
 
     /**
-     * Renders wiki export with linked notes
-     * @security Uses innerHTML to read rendered output from Obsidian's MarkdownRenderer.
-     * This is safe as we only read the output, not insert user input.
-     * See: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines#security
-     */
-    async renderWiki(centralFile: TFile, onProgress?: (current: number, total: number) => void): Promise<string> {
-        const options = this.settings as WikiRenderOptions;
-
-        const collected = await this.collector.collectLinkedFiles(centralFile, options.linkDepth);
-        const collectedFiles = collected.map(c => c.file);
-
-        this.pageList = collectedFiles.map((file) => ({
-            slug: this.linkResolver.getFileSlug(file),
-            title: file.basename,
-            path: file.path
-        }));
-
-        this.setResolvablePages(this.pageList);
-
-        const progressCallback = onProgress || ((_current: number, _total: number) => {
-            // Silent progress callback
-        });
-
-        const renderedPages: Map<string, string> = new Map();
-
-        const totalPages = collectedFiles.length;
-        const CHUNK_SIZE = 5;
-
-        for (let i = 0; i < collectedFiles.length; i += CHUNK_SIZE) {
-            const chunk = collectedFiles.slice(i, i + CHUNK_SIZE);
-
-            const results = await Promise.all(
-                chunk.map(async (file) => {
-                    const slug = this.linkResolver.getFileSlug(file);
-                    const html = await this.renderPageFromFile(file);
-                    return [slug, html] as [string, string];
-                })
-            );
-
-            results.forEach(([slug, html]) => renderedPages.set(slug, html));
-
-            await new Promise(resolve => setTimeout(resolve, 0));
-
-            progressCallback(Math.min(i + CHUNK_SIZE, totalPages), totalPages);
-        }
-
-        return this.generateWikiHtml(centralFile, renderedPages);
-    }
-
-    /**
-     * Render a single note file to HTML
-     * This is the method called by the orchestrator
-     */
-    async renderPage(file: TFile): Promise<string> {
-        return this.renderPageFromFile(file);
-    }
-
-    /**
-     * Render a single note file to HTML
-     * This is the new preferred method for rendering from orchestrator
-     */
-    /**
      * Returns content ready for MarkdownRenderer processing.
      * Override point for non-Markdown files (e.g. excalidraw).
      */
@@ -192,21 +129,6 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             return `![[${LinkResolver.getEmbedTarget(file)}]]`;
         }
         return this.app.vault.cachedRead(file);
-    }
-
-    async renderPageFromFile(file: TFile): Promise<string> {
-        debugLogger.logNoteStart(file.path);
-
-        const content = await this.readContentForPage(file);
-        const html = await this.renderPageFromContent(content);
-        debugLogger.logNoteEnd(file.path);
-        return html;
-    }
-
-    async renderPageFromContent(markdownContent: string): Promise<string> {
-        return this.renderResolvedContent(markdownContent, '.', {
-            onImageProcessed: (dedup, cacheHit) => debugLogger.logImageProcessed(dedup, cacheHit),
-        });
     }
 
     /**

@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { gunzipSync } from 'zlib';
 import {
-    buildGzipSelfExtract,
     buildGzipSelfExtractWithMeta,
-    wrapHtmlForExport,
     wrapHtmlForExportWithMeta,
     resolveCompressionMode,
     type PayloadEncoding,
@@ -61,46 +59,46 @@ function extractPayload(container: string): Buffer {
     return Buffer.from(decodeBase85(text, length));
 }
 
-describe('buildGzipSelfExtract', () => {
+describe('buildGzipSelfExtractWithMeta', () => {
     it.each<PayloadEncoding>(['base64', 'base85'])('round-trips through %s + gunzip', (encoding) => {
-        const container = buildGzipSelfExtract(SAMPLE, 'Test title', encoding);
+        const container = buildGzipSelfExtractWithMeta(SAMPLE, 'Test title', encoding).html;
         expect(container).toContain('id="zz-payload"');
         expect(container).toContain(`data-encoding="${encoding}"`);
         expect(gunzipSync(extractPayload(container)).toString('utf-8')).toBe(SAMPLE);
     });
 
     it('never emits a sequence that could close the script element in base85 mode', () => {
-        const container = buildGzipSelfExtract(SAMPLE + 'x'.repeat(100000), 'T', 'base85');
+        const container = buildGzipSelfExtractWithMeta(SAMPLE + 'x'.repeat(100000), 'T', 'base85').html;
         const payload = container.match(/data-bytes="\d+"[^>]*>([\s\S]*?)<\/script>/)![1];
         expect(payload).not.toContain('<');
     });
 
     it('escapes the container title', () => {
-        const container = buildGzipSelfExtract(SAMPLE, 'A<b>&"', 'base64');
+        const container = buildGzipSelfExtractWithMeta(SAMPLE, 'A<b>&"', 'base64').html;
         expect(container).toContain('<title>A&lt;b&gt;&amp;&quot;</title>');
     });
 
     it('produces a base85 container smaller than the base64 one', () => {
         const big = SAMPLE + '<p>Lorem ipsum dolor sit amet.</p>'.repeat(5000);
-        const base64 = buildGzipSelfExtract(big, 'T', 'base64');
-        const base85 = buildGzipSelfExtract(big, 'T', 'base85');
+        const base64 = buildGzipSelfExtractWithMeta(big, 'T', 'base64').html;
+        const base85 = buildGzipSelfExtractWithMeta(big, 'T', 'base85').html;
         expect(base85.length).toBeLessThan(base64.length);
     });
 
     it('is smaller than the input for larger, compressible documents', () => {
         const big = SAMPLE + '<p>Lorem ipsum dolor sit amet.</p>'.repeat(2000);
-        expect(buildGzipSelfExtract(big, 'T', 'base85').length).toBeLessThan(big.length);
+        expect(buildGzipSelfExtractWithMeta(big, 'T', 'base85').html.length).toBeLessThan(big.length);
     });
 });
 
-describe('wrapHtmlForExport', () => {
+describe('wrapHtmlForExportWithMeta', () => {
     it('returns the input unchanged for mode "none"', () => {
-        expect(wrapHtmlForExport(SAMPLE, 'none', 'T')).toBe(SAMPLE);
+        expect(wrapHtmlForExportWithMeta(SAMPLE, 'none', 'T').html).toBe(SAMPLE);
     });
 
     it('wraps for gzipb64 and gzipb85 modes', () => {
-        expect(wrapHtmlForExport(SAMPLE, 'gzipb64', 'T')).toContain('data-encoding="base64"');
-        expect(wrapHtmlForExport(SAMPLE, 'gzipb85', 'T')).toContain('data-encoding="base85"');
+        expect(wrapHtmlForExportWithMeta(SAMPLE, 'gzipb64', 'T').html).toContain('data-encoding="base64"');
+        expect(wrapHtmlForExportWithMeta(SAMPLE, 'gzipb85', 'T').html).toContain('data-encoding="base85"');
     });
 });
 
@@ -111,7 +109,7 @@ describe('compression metadata', () => {
 
         for (const encoding of ['base64', 'base85'] as PayloadEncoding[]) {
             const { html, meta } = buildGzipSelfExtractWithMeta(big, 'T', encoding);
-            expect(html).toBe(buildGzipSelfExtract(big, 'T', encoding));
+            expect(html).toContain('id="zz-payload"');
             expect(meta.mode).toBe(encoding === 'base64' ? 'gzipb64' : 'gzipb85');
             expect(meta.rawBytes).toBe(rawBytes);
             expect(meta.outputBytes).toBe(new TextEncoder().encode(html).length);

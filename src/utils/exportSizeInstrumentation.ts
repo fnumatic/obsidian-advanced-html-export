@@ -6,6 +6,8 @@
  * isolation from the renderer.
  */
 
+import { lastPathSegment } from './pathUtils';
+
 /**
  * Recognized diagram containers rendered by Obsidian or its diagram plugins.
  * The list is intentionally conservative: unmatched third-party renderers are
@@ -31,8 +33,7 @@ export function formatFromDataUri(dataUri: string): string {
 export function imageLabelFromPath(imagePath: string): string {
   if (imagePath.startsWith('data:')) return 'embedded image';
   if (imagePath.startsWith('blob:')) return 'embedded asset';
-  const last = imagePath.split('/').pop() ?? imagePath;
-  const name = last.split('?')[0];
+  const name = lastPathSegment(imagePath);
   try {
     return decodeURIComponent(name) || 'image';
   } catch {
@@ -61,7 +62,7 @@ export function codeLabelFromNode(node: Element): string {
 /** Derives a readable note label from a source path. */
 export function noteLabelFromPath(sourcePath: string | undefined): string | undefined {
   if (!sourcePath || sourcePath === '.') return undefined;
-  const file = sourcePath.split('/').pop() ?? sourcePath;
+  const file = lastPathSegment(sourcePath);
   const base = file.replace(/\.[^.]+$/, '');
   return base || undefined;
 }

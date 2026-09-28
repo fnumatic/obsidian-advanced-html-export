@@ -2,6 +2,8 @@ import { TFile } from 'obsidian';
 import WikiHtmlRenderer, { type RenderPipelineHooks } from './wikiHtmlRenderer';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
+import { yieldToUI } from './asyncUtils';
+import { lastPathSegment } from './pathUtils';
 import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
 
 export type RenderEventType = 
@@ -41,10 +43,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     this.eventHandlers.forEach(handler => handler(event));
   }
 
-  private async yieldToUI(): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, 0));
-  }
-
   /**
    * Renders a single note page with progress tracking
    * @security Uses innerHTML to read rendered output from Obsidian's MarkdownRenderer.
@@ -69,7 +67,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     // Phase 1: Reading file (uses shared helper for non-md files like excalidraw)
     token.throwIfCancelled();
     const content = await this.readContentForPage(file);
-    await this.yieldToUI();
+    await yieldToUI();
 
     // Phase 2: Parsing content (use pre-analyzed data if available)
     token.throwIfCancelled();
@@ -227,14 +225,14 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
               }
             });
 
-            await this.yieldToUI();
+            await yieldToUI();
           },
         },
       };
 
       const html = await this.renderResolvedContent(content, file.path, hooks);
 
-      await this.yieldToUI();
+      await yieldToUI();
 
       const noteDuration = performance.now() - this.currentNoteStartTime;
 
@@ -273,9 +271,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
     if (src.startsWith('data:')) {
       return 'data-uri';
     }
-    const parts = src.split('/');
-    const fileNameWithParams = parts[parts.length - 1];
-    return fileNameWithParams.split('?')[0] || 'unknown';
+    return lastPathSegment(src) || 'unknown';
   }
 }
 

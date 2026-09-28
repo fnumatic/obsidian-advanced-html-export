@@ -4,6 +4,7 @@ import { WikiLinkCollector } from './wikiLinkCollector';
 import { debugLogger } from './debugLogger';
 import { CancellationToken, CancellationError } from './cancellationToken';
 import { PauseController } from './pauseController';
+import { yieldToUI } from './asyncUtils';
 import { DetailedWikiRenderer, RenderEvent } from './detailedRenderer';
 import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
 
@@ -198,68 +199,6 @@ export class WikiExportOrchestrator {
   }
 
   /**
-   * Phase 3: Render selected notes
-   */
-  async renderNotes(
-    renderer: { renderPage: (file: TFile, token?: CancellationToken, pauseController?: PauseController, noteInfo?: NoteInfo) => Promise<string> },
-    onProgress?: (current: number, total: number, notePath: string) => void
-  ): Promise<Map<string, string>> {
-    if (this.selectedNotes.length === 0) {
-      throw new Error('No notes selected for rendering');
-    }
-
-    this.stage = 'rendering';
-    debugLogger.startPhase('renderNotes', { 
-      noteCount: this.selectedNotes.length 
-    });
-
-    const renderedPages = new Map<string, string>();
-    const total = this.selectedNotes.length;
-    const CHUNK_SIZE = 5;
-
-    try {
-      for (let i = 0; i < this.selectedNotes.length; i += CHUNK_SIZE) {
-        const chunk = this.selectedNotes.slice(i, i + CHUNK_SIZE);
-
-        const results = await Promise.all(
-          chunk.map(async (noteInfo) => {
-            debugLogger.logNoteStart(noteInfo.path);
-            
-            const html = await renderer.renderPage(noteInfo.file, undefined, undefined, noteInfo);
-            
-            debugLogger.logNoteEnd(noteInfo.path);
-            return { slug: noteInfo.slug, html };
-          })
-        );
-
-        results.forEach(({ slug, html }) => {
-          renderedPages.set(slug, html);
-        });
-
-        // Allow UI to update
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        // Report progress
-        if (onProgress) {
-          chunk.forEach((note, idx) => {
-            onProgress(i + idx + 1, total, note.path);
-          });
-        }
-      }
-
-      this.stage = 'completed';
-      debugLogger.endPhase();
-      debugLogger.printSummary();
-
-      return renderedPages;
-    } catch (error) {
-      this.stage = 'cancelled';
-      debugLogger.endPhase();
-      throw error;
-    }
-  }
-
-  /**
    * Phase 3b: Render selected notes with detailed progress tracking
    * This version supports cancellation, pause, and emits detailed events
    */
@@ -313,7 +252,7 @@ export class WikiExportOrchestrator {
         }
 
         // Yield to UI thread
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await yieldToUI();
       }
 
       this.stage = 'completed';

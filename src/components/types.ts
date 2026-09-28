@@ -70,21 +70,5 @@ export interface RenderingProgressProps {
   onCancel: () => void;
 }
 
-// Settings Types
-export interface SettingsPanelProps {
-  settings: {
-    imageQuality: 'high' | 'medium' | 'low';
-    enableLazyLoading: boolean;
-    enableImageDeduplication: boolean;
-    linkDepth: number;
-    wikiTitle: string;
-    enableThemeToggle: boolean;
-    enableInlineTOC: boolean;
-    defaultTheme: 'light' | 'dark';
-    debugMode: boolean;
-  };
-  onChange: (settings: SettingsPanelProps['settings']) => void;
-}
-
 // Re-export for convenience
 export type { ExportMetrics, NoteInfo, RenderEvent };

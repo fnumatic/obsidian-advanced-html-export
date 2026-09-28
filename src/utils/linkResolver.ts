@@ -1,3 +1,5 @@
+import { escapeHtml } from './htmlUtils';
+
 export interface LinkInfo {
     original: string;
     target: string;
@@ -32,15 +34,6 @@ export class LinkResolver {
 
     setPageSlugResolver(resolver: (rawTarget: string) => PageSlugResolution): void {
         this.pageSlugResolver = resolver;
-    }
-
-    private escapeHtml(value: string): string {
-        return value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
     }
 
     /** Check if a file is a known viewable type (image or excalidraw) */
@@ -196,15 +189,15 @@ export class LinkResolver {
                     const resolution = this.pageSlugResolver(link.rawTarget);
                     if (!resolution.resolved) {
                         replacement =
-                            `<span class="wiki-link-missing" data-missing-target="${this.escapeHtml(link.rawTarget)}">${this.escapeHtml(link.alias)}</span>`;
+                            `<span class="wiki-link-missing" data-missing-target="${escapeHtml(link.rawTarget)}">${escapeHtml(link.alias)}</span>`;
                     } else {
                         const slug = resolution.slug ?? link.target;
                         replacement =
-                            `<a href="javascript:void(0)" data-page="${this.escapeHtml(slug)}" style="cursor: pointer;">${this.escapeHtml(link.alias)}</a>`;
+                            `<a href="javascript:void(0)" data-page="${escapeHtml(slug)}" style="cursor: pointer;">${escapeHtml(link.alias)}</a>`;
                     }
                 } else {
                     replacement =
-                        `<a href="javascript:void(0)" data-page="${this.escapeHtml(link.target)}" style="cursor: pointer;">${this.escapeHtml(link.alias)}</a>`;
+                        `<a href="javascript:void(0)" data-page="${escapeHtml(link.target)}" style="cursor: pointer;">${escapeHtml(link.alias)}</a>`;
                 }
 
                 resolvedContent = resolvedContent.replace(link.original, replacement);
