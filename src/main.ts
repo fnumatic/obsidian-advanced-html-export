@@ -16,6 +16,7 @@ interface AdvancedHtmlExportSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
+  exportCompression: 'none' | 'gzipb64' | 'gzipb85';
   linkDepth: number;
   includeUnlinked: boolean;
   wikiTitle: string;
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   imageQuality: 'medium',
   enableLazyLoading: true,
   enableImageDeduplication: true,
+  exportCompression: 'none',
   linkDepth: 1,
   includeUnlinked: false,
   wikiTitle: '',
@@ -134,6 +136,19 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.enableImageDeduplication)
         .onChange(async (value) => {
           this.plugin.settings.enableImageDeduplication = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Export compression')
+      .setDesc('Wrap the exported HTML in a self-extracting gzip container that unpacks itself when opened. gzip + base85 is about 6% smaller than gzip + base64. Can be overridden per start note via the "export.compression" frontmatter (none, gzipb64, gzipb85).')
+      .addDropdown(dropdown => dropdown
+        .addOption('none', 'None (plain HTML)')
+        .addOption('gzipb64', 'gzip + base64')
+        .addOption('gzipb85', 'gzip + base85 (smaller)')
+        .setValue(this.plugin.settings.exportCompression)
+        .onChange(async (value: string) => {
+          this.plugin.settings.exportCompression = value as 'none' | 'gzipb64' | 'gzipb85';
           await this.plugin.saveSettings();
         }));
 

@@ -6,6 +6,7 @@ import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
 import { NoteSelectionModal } from '../ui/modals/NoteSelectionModal';
 import { RenderingProgressModal } from '../ui/modals/RenderingProgressModal';
 import { downloadBlob, sanitizeFilename } from '../utils/fileUtils';
+import { wrapHtmlForExport, resolveCompressionMode } from '../utils/selfExtract';
 import { debugLogger } from '../utils/debugLogger';
 import { CancellationToken, CancellationError } from '../utils/cancellationToken';
 import { PauseController } from '../utils/pauseController';
@@ -143,7 +144,19 @@ export class ExportWikiCommand {
             );
 
             // Download
-            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const containerTitle = this.plugin.settings.wikiTitle || file.basename;
+            const frontmatterExport = this.app.metadataCache.getFileCache(file)?.frontmatter?.export as
+                { compression?: unknown } | undefined;
+            const compression = resolveCompressionMode(
+                frontmatterExport?.compression,
+                this.plugin.settings.exportCompression
+            );
+            const outputHtml = wrapHtmlForExport(
+                htmlContent,
+                compression,
+                containerTitle
+            );
+            const blob = new Blob([outputHtml], { type: 'text/html' });
             const filename = this.generateWikiFilename(file.path);
 
             downloadBlob(blob, filename);

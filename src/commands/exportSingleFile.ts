@@ -2,6 +2,7 @@ import { App, Notice, TFile } from 'obsidian';
 import type AdvancedHtmlExportPlugin from '../main';
 import HtmlRenderer from '../utils/htmlRenderer';
 import { downloadBlob, generateSafeFilename } from '../utils/fileUtils';
+import { wrapHtmlForExport, resolveCompressionMode } from '../utils/selfExtract';
 
 /**
  * Command to export the currently active file as HTML
@@ -53,7 +54,18 @@ export class ExportSingleFileCommand {
       const fullHtml = this.createHtmlDocument(htmlContent, activeFile.basename);
 
       // Create blob and download
-      const blob = new Blob([fullHtml], { type: 'text/html' });
+      const frontmatterExport = this.app.metadataCache.getFileCache(activeFile)?.frontmatter?.export as
+        { compression?: unknown } | undefined;
+      const compression = resolveCompressionMode(
+        frontmatterExport?.compression,
+        this.plugin.settings.exportCompression
+      );
+      const outputHtml = wrapHtmlForExport(
+        fullHtml,
+        compression,
+        activeFile.basename
+      );
+      const blob = new Blob([outputHtml], { type: 'text/html' });
       const filename = generateSafeFilename(activeFile.path, 'html');
 
       downloadBlob(blob, filename);

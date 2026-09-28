@@ -111,6 +111,33 @@ The diagrams will be automatically converted to embedded SVG when exporting to H
 3. All linked notes are collected and exported to a single HTML file
 4. Open the HTML file to navigate between pages using the sidebar or links
 
+## Export Compression
+
+Exports can optionally be wrapped in a self-extracting, compressed HTML container. The resulting file stays a single `.html` file and unpacks itself in the browser using the native `DecompressionStream` — no server or external assets required.
+
+Configure it under `Settings → Advanced HTML Export → Export options → Export compression`:
+
+| Option | Description |
+| --- | --- |
+| `None` | Plain HTML (default) |
+| `gzip + base64` | gzip-compressed payload, base64-encoded |
+| `gzip + base85` | gzip-compressed payload, base85-encoded (~6% smaller than base64) |
+
+### Override per note
+
+The start note of an export can override the global setting via its frontmatter:
+
+```yaml
+---
+export:
+  compression: gzipb85
+---
+```
+
+Accepted values are `none`, `gzipb64` and `gzipb85`. The resolution order is: frontmatter → plugin setting → `none`. An absent or invalid value falls back to the plugin setting, and `none` can be used to disable compression for a single note.
+
+Opening a compressed export briefly shows an "Unpacking…" screen. It requires a browser with `DecompressionStream` support (Chrome 80+, Firefox 113+, Safari 16.4+).
+
 ## Development Process
 
 ### Prerequisites
