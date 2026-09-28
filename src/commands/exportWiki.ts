@@ -6,7 +6,10 @@ import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
 import { NoteSelectionModal } from '../ui/modals/NoteSelectionModal';
 import { RenderingProgressModal } from '../ui/modals/RenderingProgressModal';
 import { downloadBlob, sanitizeFilename } from '../utils/fileUtils';
-import { wrapHtmlForExport, resolveCompressionMode } from '../utils/selfExtract';
+import { wrapHtmlForExportWithMeta, resolveCompressionMode } from '../utils/selfExtract';
+import { ExportSizeLedger } from '../utils/exportSizeLedger';
+import { inlineDataUriBytes, utf8ByteLength } from '../utils/exportSizeReport';
+import { ExportStatisticsModal } from '../ui/modals/ExportStatisticsModal';
 import { debugLogger } from '../utils/debugLogger';
 import { CancellationToken, CancellationError } from '../utils/cancellationToken';
 import { PauseController } from '../utils/pauseController';
@@ -122,9 +125,14 @@ export class ExportWikiCommand {
             const token = new CancellationToken();
             const pauseController = new PauseController();
             const progressModal = new RenderingProgressModal(this.app, token, pauseController, metrics, selectedNotes);
-            
+
+            const ledger = new ExportSizeLedger();
+            for (const note of selectedNotes) {
+                ledger.recordNoteSource(note.file.stat?.size ?? 0);
+            }
+
             // Open progress modal and start rendering
-            const renderPromise = this.performRendering(orchestrator, selectedNotes, options, token, pauseController, progressModal);
+            const renderPromise = this.performRendering(orchestrator, selectedNotes, options, token, pauseController, progressModal, ledger);
             const modalResult = await progressModal.openAndAwait();
             
             if (!modalResult) {
@@ -134,6 +142,20 @@ export class ExportWikiCommand {
             }
 
             const { renderedPages, renderer: detailedRenderer } = await renderPromise;
+
+            // Record per-note artifacts (excluding inline images, which are
+            // listed separately) for the largest-artifacts ranking.
+            for (const note of selectedNotes) {
+                const pageHtml = renderedPages.get(note.slug);
+                if (pageHtml !== undefined) {
+                    ledger.recordArtifact({
+                        kind: 'note',
+                        original: note.title,
+                        exportType: 'HTML',
+                        bytes: Math.max(0, utf8ByteLength(pageHtml) - inlineDataUriBytes(pageHtml)),
+                    });
+                }
+            }
 
             // Generate final HTML using the same renderer that processed the images
             // This ensures the imageCache is available for the restoration script
@@ -151,17 +173,24 @@ export class ExportWikiCommand {
                 frontmatterExport?.compression,
                 this.plugin.settings.exportCompression
             );
-            const outputHtml = wrapHtmlForExport(
+            const { html: outputHtml, meta } = wrapHtmlForExportWithMeta(
                 htmlContent,
                 compression,
                 containerTitle
             );
+            ledger.setRawBytes(meta.rawBytes);
+            ledger.setOutputBytes(meta.outputBytes);
+            ledger.setCompression(meta);
             const blob = new Blob([outputHtml], { type: 'text/html' });
             const filename = this.generateWikiFilename(file.path);
 
             downloadBlob(blob, filename);
 
             new Notice(`Wiki exported as ${filename}`);
+
+            if (this.plugin.settings.showExportStatistics) {
+                new ExportStatisticsModal(this.app, ledger.finalize()).open();
+            }
 
             // Export debug log if in debug mode
             debugLogger.exportToFile();
@@ -182,11 +211,13 @@ export class ExportWikiCommand {
         options: WikiRenderOptions,
         token: CancellationToken,
         pauseController: PauseController,
-        progressModal: RenderingProgressModal
+        progressModal: RenderingProgressModal,
+        ledger: ExportSizeLedger
     ): Promise<{ renderedPages: Map<string, string>; renderer: DetailedWikiRenderer }> {
         // Create detailed renderer
         const detailedRenderer = new DetailedWikiRenderer(this.app, this.plugin, options);
-        
+        detailedRenderer.setSizeLedger(ledger);
+
         // Only resolve links to pages that will actually be in the export
         detailedRenderer.setResolvablePages(
             selectedNotes.map(n => ({ slug: n.slug, title: n.title, path: n.path }))

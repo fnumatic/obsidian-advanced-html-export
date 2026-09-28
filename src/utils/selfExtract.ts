@@ -16,6 +16,26 @@ export type CompressionMode = 'none' | 'gzipb64' | 'gzipb85';
 export type PayloadEncoding = 'base64' | 'base85';
 
 /**
+ * Size metadata describing how a document was wrapped for export. Populated by
+ * the same builders that produce the output, so the numbers cannot drift from
+ * the actual file.
+ */
+export interface CompressionMeta {
+  /** Compression mode that was applied. */
+  mode: CompressionMode;
+  /** Bytes of the uncompressed input document. */
+  rawBytes: number;
+  /** Bytes of the gzip payload (equals `rawBytes` for mode `none`). */
+  compressedBytes: number;
+  /** Bytes of the encoded payload (equals `rawBytes` for mode `none`). */
+  encodedBytes: number;
+  /** Bytes of the final document written to disk. */
+  outputBytes: number;
+  /** Bytes added by the text encoding (base64/base85) over the gzip payload. */
+  encodingOverheadBytes: number;
+}
+
+/**
  * 85 printable ASCII characters (33..118) excluding `<` (60), so the base85
  * payload can never terminate the enclosing `<script>` element. Built
  * programmatically to avoid escaping issues with backslash and quotes.
@@ -166,11 +186,40 @@ ${body}
  * @returns The self-extracting HTML document
  */
 export function buildGzipSelfExtract(html: string, title: string, encoding: PayloadEncoding): string {
-    const compressed = gzipSync(textEncoder.encode(html), { level: 9 });
+    return buildGzipSelfExtractWithMeta(html, title, encoding).html;
+}
+
+/**
+ * Wraps an HTML document into a gzip self-extracting container and reports the
+ * sizes involved.
+ * @param html The full HTML document to wrap
+ * @param title Title used for the container document
+ * @param encoding Encoding of the compressed payload (base64 or base85)
+ * @returns The self-extracting HTML document and its size metadata
+ */
+export function buildGzipSelfExtractWithMeta(
+    html: string,
+    title: string,
+    encoding: PayloadEncoding,
+): { html: string; meta: CompressionMeta } {
+    const input = textEncoder.encode(html);
+    const compressed = gzipSync(input, { level: 9 });
     const payload = encoding === 'base64' ? encodeBase64(compressed) : encodeBase85(compressed);
     const body = `<script id="zz-payload" type="application/octet-stream" data-encoding="${encoding}" data-bytes="${compressed.length}">${payload}</script>
 <script>${GZIP_LOADER}</script>`;
-    return buildContainer(title, body);
+    const container = buildContainer(title, body);
+    const encodedBytes = textEncoder.encode(payload).length;
+    return {
+        html: container,
+        meta: {
+            mode: encoding === 'base64' ? 'gzipb64' : 'gzipb85',
+            rawBytes: input.length,
+            compressedBytes: compressed.length,
+            encodedBytes,
+            outputBytes: textEncoder.encode(container).length,
+            encodingOverheadBytes: encodedBytes - compressed.length,
+        },
+    };
 }
 
 /**
@@ -181,13 +230,40 @@ export function buildGzipSelfExtract(html: string, title: string, encoding: Payl
  * @returns The (possibly wrapped) HTML document
  */
 export function wrapHtmlForExport(html: string, mode: CompressionMode, title: string): string {
+    return wrapHtmlForExportWithMeta(html, mode, title).html;
+}
+
+/**
+ * Applies the configured compression to an exported HTML document and reports
+ * the resulting sizes.
+ * @param html The full HTML document
+ * @param mode Compression mode from the plugin settings
+ * @param title Title used for the self-extracting container
+ * @returns The (possibly wrapped) HTML document and its size metadata
+ */
+export function wrapHtmlForExportWithMeta(
+    html: string,
+    mode: CompressionMode,
+    title: string,
+): { html: string; meta: CompressionMeta } {
     if (mode === 'gzipb64') {
-        return buildGzipSelfExtract(html, title, 'base64');
+        return buildGzipSelfExtractWithMeta(html, title, 'base64');
     }
     if (mode === 'gzipb85') {
-        return buildGzipSelfExtract(html, title, 'base85');
+        return buildGzipSelfExtractWithMeta(html, title, 'base85');
     }
-    return html;
+    const rawBytes = textEncoder.encode(html).length;
+    return {
+        html,
+        meta: {
+            mode: 'none',
+            rawBytes,
+            compressedBytes: rawBytes,
+            encodedBytes: rawBytes,
+            outputBytes: rawBytes,
+            encodingOverheadBytes: 0,
+        },
+    };
 }
 
 /**

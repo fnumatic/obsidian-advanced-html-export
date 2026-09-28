@@ -1,10 +1,16 @@
 import { App, Component, TFile } from 'obsidian';
-import HtmlRenderer, { type ImageProcessingHooks, type RenderMarkdownResult } from './htmlRenderer';
+import HtmlRenderer, {
+    extractDiagramSources,
+    noteLabelFromPath,
+    type ImageProcessingHooks,
+    type RenderMarkdownResult,
+} from './htmlRenderer';
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { fillTemplate } from './templateUtils';
 import { debugLogger } from './debugLogger';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
+import { utf8ByteLength } from './exportSizeReport';
 import template from './wikiTemplates/template.html?raw';
 import styles from './wikiTemplates/styles.css?raw';
 import signals from './wikiTemplates/signals.js?raw';
@@ -238,6 +244,11 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             e.remove();
         });
 
+        this.measureContentSizes(el, {
+            noteLabel: noteLabelFromPath(sourcePath),
+            diagramSources: extractDiagramSources(markdownContent),
+        });
+
         await hooks?.beforeImageProcessing?.(el);
         await this.processImagesInElement(el, hooks?.imageHooks, hooks?.onImageProcessed);
         await hooks?.afterImageProcessing?.(el);
@@ -288,6 +299,21 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             WIKI_PAGES: pagesJson,
             IMAGE_RESTORATION: imageRestoration
         });
+
+        if (this.sizeLedger) {
+            // Measure the shell without the image payload so images are not
+            // counted twice (they are recorded separately by the ledger).
+            const shellScripts = fillTemplate(appTemplate, {
+                CENTRAL_SLUG: centralSlug,
+                DEFAULT_THEME: defaultTheme,
+                WIKI_PAGES: pagesJson,
+                IMAGE_RESTORATION: ''
+            });
+            this.sizeLedger.setShell({
+                cssBytes: utf8ByteLength(styles),
+                jsBytes: utf8ByteLength(signals + '\n' + helpers + '\n' + shellScripts)
+            });
+        }
 
         return fillTemplate(template, {
             WIKI_TITLE: wikiTitle,

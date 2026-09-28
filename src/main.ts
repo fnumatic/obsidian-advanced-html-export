@@ -17,6 +17,7 @@ interface AdvancedHtmlExportSettings {
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
   exportCompression: 'none' | 'gzipb64' | 'gzipb85';
+  showExportStatistics: boolean;
   linkDepth: number;
   includeUnlinked: boolean;
   wikiTitle: string;
@@ -36,6 +37,7 @@ const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableLazyLoading: true,
   enableImageDeduplication: true,
   exportCompression: 'none',
+  showExportStatistics: false,
   linkDepth: 1,
   includeUnlinked: false,
   wikiTitle: '',
@@ -149,6 +151,16 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.exportCompression)
         .onChange(async (value: string) => {
           this.plugin.settings.exportCompression = value as 'none' | 'gzipb64' | 'gzipb85';
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Show export statistics')
+      .setDesc('Show a size breakdown of the generated file after each export (what data uses how much space)')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.showExportStatistics)
+        .onChange(async (value) => {
+          this.plugin.settings.showExportStatistics = value;
           await this.plugin.saveSettings();
         }));
 

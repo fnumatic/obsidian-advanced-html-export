@@ -2,7 +2,10 @@ import { App, Notice, TFile } from 'obsidian';
 import type AdvancedHtmlExportPlugin from '../main';
 import HtmlRenderer from '../utils/htmlRenderer';
 import { downloadBlob, generateSafeFilename } from '../utils/fileUtils';
-import { wrapHtmlForExport, resolveCompressionMode } from '../utils/selfExtract';
+import { wrapHtmlForExportWithMeta, resolveCompressionMode } from '../utils/selfExtract';
+import { ExportSizeLedger } from '../utils/exportSizeLedger';
+import { inlineDataUriBytes, utf8ByteLength } from '../utils/exportSizeReport';
+import { ExportStatisticsModal } from '../ui/modals/ExportStatisticsModal';
 
 /**
  * Command to export the currently active file as HTML
@@ -39,19 +42,30 @@ export class ExportSingleFileCommand {
       // Read file content
       const content = await this.app.vault.cachedRead(activeFile);
 
-      // Create HTML renderer
+      // Create HTML renderer with size accounting
+      const ledger = new ExportSizeLedger();
       const htmlRenderer = new HtmlRenderer(this.app, this.plugin, {
         imageQuality: this.plugin.settings.imageQuality,
         enableLazyLoading: this.plugin.settings.enableLazyLoading,
         enableImageDeduplication: this.plugin.settings.enableImageDeduplication,
         disableSyntaxHighlighting: this.plugin.settings.disableSyntaxHighlighting !== false
       });
+      htmlRenderer.setSizeLedger(ledger);
+      htmlRenderer.setArtifactLabel(activeFile.basename);
+      ledger.recordNoteSource(activeFile.stat?.size ?? utf8ByteLength(content));
 
       // Render markdown to HTML
       const htmlContent = await htmlRenderer.render(content);
 
       // Create complete HTML document
       const fullHtml = this.createHtmlDocument(htmlContent, activeFile.basename);
+      ledger.setShell({ cssBytes: utf8ByteLength(this.getEmbeddedCss()), jsBytes: 0 });
+      ledger.recordArtifact({
+        kind: 'note',
+        original: activeFile.basename,
+        exportType: 'HTML',
+        bytes: Math.max(0, utf8ByteLength(htmlContent) - inlineDataUriBytes(htmlContent)),
+      });
 
       // Create blob and download
       const frontmatterExport = this.app.metadataCache.getFileCache(activeFile)?.frontmatter?.export as
@@ -60,11 +74,14 @@ export class ExportSingleFileCommand {
         frontmatterExport?.compression,
         this.plugin.settings.exportCompression
       );
-      const outputHtml = wrapHtmlForExport(
+      const { html: outputHtml, meta } = wrapHtmlForExportWithMeta(
         fullHtml,
         compression,
         activeFile.basename
       );
+      ledger.setRawBytes(meta.rawBytes);
+      ledger.setOutputBytes(meta.outputBytes);
+      ledger.setCompression(meta);
       const blob = new Blob([outputHtml], { type: 'text/html' });
       const filename = generateSafeFilename(activeFile.path, 'html');
 
@@ -73,6 +90,10 @@ export class ExportSingleFileCommand {
       // Update progress notice
       progressNotice.hide();
       new Notice(`File exported as ${filename}`);
+
+      if (this.plugin.settings.showExportStatistics) {
+        new ExportStatisticsModal(this.app, ledger.finalize()).open();
+      }
 
     } catch (error) {
       console.error('Error exporting file:', error);

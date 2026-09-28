@@ -138,6 +138,20 @@ Accepted values are `none`, `gzipb64` and `gzipb85`. The resolution order is: fr
 
 Opening a compressed export briefly shows an "Unpacking…" screen. It requires a browser with `DecompressionStream` support (Chrome 80+, Firefox 113+, Safari 16.4+).
 
+## Export Statistics
+
+It is often unclear what actually fills up an exported file. Enable `Settings → Advanced HTML Export → Export options → Show export statistics` to open a size overview after each wiki or single-file export (default: off).
+
+The overview is measured exactly while rendering and shows:
+
+- **Headline sizes** — the output file size, the uncompressed HTML size and, when compression is enabled, the gzip payload plus the encoding overhead (base64/base85).
+- **By category** — note markup, images, diagrams, code blocks, CSS and JavaScript, each with bytes, share and a proportional bar. The categories are mutually exclusive and sum to the uncompressed HTML size.
+- **Images by format** — embedded bytes per format (webp, png, jpeg, svg, gif, …).
+- **Largest artifacts** — the five biggest individual contributors (notes, images, diagrams, code blocks) ranked by size, shown as a table with kind, original name, export type and size. The original name is the source file where one exists (image files, embedded `.excalidraw` diagrams) and otherwise the source note; the export type is what the artifact becomes in the file (image format such as `webp`, `svg` for Excalidraw drawings or the diagram type for other engines, code language, `HTML` for notes).
+- **Vault vs. export** — original note and image source bytes compared to the embedded/optimized bytes, including how much identical-image deduplication saved.
+
+Diagram and code block bytes are measured from the rendered elements. Diagram detection is conservative: markup from renderers that are not recognized is counted as note markup instead of being attributed incorrectly.
+
 ## Development Process
 
 ### Prerequisites

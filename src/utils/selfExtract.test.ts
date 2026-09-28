@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { gunzipSync } from 'zlib';
-import { buildGzipSelfExtract, wrapHtmlForExport, resolveCompressionMode, type PayloadEncoding } from './selfExtract';
+import {
+    buildGzipSelfExtract,
+    buildGzipSelfExtractWithMeta,
+    wrapHtmlForExport,
+    wrapHtmlForExportWithMeta,
+    resolveCompressionMode,
+    type PayloadEncoding,
+} from './selfExtract';
 
 const SAMPLE = '<!DOCTYPE html><html><head><title>T</title></head>'
     + '<body><h1>Hällo &amp; &lt;world&gt;</h1><p>Some content to compress.</p></body></html>';
@@ -94,6 +101,43 @@ describe('wrapHtmlForExport', () => {
     it('wraps for gzipb64 and gzipb85 modes', () => {
         expect(wrapHtmlForExport(SAMPLE, 'gzipb64', 'T')).toContain('data-encoding="base64"');
         expect(wrapHtmlForExport(SAMPLE, 'gzipb85', 'T')).toContain('data-encoding="base85"');
+    });
+});
+
+describe('compression metadata', () => {
+    it('reports consistent sizes for base64 and base85', () => {
+        const big = SAMPLE + '<p>Lorem ipsum dolor sit amet.</p>'.repeat(5000);
+        const rawBytes = new TextEncoder().encode(big).length;
+
+        for (const encoding of ['base64', 'base85'] as PayloadEncoding[]) {
+            const { html, meta } = buildGzipSelfExtractWithMeta(big, 'T', encoding);
+            expect(html).toBe(buildGzipSelfExtract(big, 'T', encoding));
+            expect(meta.mode).toBe(encoding === 'base64' ? 'gzipb64' : 'gzipb85');
+            expect(meta.rawBytes).toBe(rawBytes);
+            expect(meta.outputBytes).toBe(new TextEncoder().encode(html).length);
+            expect(meta.compressedBytes).toBeGreaterThan(0);
+            expect(meta.encodedBytes).toBeGreaterThan(0);
+            expect(meta.encodingOverheadBytes).toBe(meta.encodedBytes - meta.compressedBytes);
+            expect(meta.encodingOverheadBytes).toBeGreaterThan(0);
+        }
+    });
+
+    it('has less encoding overhead in base85 than in base64', () => {
+        const big = SAMPLE + '<p>Lorem ipsum dolor sit amet.</p>'.repeat(5000);
+        const base64 = buildGzipSelfExtractWithMeta(big, 'T', 'base64').meta;
+        const base85 = buildGzipSelfExtractWithMeta(big, 'T', 'base85').meta;
+        expect(base85.encodingOverheadBytes).toBeLessThan(base64.encodingOverheadBytes);
+        expect(base85.outputBytes).toBeLessThan(base64.outputBytes);
+    });
+
+    it('reports unchanged sizes and zero overhead for mode "none"', () => {
+        const rawBytes = new TextEncoder().encode(SAMPLE).length;
+        const { html, meta } = wrapHtmlForExportWithMeta(SAMPLE, 'none', 'T');
+        expect(html).toBe(SAMPLE);
+        expect(meta.mode).toBe('none');
+        expect(meta.rawBytes).toBe(rawBytes);
+        expect(meta.outputBytes).toBe(rawBytes);
+        expect(meta.encodingOverheadBytes).toBe(0);
     });
 });
 

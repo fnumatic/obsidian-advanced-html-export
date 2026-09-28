@@ -1,10 +1,110 @@
 import { App, arrayBufferToBase64, Component, MarkdownRenderer, TFile } from 'obsidian';
 import { ImageOptimizer } from './imageOptimizer';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
+import { ExportSizeLedger } from './exportSizeLedger';
+import { utf8ByteLength } from './exportSizeReport';
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'svg', 'webp'];
 const MARKDOWN_RENDER_TIMEOUT_MS = 30000;
 const TRANSPARENT_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+/**
+ * Recognized diagram containers rendered by Obsidian or its diagram plugins.
+ * The list is intentionally conservative: unmatched third-party renderers are
+ * counted as note markup instead of being attributed incorrectly.
+ */
+const DIAGRAM_SELECTOR = [
+  '.mermaid',
+  '.block-language-mermaid',
+  '.block-language-plantuml',
+  '.block-language-graph',
+  '.excalidraw',
+  'svg.excalidraw-svg',
+].join(',');
+
+/** Derives a short format name from an embedded data URI. */
+function formatFromDataUri(dataUri: string): string {
+  const match = dataUri.match(/^data:([^;,]+)/);
+  if (!match) return 'unknown';
+  return match[1].replace(/^image\//, '').replace(/\+xml$/, '');
+}
+
+/** Derives a display label for an image source path. */
+function imageLabelFromPath(imagePath: string): string {
+  if (imagePath.startsWith('data:')) return 'embedded image';
+  if (imagePath.startsWith('blob:')) return 'embedded asset';
+  const last = imagePath.split('/').pop() ?? imagePath;
+  const name = last.split('?')[0];
+  try {
+    return decodeURIComponent(name) || 'image';
+  } catch {
+    return name || 'image';
+  }
+}
+
+/** Derives a diagram type label from a container's class list. */
+function diagramLabelFromNode(node: Element): string {
+  const className = node.getAttribute?.('class') ?? '';
+  if (className.includes('mermaid')) return 'Mermaid';
+  if (className.includes('plantuml')) return 'PlantUML';
+  if (className.includes('excalidraw')) return 'Excalidraw';
+  if (className.includes('graph')) return 'Graph';
+  return 'Diagram';
+}
+
+/** Derives a language label from a code block element. */
+function codeLabelFromNode(node: Element): string {
+  const code = node.querySelector?.('code');
+  const className = code?.getAttribute?.('class') ?? '';
+  const match = className.match(/language-([\w-]+)/);
+  return match ? match[1] : 'Code';
+}
+
+/** Derives a readable note label from a source path. */
+export function noteLabelFromPath(sourcePath: string | undefined): string | undefined {
+  if (!sourcePath || sourcePath === '.') return undefined;
+  const file = sourcePath.split('/').pop() ?? sourcePath;
+  const base = file.replace(/\.[^.]+$/, '');
+  return base || undefined;
+}
+
+const EMBED_PATTERN = /!\[\[([^\]]+?)\]\]/g;
+const DIAGRAM_SOURCE_PATTERN = /\.excalidraw$/i;
+
+/**
+ * Extracts the file names of embedded diagram source files (currently
+ * `.excalidraw` embeds) from raw note markdown, in document order.
+ * @param markdown Raw note markdown
+ * @returns Embedded diagram file names
+ */
+export function extractDiagramSources(markdown: string): string[] {
+  const sources: string[] = [];
+  for (const match of markdown.matchAll(EMBED_PATTERN)) {
+    const target = match[1].split('|')[0].split('#')[0].split('^')[0].trim();
+    if (DIAGRAM_SOURCE_PATTERN.test(target)) {
+      sources.push(target.split('/').pop() ?? target);
+    }
+  }
+  return sources;
+}
+
+/**
+ * Tries to read the embedded source path (e.g. a linked `.excalidraw` file)
+ * from a diagram container or one of its descendants, if exposed in the DOM.
+ */
+function diagramSourceFromNode(node: Element): string | undefined {
+  const attributes = ['data-path', 'data-src', 'data-href', 'data-file'];
+  const candidates: Element[] = [node];
+  const selector = attributes.map((attr) => `[${attr}]`).join(',');
+  node.querySelectorAll?.(selector)?.forEach((child) => candidates.push(child));
+  for (const candidate of candidates) {
+    for (const attribute of attributes) {
+      const value = candidate.getAttribute?.(attribute);
+      if (value) return value;
+    }
+  }
+  return undefined;
+}
 
 export interface RenderMarkdownResult {
   ok: boolean;
@@ -44,6 +144,9 @@ export default class HtmlRenderer {
   protected settings: HtmlRendererSettings;
   protected imageCache: Map<string, string>;
   protected imageFiles: Map<string, TFile>;
+  protected sizeLedger: ExportSizeLedger | null = null;
+  /** Fallback label for diagram/code artifacts (e.g. the single-file note). */
+  protected artifactLabel: string | null = null;
 
   constructor(app: App, component: Component, settings: HtmlRendererSettings, sharedImageCache?: Map<string, string>) {
     this.app = app;
@@ -51,6 +154,23 @@ export default class HtmlRenderer {
     this.settings = settings;
     this.imageCache = sharedImageCache || new Map();
     this.imageFiles = this.initializeImageFiles();
+  }
+
+  /**
+   * Attaches a size ledger that receives byte contributions while rendering.
+   * @param ledger Ledger to feed, or null to disable accounting
+   */
+  setSizeLedger(ledger: ExportSizeLedger | null): void {
+    this.sizeLedger = ledger;
+  }
+
+  /**
+   * Sets a fallback label (usually the note name) used as the origin detail for
+   * diagram and code block artifacts when no per-page label is available.
+   * @param label Note name, or null to clear
+   */
+  setArtifactLabel(label: string | null): void {
+    this.artifactLabel = label;
   }
 
   private initializeImageFiles(): Map<string, TFile> {
@@ -159,9 +279,17 @@ export default class HtmlRenderer {
 
     const { buffer, mimeType } = source;
     const hash = await ImageOptimizer.generateImageHash(buffer);
+    const originalBytes = buffer.byteLength;
 
     if (this.imageCache.has(hash)) {
-      return { hash, base64: this.imageCache.get(hash)! };
+      const cached = this.imageCache.get(hash)!;
+      this.sizeLedger?.recordImage({
+        hash,
+        format: formatFromDataUri(cached),
+        originalBytes,
+        embeddedBytes: utf8ByteLength(cached),
+      });
+      return { hash, base64: cached };
     }
 
     let base64: string;
@@ -175,7 +303,80 @@ export default class HtmlRenderer {
     }
 
     this.imageCache.set(hash, base64);
+    const format = formatFromDataUri(base64);
+    this.sizeLedger?.recordImage({
+      hash,
+      format,
+      originalBytes,
+      embeddedBytes: utf8ByteLength(base64),
+    });
+    this.sizeLedger?.recordArtifact({
+      kind: 'image',
+      original: imageLabelFromPath(imagePath),
+      exportType: format,
+      bytes: utf8ByteLength(base64),
+    });
     return { hash, base64 };
+  }
+
+  /**
+   * Measures the bytes contributed by diagrams and code blocks in a rendered
+   * element and records them in the size ledger.
+   * @param el Rendered content element
+   */
+  protected measureContentSizes(
+    el: Element,
+    context: { noteLabel?: string; diagramSources?: string[] } = {},
+  ): void {
+    const ledger = this.sizeLedger;
+    if (!ledger) return;
+
+    const origin = context.noteLabel ?? this.artifactLabel ?? undefined;
+    const diagramSources = [...(context.diagramSources ?? [])];
+
+    const diagramNodes: Element[] = [];
+    el.querySelectorAll(DIAGRAM_SELECTOR).forEach((node) => {
+      if (!diagramNodes.some((matched) => matched.contains(node))) {
+        diagramNodes.push(node);
+      }
+    });
+
+    let diagramBytes = 0;
+    for (const node of diagramNodes) {
+      const bytes = utf8ByteLength(node.outerHTML ?? '');
+      diagramBytes += bytes;
+
+      const type = diagramLabelFromNode(node);
+      const domSource = diagramSourceFromNode(node);
+      const fallbackSource = type === 'Excalidraw' ? diagramSources.shift() : undefined;
+      const rawSource = domSource ?? fallbackSource;
+      const sourceName = rawSource ? (rawSource.split('/').pop() ?? rawSource) : undefined;
+
+      // original: the source file, or the note it lives in. Excalidraw drawings
+      // are exported as `svg`; other diagram engines keep their type as the
+      // export type.
+      ledger.recordArtifact({
+        kind: 'diagram',
+        original: sourceName ?? origin ?? '—',
+        exportType: type === 'Excalidraw' ? 'svg' : type,
+        bytes,
+      });
+    }
+    ledger.recordDiagrams(diagramBytes);
+
+    let codeBytes = 0;
+    el.querySelectorAll('pre').forEach((node) => {
+      if (diagramNodes.some((matched) => matched.contains(node))) return;
+      const bytes = utf8ByteLength(node.outerHTML ?? '');
+      codeBytes += bytes;
+      ledger.recordArtifact({
+        kind: 'codeBlock',
+        original: origin ?? '—',
+        exportType: codeLabelFromNode(node),
+        bytes,
+      });
+    });
+    ledger.recordCodeBlocks(codeBytes);
   }
 
   protected async convertImageToHash(imagePath: string): Promise<string> {
@@ -257,6 +458,11 @@ export default class HtmlRenderer {
     // Remove copy-code buttons if they exist
     el.querySelectorAll('.copy-code-button').forEach(e => {
       e.remove();
+    });
+
+    this.measureContentSizes(el, {
+      ...(this.artifactLabel ? { noteLabel: this.artifactLabel } : {}),
+      diagramSources: extractDiagramSources(markdownContent),
     });
 
     let html: string;
