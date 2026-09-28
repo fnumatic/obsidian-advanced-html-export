@@ -21,23 +21,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
-      # release-please cannot add the dynamic "version -> minAppVersion" key to
-      # versions.json, so it is synced here after a release has been created.
-      - name: Checkout
-        if: ${{ steps.release.outputs.release_created }}
-        uses: actions/checkout@v5
-
-      - name: Sync versions.json
-        if: ${{ steps.release.outputs.release_created }}
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          MIN_APP_VERSION=$(jq -r '.minAppVersion' manifest.json)
-          jq --arg v "$VERSION" --arg m "$MIN_APP_VERSION" '. + {($v): $m}' versions.json > versions.json.tmp
-          mv versions.json.tmp versions.json
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add versions.json
-          git commit -m "chore(release): sync versions.json for ${VERSION} [skip ci]"
-          git push

@@ -1,10 +1,13 @@
 name: Release obsidian plugin
 
 on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - "*" # Push events to matching any tag format, i.e. 1.0, 20.15.10
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build and publish assets for
+        required: true
 
 env:
   PLUGIN_NAME: obsidian-advanced-html-export # Plugin ID from manifest.json
@@ -16,7 +19,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve tag
+        id: ref
+        run: echo "tag=${{ github.event.release.tag_name || github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.ref.outputs.tag }}
       - name: Use Node.js
         uses: actions/setup-node@v5
         with:
@@ -31,11 +39,33 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ref.outputs.tag }}
         run: |
           # release-please creates the release and its notes; only attach assets here
-          gh release upload "$GITHUB_REF_NAME" \
+          gh release upload "$TAG" \
             ${{ env.PLUGIN_NAME }}.zip \
             dist/main.js \
             dist/styles.css \
             dist/manifest.json \
             --clobber
+      - name: Sync versions.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          # release-please cannot add the dynamic "version -> minAppVersion" key
+          VERSION="${TAG#v}"
+          MIN_APP_VERSION=$(jq -r '.minAppVersion' manifest.json)
+          git fetch origin main
+          git checkout main
+          if jq -e --arg v "$VERSION" 'has($v)' versions.json > /dev/null; then
+            echo "versions.json already contains ${VERSION}"
+            exit 0
+          fi
+          jq --arg v "$VERSION" --arg m "$MIN_APP_VERSION" '. + {($v): $m}' versions.json > versions.json.tmp
+          mv versions.json.tmp versions.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add versions.json
+          git commit -m "chore(release): sync versions.json for ${VERSION} [skip ci]"
+          git push origin main
