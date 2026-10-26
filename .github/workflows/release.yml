@@ -103,7 +103,8 @@ jobs:
           VERSION="${TAG#v}"
           MIN_APP_VERSION=$(jq -r '.minAppVersion' manifest.json)
           git fetch origin main
-          git checkout main
+          # pnpm records --allow-build in pnpm-workspace.yaml; drop that edit
+          git checkout -f main
           if jq -e --arg v "$VERSION" 'has($v)' versions.json > /dev/null; then
             echo "versions.json already contains ${VERSION}"
             exit 0
