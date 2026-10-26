@@ -67,7 +67,7 @@ jobs:
         with:
           ref: ${{ needs.resolve-tag.outputs.tag }}
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 12.11.2
       - name: Use Node.js
