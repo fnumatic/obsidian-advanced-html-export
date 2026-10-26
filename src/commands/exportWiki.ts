@@ -5,7 +5,8 @@ import { WikiExportOrchestrator, NoteInfo, ExportMetrics } from '../utils/wikiEx
 import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
 import { NoteSelectionModal } from '../ui/modals/NoteSelectionModal';
 import { RenderingProgressModal } from '../ui/modals/RenderingProgressModal';
-import { downloadBlob, sanitizeFilename } from '../utils/fileUtils';
+import { downloadBlob, generateWikiFilename } from '../utils/fileUtils';
+import { resolveTimestampFormat } from '../settings';
 import { wrapHtmlForExportWithMeta, resolveCompressionMode, type CompressionMode } from '../utils/selfExtract';
 import { ExportSizeLedger } from '../utils/exportSizeLedger';
 import { createNoteArtifact } from '../utils/exportSizeReport';
@@ -166,13 +167,25 @@ export class ExportWikiCommand {
         );
         ledger.applyCompression(meta);
 
-        const filename = this.generateWikiFilename(file.path);
+        const filename = generateWikiFilename(file.path, {
+            timestamp: this.timestampFormatFor(file),
+        });
         downloadBlob(new Blob([outputHtml], { type: 'text/html' }), filename);
         new Notice(`Wiki exported as ${filename}`);
 
         if (this.plugin.settings.showExportStatistics) {
             new ExportStatisticsModal(this.app, ledger.finalize()).open();
         }
+    }
+
+    /** Resolves the timestamp format from the start note, falling back to the setting. */
+    private timestampFormatFor(file: TFile): string | false {
+        const frontmatterExport = this.app.metadataCache.getFileCache(file)?.frontmatter?.export as
+            { timestamp?: unknown } | undefined;
+        return resolveTimestampFormat(
+            frontmatterExport?.timestamp,
+            this.plugin.settings.timestampFormat
+        );
     }
 
     /** Resolves the compression mode from frontmatter and plugin settings. */
@@ -212,11 +225,5 @@ export class ExportWikiCommand {
         );
 
         return { renderedPages, renderer: detailedRenderer };
-    }
-
-    private generateWikiFilename(filePath: string): string {
-        const baseName = filePath.split('/').pop()?.split('.')[0] || 'wiki';
-        const sanitized = sanitizeFilename(baseName);
-        return `${sanitized}-wiki.html`;
     }
 }

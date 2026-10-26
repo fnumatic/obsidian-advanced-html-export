@@ -1,9 +1,12 @@
+import { DEFAULT_TIMESTAMP_FORMAT } from './utils/fileUtils';
+
 /** Persisted plugin settings. */
 export interface AdvancedHtmlExportSettings {
   imageQuality: 'high' | 'medium' | 'low';
   enableLazyLoading: boolean;
   enableImageDeduplication: boolean;
   exportCompression: 'none' | 'gzipb64' | 'gzipb85';
+  timestampFormat: string;
   showExportStatistics: boolean;
   linkDepth: number;
   includeUnlinked: boolean;
@@ -24,6 +27,7 @@ export const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableLazyLoading: true,
   enableImageDeduplication: true,
   exportCompression: 'none',
+  timestampFormat: DEFAULT_TIMESTAMP_FORMAT,
   showExportStatistics: false,
   linkDepth: 1,
   includeUnlinked: false,
@@ -36,3 +40,21 @@ export const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   syntaxHighlightLanguages: DEFAULT_LANGUAGES,
   exportAuthor: '',
 };
+
+/**
+ * Resolves the timestamp format for one export. Frontmatter `export.timestamp`
+ * accepts `false` (off), `true` (use the setting) or a format string; a format
+ * string wins over the setting. Returns `false` when timestamps are disabled.
+ */
+export function resolveTimestampFormat(
+  frontmatterValue: unknown,
+  settingFormat: string,
+): string | false {
+  if (frontmatterValue === false) return false;
+  if (typeof frontmatterValue === 'string' && frontmatterValue.trim().length > 0) {
+    return frontmatterValue.trim();
+  }
+  const fallback = settingFormat.trim();
+  if (fallback.length > 0) return fallback;
+  return frontmatterValue === true ? DEFAULT_TIMESTAMP_FORMAT : false;
+}

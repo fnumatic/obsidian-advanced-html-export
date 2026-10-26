@@ -111,6 +111,60 @@ The diagrams will be automatically converted to embedded SVG when exporting to H
 3. All linked notes are collected and exported to a single HTML file
 4. Open the HTML file to navigate between pages using the sidebar or links
 
+### Timestamped filenames
+
+Exports append a local timestamp by default, so repeated exports do not overwrite
+each other:
+
+- `My Note-2026-10-26_16-30-05.html`
+- `01-central-note-wiki-2026-10-26_16-30-05.html`
+
+The layout is configurable under `Settings → Advanced HTML Export → Export options
+→ Timestamp format`. Supported tokens:
+
+| Token | Meaning | Example |
+| --- | --- | --- |
+| `YYYY` | four-digit year | `2026` |
+| `YY` | two-digit year | `26` |
+| `MM` | month | `10` |
+| `DD` | day | `26` |
+| `HH` | hours (24h) | `16` |
+| `mm` | minutes | `30` |
+| `ss` | seconds | `05` |
+
+Other characters are kept as literals. Spaces and characters that are invalid in
+filenames become underscores. Leave the setting empty to disable timestamps.
+
+Override the format per note in the frontmatter:
+
+```yaml
+---
+export:
+  timestamp: "YYYY-MM-DD"
+---
+```
+
+Disable the timestamp for one export:
+
+```yaml
+---
+export:
+  timestamp: false
+---
+```
+
+Use the global format, falling back to the default when the setting is empty:
+
+```yaml
+---
+export:
+  timestamp: true
+---
+```
+
+For a wiki export, the value comes from the start note. For a single-file export,
+it comes from the exported note. The frontmatter value wins over the setting.
+
 ### Exclude notes from an export
 
 The start note of a wiki export can exclude notes through its frontmatter:

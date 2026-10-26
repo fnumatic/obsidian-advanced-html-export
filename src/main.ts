@@ -20,7 +20,7 @@ type BooleanSettingKey =
   | 'enableInlineTOC'
   | 'disableSyntaxHighlighting';
 
-type TextSettingKey = 'wikiTitle' | 'exportAuthor' | 'syntaxHighlightLanguages';
+type TextSettingKey = 'wikiTitle' | 'exportAuthor' | 'syntaxHighlightLanguages' | 'timestampFormat';
 
 type DropdownSettingKey = 'imageQuality' | 'exportCompression' | 'defaultTheme';
 
@@ -96,6 +96,13 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
     ]);
 
     this.addToggle('Show export statistics', 'Show a size breakdown of the generated file after each export (what data uses how much space)', 'showExportStatistics');
+
+    this.addText(
+      'Timestamp format',
+      'Layout of the timestamp in exported filenames. Tokens: YYYY, YY, MM, DD, HH, mm, ss. Spaces and invalid filename characters become underscores. Leave empty to disable timestamps. Can be overridden per note via the "export.timestamp" frontmatter (false to disable, or another format).',
+      'timestampFormat',
+      'YYYY-MM-DD_HH-mm-ss'
+    );
 
     this.addSlider('Wiki link depth', 'How many levels of links to include in wiki export (1 = direct links only)', 'linkDepth', [1, 10, 1]);
 

@@ -2,6 +2,7 @@ import { App, Notice, TFile } from 'obsidian';
 import type AdvancedHtmlExportPlugin from '../main';
 import HtmlRenderer from '../utils/htmlRenderer';
 import { downloadBlob, generateSafeFilename } from '../utils/fileUtils';
+import { resolveTimestampFormat } from '../settings';
 import { wrapHtmlForExportWithMeta, resolveCompressionMode } from '../utils/selfExtract';
 import { ExportSizeLedger } from '../utils/exportSizeLedger';
 import { createNoteArtifact, utf8ByteLength } from '../utils/exportSizeReport';
@@ -66,7 +67,7 @@ export class ExportSingleFileCommand {
 
       // Create blob and download
       const frontmatterExport = this.app.metadataCache.getFileCache(activeFile)?.frontmatter?.export as
-        { compression?: unknown } | undefined;
+        { compression?: unknown; timestamp?: unknown } | undefined;
       const compression = resolveCompressionMode(
         frontmatterExport?.compression,
         this.plugin.settings.exportCompression
@@ -78,7 +79,12 @@ export class ExportSingleFileCommand {
       );
       ledger.applyCompression(meta);
       const blob = new Blob([outputHtml], { type: 'text/html' });
-      const filename = generateSafeFilename(activeFile.path, 'html');
+      const filename = generateSafeFilename(activeFile.path, 'html', {
+        timestamp: resolveTimestampFormat(
+          frontmatterExport?.timestamp,
+          this.plugin.settings.timestampFormat
+        ),
+      });
 
       downloadBlob(blob, filename);
 

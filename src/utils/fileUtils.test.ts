@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { downloadBlob, sanitizeFilename, generateSafeFilename } from './fileUtils';
+import { downloadBlob, sanitizeFilename, generateSafeFilename, generateWikiFilename, formatTimestamp, appendTimestamp } from './fileUtils';
 
 // Mock DOM elements
 const mockBody = {
@@ -68,24 +68,116 @@ describe('fileUtils', () => {
   });
 
   describe('generateSafeFilename', () => {
-    it('should generate safe filename with extension', () => {
-      expect(generateSafeFilename('path/to/file.md', 'html')).toBe('file.html');
+    const date = new Date(2026, 9, 26, 16, 30, 5);
+
+    it('should generate safe filename with timestamp and extension', () => {
+      expect(generateSafeFilename('path/to/file.md', 'html', { date })).toBe(
+        'file-2026-10-26_16-30-05.html',
+      );
     });
 
     it('should sanitize filename', () => {
-      expect(generateSafeFilename('path/to/file<>.md', 'html')).toBe('file__.html');
+      expect(generateSafeFilename('path/to/file<>.md', 'html', { date })).toBe(
+        'file__-2026-10-26_16-30-05.html',
+      );
     });
 
-    it('should use default extension', () => {
-      expect(generateSafeFilename('path/to/file.md')).toBe('file.html');
+    it('should use the given extension', () => {
+      expect(generateSafeFilename('path/to/file.md', 'txt', { date })).toBe(
+        'file-2026-10-26_16-30-05.txt',
+      );
+    });
+
+    it('should keep dots inside the note name', () => {
+      expect(generateSafeFilename('path/to/v1.2 notes.md', 'html', { date })).toBe(
+        'v1.2_notes-2026-10-26_16-30-05.html',
+      );
     });
 
     it('should handle files without extension', () => {
-      expect(generateSafeFilename('path/to/file')).toBe('file.html');
+      expect(generateSafeFilename('path/to/file', 'html', { date })).toBe(
+        'file-2026-10-26_16-30-05.html',
+      );
     });
 
     it('should use untitled for empty filename', () => {
-      expect(generateSafeFilename('')).toBe('untitled.html');
+      expect(generateSafeFilename('', 'html', { date })).toBe('untitled-2026-10-26_16-30-05.html');
+    });
+
+    it('should omit the timestamp when disabled', () => {
+      expect(generateSafeFilename('path/to/file.md', 'html', { timestamp: false })).toBe('file.html');
+    });
+
+    it('should use a custom timestamp format', () => {
+      expect(generateSafeFilename('path/to/file.md', 'html', { timestamp: 'YYYY-MM-DD', date })).toBe(
+        'file-2026-10-26.html',
+      );
+    });
+
+    it('should produce a different name for each export', () => {
+      const first = generateSafeFilename('note.md', 'html', { date: new Date(2026, 9, 26, 16, 30, 5) });
+      const second = generateSafeFilename('note.md', 'html', { date: new Date(2026, 9, 26, 16, 30, 6) });
+      expect(first).not.toBe(second);
+    });
+  });
+
+  describe('formatTimestamp', () => {
+    const date = new Date(2026, 0, 2, 3, 4, 5);
+
+    it('should pad all parts to two digits', () => {
+      expect(formatTimestamp(date)).toBe('2026-01-02_03-04-05');
+    });
+
+    it('should apply a custom format', () => {
+      expect(formatTimestamp(date, 'YY.MM.DD HH:mm:ss')).toBe('26.01.02 03:04:05');
+    });
+
+    it('should keep unknown characters as literals', () => {
+      expect(formatTimestamp(date, 'export-YYYY')).toBe('export-2026');
+    });
+  });
+
+  describe('appendTimestamp', () => {
+    const date = new Date(2026, 9, 26, 16, 30, 5);
+
+    it('should insert the timestamp before the extension', () => {
+      expect(appendTimestamp('note.html', undefined, date)).toBe('note-2026-10-26_16-30-05.html');
+    });
+
+    it('should use a custom format', () => {
+      expect(appendTimestamp('note.html', 'YYYY-MM-DD', date)).toBe('note-2026-10-26.html');
+    });
+
+    it('should sanitize invalid filename characters in the format', () => {
+      expect(appendTimestamp('note.html', 'YYYY/MM/DD HH:mm', date)).toBe('note-2026_10_26_16_30.html');
+    });
+
+    it('should keep multi-dot names intact', () => {
+      expect(appendTimestamp('my.note.html', undefined, date)).toBe('my.note-2026-10-26_16-30-05.html');
+    });
+
+    it('should append to names without an extension', () => {
+      expect(appendTimestamp('note', undefined, date)).toBe('note-2026-10-26_16-30-05');
+    });
+  });
+
+  describe('generateWikiFilename', () => {
+    it('should add the wiki suffix and timestamp', () => {
+      const date = new Date(2026, 9, 26, 16, 30, 5);
+      expect(generateWikiFilename('export/01-central-note.md', { date })).toBe(
+        '01-central-note-wiki-2026-10-26_16-30-05.html',
+      );
+    });
+
+    it('should fall back to wiki for empty paths', () => {
+      const date = new Date(2026, 9, 26, 16, 30, 5);
+      expect(generateWikiFilename('', { date })).toBe('wiki-2026-10-26_16-30-05.html');
+    });
+
+    it('should omit the timestamp when disabled', () => {
+      expect(generateWikiFilename('export/01-central-note.md', { timestamp: false })).toBe(
+        '01-central-note-wiki.html',
+      );
     });
   });
 });
