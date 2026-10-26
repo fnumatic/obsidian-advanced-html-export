@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.10.0...0.11.0) (2026-10-26)
+
+
+### Features
+
+* **export:** make filename timestamp format configurable ([80946f3](https://github.com/fnumatic/obsidian-advanced-html-export/commit/80946f30a4cc266b9988f0691035fd87e6b97502))
+* **wiki-export:** exclude notes via start-note frontmatter ([df8578e](https://github.com/fnumatic/obsidian-advanced-html-export/commit/df8578eb408fbefc596b5fea338e7e3d68a4af87))
+
 ## [0.10.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.9.0...0.10.0) (2026-09-28)
 
 
