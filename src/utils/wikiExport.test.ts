@@ -168,3 +168,108 @@ describe('Frontmatter depth override', () => {
     expect(notes).toHaveLength(0);
   });
 });
+
+describe('Export exclusion rules', () => {
+  beforeEach(installMockDocument);
+
+  it('excludes linked notes by frontmatter tag', async () => {
+    const { app } = mockAppWithFiles(
+      { 'root.md': '[[a]] [[b]]', 'a.md': '', 'b.md': '' },
+      {
+        'root.md': { export: { exclude: { tags: ['companion'] } } },
+        'a.md': { tags: ['companion'] },
+      },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[a]] [[b]]', 1);
+    expect(notes.map(n => n.slug).sort()).toEqual(['b', 'root']);
+  });
+
+  it('excludes linked notes by inline tag', async () => {
+    const { app } = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': 'text' },
+      { 'root.md': { export: { exclude: { tags: ['companion'] } } } },
+      { 'a.md': { tags: [{ tag: '#companion' }] } },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[a]]', 1);
+    expect(notes.map(n => n.slug)).toEqual(['root']);
+  });
+
+  it('matches tags case-insensitively and accepts a single string', async () => {
+    const { app } = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '' },
+      {
+        'root.md': { export: { exclude: { tags: 'Companion' } } },
+        'a.md': { tags: ['#companion'] },
+      },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[a]]', 1);
+    expect(notes.map(n => n.slug)).toEqual(['root']);
+  });
+
+  it('excludes notes in an excluded folder and its subfolders', async () => {
+    const { app } = mockAppWithFiles(
+      {
+        'root.md': '[[Companion]] [[Course]]',
+        'Kurse/Begleitmaterial/Companion.md': '',
+        'Kurse/Course.md': '',
+      },
+      { 'root.md': { export: { exclude: { folders: ['Kurse/Begleitmaterial'] } } } },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[Companion]] [[Course]]', 1);
+    expect(notes.map(n => n.path).sort()).toEqual(['Kurse/Course.md', 'root.md']);
+  });
+
+  it('excludes explicitly linked notes by name and path', async () => {
+    const { app } = mockAppWithFiles(
+      {
+        'root.md': '[[Companion]] [[Kurse/Other]] [[Keep]]',
+        'Companion.md': '',
+        'Kurse/Other.md': '',
+        'Keep.md': '',
+      },
+      {
+        'root.md': { export: { exclude: { links: ['Companion', 'Kurse/Other.md'] } } },
+      },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[Companion]] [[Kurse/Other]] [[Keep]]', 1);
+    expect(notes.map(n => n.slug).sort()).toEqual(['keep', 'root']);
+  });
+
+  it('stops traversal at excluded notes', async () => {
+    const { app } = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '[[b]]', 'b.md': '' },
+      {
+        'root.md': { export: { exclude: { tags: ['companion'] } } },
+        'a.md': { tags: ['companion'] },
+      },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[a]]', 2);
+    expect(notes.map(n => n.slug)).toEqual(['root']);
+  });
+
+  it('keeps the start note even when it matches a rule', async () => {
+    const { app } = mockAppWithFiles(
+      { 'root.md': '[[a]]', 'a.md': '' },
+      { 'root.md': { tags: ['companion'], export: { exclude: { tags: ['companion'] } } } },
+    );
+    const notes = await collectNotes(app, 'root.md', '[[a]]', 1);
+    expect(notes.map(n => n.slug).sort()).toEqual(['a', 'root']);
+  });
+
+  it('applies rules only to the start note of each export', async () => {
+    const { app } = mockAppWithFiles(
+      { 'kurs.md': '[[companion]] [[hub]]', 'hub.md': '[[companion]]', 'companion.md': '' },
+      {
+        'kurs.md': { export: { exclude: { tags: ['companion'] } } },
+        'companion.md': { tags: ['companion'] },
+      },
+    );
+
+    const course = await collectNotes(app, 'kurs.md', '[[companion]] [[hub]]', 2);
+    expect(course.map(n => n.slug).sort()).toEqual(['hub', 'kurs']);
+
+    // The hub has no rules of its own, so it can export the companion notes.
+    const hub = await collectNotes(app, 'hub.md', '[[companion]]', 1);
+    expect(hub.map(n => n.slug).sort()).toEqual(['companion', 'hub']);
+  });
+});

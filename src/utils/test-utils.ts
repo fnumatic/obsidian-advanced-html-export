@@ -48,9 +48,14 @@ export function createMockFile(path: string, content: string): TFile {
   return file as unknown as TFile;
 }
 
+interface MockMetadataCacheEntry {
+  tags?: Array<{ tag: string }>;
+}
+
 export function mockAppWithFiles(
   entries: Record<string, string>,
   frontmatterByPath?: Record<string, Record<string, unknown>>,
+  cacheByPath?: Record<string, MockMetadataCacheEntry>,
 ) {
   const files: TFile[] = [];
   const byPath = new Map<string, TFile>();
@@ -67,11 +72,32 @@ export function mockAppWithFiles(
       (f as unknown as Record<string, unknown>).__content as string || '',
   };
 
+  const resolveLink = (linkpath: string): TFile | null => {
+    const clean = linkpath.split('#')[0].split('|')[0].trim();
+    if (!clean) return null;
+    if (byPath.has(clean)) return byPath.get(clean)!;
+    if (byPath.has(`${clean}.md`)) return byPath.get(`${clean}.md`)!;
+    const lower = clean.toLowerCase();
+    return (
+      files.find((file) => file.basename === clean || file.name === clean) ??
+      files.find(
+        (file) => file.basename.toLowerCase() === lower || file.name.toLowerCase() === lower,
+      ) ??
+      null
+    );
+  };
+
   const metadataCache = {
     getFileCache: (file: TFile) => {
       const fm = frontmatterByPath?.[file.path];
-      return fm ? { frontmatter: fm } : null;
+      const cache = cacheByPath?.[file.path];
+      if (!fm && !cache) return null;
+      return {
+        ...(fm ? { frontmatter: fm } : {}),
+        ...cache,
+      };
     },
+    getFirstLinkpathDest: resolveLink,
   };
 
   const app = { vault, workspace: {}, metadataCache };

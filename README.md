@@ -111,6 +111,32 @@ The diagrams will be automatically converted to embedded SVG when exporting to H
 3. All linked notes are collected and exported to a single HTML file
 4. Open the HTML file to navigate between pages using the sidebar or links
 
+### Exclude notes from an export
+
+The start note of a wiki export can exclude notes through its frontmatter:
+
+```yaml
+---
+export:
+  exclude:
+    tags: [companion]
+    folders: [Kurse/Begleitmaterial]
+    links: ["Companion Note", "Glossar"]
+---
+```
+
+- `tags` matches frontmatter and inline tags; the leading `#` is optional.
+- `folders` matches the folder and its subfolders.
+- `links` accepts note names or vault paths.
+- Excluded notes are skipped and their outgoing links are not followed.
+- The start note itself is always included unless it has `publish: false`.
+- `publish: false` is a global hard exclusion and is not overridden.
+
+The rules apply only to the export started at that note. To export the excluded
+notes, start another export at a note that links them and has no `export.exclude`
+rules — for example a companion-notes hub that the course note links to. Add that
+hub to `links` as well if it should not appear in the course export.
+
 ## Export Compression
 
 Exports can optionally be wrapped in a self-extracting, compressed HTML container. The resulting file stays a single `.html` file and unpacks itself in the browser using the native `DecompressionStream` — no server or external assets required.

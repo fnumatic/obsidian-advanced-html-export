@@ -7,7 +7,9 @@ Control export scope per note using frontmatter. With the `export` frontmatter k
 - Which notes are excluded (tags/frontmatter flag)
 - Whether the root note is included
 
-**Status:** Planned | **Priority:** High | **Est. Effort:** ~6 hours
+**Status:** Partially implemented — `export.exclude` on the start note supports `tags`,
+`folders` and `links` (see README). `frontmatterFlag`, `export.enabled` and
+`export.scope.includeRoot` remain open. | **Priority:** High | **Est. Effort:** ~6 hours
 
 ---
 

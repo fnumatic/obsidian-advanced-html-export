@@ -1,4 +1,4 @@
-import { App, Component, TFile } from 'obsidian';
+import { App, Component, TFile, type CachedMetadata } from 'obsidian';
 import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import type { WikiRenderOptions } from './wikiHtmlRenderer';
@@ -8,6 +8,15 @@ import { PauseController } from './pauseController';
 import { yieldToUI } from './asyncUtils';
 import { DetailedWikiRenderer, RenderEvent } from './detailedRenderer';
 import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
+
+export interface ExportExcludeRules {
+  /** Tags (with or without a leading `#`) that exclude a note. */
+  tags?: string[];
+  /** Folder paths whose notes are excluded, including subfolders. */
+  folders?: string[];
+  /** Wiki links or vault paths of notes to exclude. */
+  links?: string[];
+}
 
 export interface PageFrontmatter {
   title?: string;
@@ -21,7 +30,56 @@ export interface PageFrontmatter {
     scope?: {
       maxDepth?: number;
     };
+    exclude?: ExportExcludeRules;
   };
+}
+
+/** Accepts a single string or an array and returns trimmed, non-empty entries. */
+function toStringList(value: unknown): string[] | undefined {
+  const values = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+  const strings = values
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return strings.length > 0 ? strings : undefined;
+}
+
+/** Parses the `export` frontmatter block, ignoring malformed values. */
+function parseExportConfig(value: unknown): PageFrontmatter['export'] {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const raw = value as {
+    scope?: { maxDepth?: unknown };
+    exclude?: { tags?: unknown; folders?: unknown; links?: unknown };
+  };
+  const rawMaxDepth = raw.scope?.maxDepth;
+  const maxDepth =
+    typeof rawMaxDepth === 'number' && Number.isInteger(rawMaxDepth) && rawMaxDepth >= 0
+      ? rawMaxDepth
+      : undefined;
+  const tags = toStringList(raw.exclude?.tags);
+  const folders = toStringList(raw.exclude?.folders);
+  const links = toStringList(raw.exclude?.links);
+  const exclude = tags || folders || links ? { tags, folders, links } : undefined;
+  const scope = maxDepth !== undefined ? { maxDepth } : undefined;
+  if (!scope && !exclude) return undefined;
+  return { scope, exclude };
+}
+
+function normalizeTag(tag: string): string {
+  return tag.trim().replace(/^#/, '').toLowerCase();
+}
+
+function normalizeFolder(folder: string): string {
+  return folder.trim().replace(/^\/+|\/+$/g, '');
+}
+
+/** Collects frontmatter and inline tags from a metadata cache entry. */
+function tagsFromCache(cache: CachedMetadata | null): string[] {
+  const frontmatterTags = toStringList(cache?.frontmatter?.tags) ?? [];
+  const inlineTags = cache?.tags?.map((tag) => tag.tag) ?? [];
+  return [...frontmatterTags, ...inlineTags]
+    .map(normalizeTag)
+    .filter((tag) => tag.length > 0);
 }
 
 export type WikiExportOptions = WikiRenderOptions;
@@ -92,20 +150,46 @@ export class WikiExportOrchestrator {
 
   private getPageFrontmatter(file: TFile): PageFrontmatter {
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
-    const rawExportScope = (fm.export as { scope?: { maxDepth?: unknown } } | undefined)?.scope;
-    const rawMaxDepth = rawExportScope?.maxDepth;
-    const maxDepth = typeof rawMaxDepth === 'number' && Number.isInteger(rawMaxDepth) && rawMaxDepth >= 0
-      ? rawMaxDepth
-      : undefined;
     return {
       title: fm.title as string | undefined,
       publish: fm.publish as boolean | undefined,
-      aliases: Array.isArray(fm.aliases) ? fm.aliases as string[] : undefined,
-      tags: Array.isArray(fm.tags) ? fm.tags as string[] : undefined,
+      aliases: toStringList(fm.aliases),
+      tags: toStringList(fm.tags),
       author: fm.author as string | undefined,
       license: fm.license as string | undefined,
       note: fm.note as string | undefined,
-      export: maxDepth !== undefined ? { scope: { maxDepth } } : undefined,
+      export: parseExportConfig(fm.export),
+    };
+  }
+
+  /**
+   * Builds the include predicate for one export. Rules come only from the
+   * start note; the start note itself is always kept unless `publish: false`.
+   */
+  private createInclusionFilter(
+    centralFile: TFile,
+    centralFm: PageFrontmatter,
+  ): (file: TFile) => boolean {
+    const rules = centralFm.export?.exclude;
+    const tags = new Set((rules?.tags ?? []).map(normalizeTag));
+    const folders = (rules?.folders ?? [])
+      .map(normalizeFolder)
+      .filter((folder) => folder.length > 0);
+    const excludedPaths = new Set<string>();
+
+    for (const link of rules?.links ?? []) {
+      const target = this.app.metadataCache.getFirstLinkpathDest(link, centralFile.path);
+      if (target) excludedPaths.add(target.path);
+    }
+
+    return (file: TFile): boolean => {
+      if (file.path === centralFile.path) return centralFm.publish !== false;
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (cache?.frontmatter?.publish === false) return false;
+      if (excludedPaths.has(file.path)) return false;
+      if (folders.some((folder) => file.path.startsWith(`${folder}/`))) return false;
+      if (tags.size > 0 && tagsFromCache(cache).some((tag) => tags.has(tag))) return false;
+      return true;
     };
   }
 
@@ -132,10 +216,7 @@ export class WikiExportOrchestrator {
       linkDepth
     });
 
-    const shouldIncludeFile = (file: TFile): boolean => {
-      const fm = this.getPageFrontmatter(file);
-      return fm.publish !== false;
-    };
+    const shouldIncludeFile = this.createInclusionFilter(centralFile, centralFm);
 
     const collected = await this.collector.collectLinkedFiles(
       centralFile, 
