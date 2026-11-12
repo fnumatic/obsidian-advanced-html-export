@@ -11,6 +11,7 @@ import { createExportPreviewView } from './views/export-preview-view';
 import { createExportStatisticsView } from './views/export-statistics-view';
 import { createRenderingProgressView } from './views/rendering-progress-view';
 import { element } from './view-helpers';
+import { installObsidianDom } from '../utils/test-utils';
 import { NoteSelectionModal } from './modals/NoteSelectionModal';
 import { ExportPreviewModal } from './modals/ExportPreviewModal';
 import { ExportStatisticsModal } from './modals/ExportStatisticsModal';
@@ -41,6 +42,7 @@ const search = (value: string): void => {
 };
 
 beforeEach(() => {
+  installObsidianDom();
   vi.useFakeTimers();
   target = document.createElement('div');
   document.body.append(target);

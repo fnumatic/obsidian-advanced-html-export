@@ -11,10 +11,10 @@ import { PauseController } from '../../src/utils/pauseController';
 import 'virtual:uno.css';
 import '../../src/styles.css';
 import '../../src/ui/styles/plugin-styles.css';
+import './bench.css';
 
 const target = document.createElement('div');
-target.className = 'advanced-html-export-modal';
-target.style.width = '720px';
+target.className = 'advanced-html-export-modal benchmark-target';
 document.body.append(target);
 const assert = (value: unknown, message: string): void => { if (!value) throw new Error(message); };
 const settle = (): void => { target.getBoundingClientRect(); };

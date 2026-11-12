@@ -154,11 +154,7 @@ export default class HtmlRenderer {
       }
 
       if (!el.innerHTML || el.innerHTML.trim() === '') {
-        const escaped = content
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        el.innerHTML = `<pre class="markdown-render-error-fallback">${escaped}</pre>`;
+        el.createEl('pre', { cls: 'markdown-render-error-fallback', text: content });
       }
 
       return {

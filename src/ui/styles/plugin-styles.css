@@ -95,6 +95,20 @@ body .advanced-html-export-modal {
     background: linear-gradient(90deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
 }
 
+.progress-text {
+    text-shadow: 0 1px 2px rgba(0 0 0 / 30%);
+}
+
+/* Progress width is data, so it travels in a custom property. */
+[data-tags="pb-fill"],
+.progress-fill {
+    width: var(--pb-value, 0%);
+}
+
+.rp-hidden {
+    visibility: hidden;
+}
+
 /* Visible life while a phase runs without measurable sub-progress. */
 .progress-busy {
     animation: progress-pulse 1.4s ease-in-out infinite;

@@ -1,19 +1,46 @@
 import { TFile } from 'obsidian';
 
+interface CreateElementOptions {
+  cls?: string;
+  text?: string;
+  attr?: Record<string, string>;
+}
+
 /**
- * Adds the Obsidian `HTMLElement.createDiv()` helper used by the renderers to
- * the DOM provided by the test environment (happy-dom / jsdom).
+ * Adds the Obsidian element helpers used by the views and renderers to the DOM
+ * provided by the test environment (happy-dom / jsdom).
  */
 export function installObsidianDom(): void {
   if (typeof HTMLElement === 'undefined') return;
   const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
-  if (typeof proto.createDiv !== 'function') {
-    proto.createDiv = function (this: HTMLElement, opts?: { cls?: string; text?: string }) {
-      const el = this.ownerDocument.createElement('div');
+  if (typeof proto.createEl !== 'function') {
+    proto.createEl = function (this: HTMLElement, tag: string, opts?: CreateElementOptions) {
+      const el = this.ownerDocument.createElement(tag);
       if (opts?.cls) el.className = opts.cls;
       if (opts?.text !== undefined) el.textContent = opts.text;
+      for (const [name, value] of Object.entries(opts?.attr ?? {})) el.setAttribute(name, value);
       this.appendChild(el);
       return el;
+    };
+  }
+  if (typeof proto.createDiv !== 'function') {
+    proto.createDiv = function (this: HTMLElement, opts?: CreateElementOptions) {
+      return (this as unknown as { createEl(tag: string, o?: CreateElementOptions): HTMLElement }).createEl('div', opts);
+    };
+  }
+  if (typeof proto.createSpan !== 'function') {
+    proto.createSpan = function (this: HTMLElement, opts?: CreateElementOptions) {
+      return (this as unknown as { createEl(tag: string, o?: CreateElementOptions): HTMLElement }).createEl('span', opts);
+    };
+  }
+  if (typeof proto.empty !== 'function') {
+    proto.empty = function (this: HTMLElement) {
+      this.replaceChildren();
+    };
+  }
+  if (typeof proto.setCssProps !== 'function') {
+    proto.setCssProps = function (this: HTMLElement, props: Record<string, string>) {
+      for (const [name, value] of Object.entries(props)) this.style.setProperty(name, value);
     };
   }
 }

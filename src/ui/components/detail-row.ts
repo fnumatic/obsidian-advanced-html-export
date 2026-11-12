@@ -1,9 +1,23 @@
 import type { CurrentNoteProgress, DetailItem } from '../types';
-import { element, html, icon, setText, type IconName, type SafeHtml } from '../view-helpers';
+import { element, icon, setText, type IconName } from '../view-helpers';
 import { progressBar, bindProgressBar } from './progress-bar';
 
-export function detailRow(name: IconName, label: string): SafeHtml {
-  return html`<div data-tags="dr-container" class="flex flex-col gap-0.5 text-obsidian-sm"><div data-tags="dr-main" class="flex items-center gap-2"><span class="w-5 text-center text-obsidian">${icon(name)}</span><span class="whitespace-nowrap text-obsidian-muted">${label}</span><div class="flex-1">${progressBar(true)}</div><span data-tags="dr-progress" class="whitespace-nowrap text-obsidian-muted tabular-nums min-w-[50px] text-right"></span></div><div data-tags="dr-status" class="text-obsidian-xs text-obsidian-muted pl-7 min-h-4 whitespace-nowrap overflow-hidden text-ellipsis"></div></div>`;
+/** Appends one detail row and returns its root. */
+export function detailRow(parent: HTMLElement, name: IconName, label: string): HTMLElement {
+  const root = parent.createDiv({ cls: 'flex flex-col gap-0.5 text-obsidian-sm', attr: { 'data-tags': 'dr-container' } });
+  const main = root.createDiv({ cls: 'flex items-center gap-2', attr: { 'data-tags': 'dr-main' } });
+  icon(main.createSpan({ cls: 'w-5 text-center text-obsidian' }), name);
+  main.createSpan({ cls: 'whitespace-nowrap text-obsidian-muted', text: label });
+  progressBar(main.createDiv({ cls: 'flex-1' }), true);
+  main.createSpan({
+    cls: 'whitespace-nowrap text-obsidian-muted tabular-nums min-w-[50px] text-right',
+    attr: { 'data-tags': 'dr-progress' },
+  });
+  root.createDiv({
+    cls: 'text-obsidian-xs text-obsidian-muted pl-7 min-h-4 whitespace-nowrap overflow-hidden text-ellipsis',
+    attr: { 'data-tags': 'dr-status' },
+  });
+  return root;
 }
 
 export function bindDetailRow(root: HTMLElement): (item: DetailItem | undefined) => void {

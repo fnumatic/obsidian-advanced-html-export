@@ -3,7 +3,7 @@ import type { RenderingProgressProps } from '../types';
 import type { ModalView } from '../view';
 import { formatDuration, truncateTitle } from '../../utils/renderProgress';
 import { RenderingProgressStore } from '../rendering-progress-store';
-import { bindAction, button, element, html, icon, noteStats, setText } from '../view-helpers';
+import { bindAction, button, element, icon, noteStats, setText } from '../view-helpers';
 import { bindProgressBar, progressBar } from '../components/progress-bar';
 import { bindDetailRow, detailRow } from '../components/detail-row';
 
@@ -15,39 +15,74 @@ export interface RenderingProgressView extends ModalView {
 /** Keeps stable DOM references and appends each completed note exactly once. */
 export function createRenderingProgressView(target: HTMLElement, props: RenderingProgressProps): RenderingProgressView {
   const events = new AbortController();
-  target.innerHTML = html`<div data-tags="rp-container" class="p-0">
-    <header data-tags="rp-header" class="mt-0 mb-4 text-obsidian font-semibold">Rendering wiki export</header>
-    <details data-tags="rp-completed" open class="mb-3">
-      <summary class="font-semibold text-obsidian cursor-pointer py-2">Completed notes (0)</summary>
-      <div data-completed-list class="min-h-[114px] max-h-[114px] overflow-y-auto border border-obsidian rounded p-1.5 mt-2"></div>
-    </details>
-    <section data-tags="rp-current" class="mt-3 p-2.5 bg-obsidian-alt rounded">
-      <div data-current-title class="font-semibold text-obsidian mb-2 whitespace-nowrap overflow-hidden text-ellipsis"></div>
-      <div data-phase class="text-obsidian-xs text-obsidian-muted mb-2 h-4 whitespace-nowrap overflow-hidden text-ellipsis"></div>
-      ${progressBar()}
-      <div class="flex flex-col gap-1.5 mt-2">${detailRow('chart-bar', 'Diagrams')}${detailRow('code-block', 'Code blocks')}${detailRow('image', 'images')}</div>
-      <div data-warning role="status" class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg h-[28px]"></div>
-    </section>
-    <div data-tags="rp-time-stats" class="mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-obsidian-sm">
-      ${([['timer', 'Elapsed'], ['hourglass', 'Remaining'], ['lightning', 'Speed']] as const).map(([name, label]) => html`<div class="flex flex-col items-center gap-1"><span data-time class="font-semibold"></span><span class="text-obsidian-xs text-obsidian-muted">${icon(name, '1em')} ${label}</span></div>`)}
-    </div>
-    <footer data-tags="rp-footer" class="mt-4 flex justify-between items-center gap-3">
-      <div data-paused class="font-semibold text-obsidian-sm">${icon('pause', '1em')} PAUSED</div>
-      <div class="flex gap-3 ml-auto">${button('Pause', 'pause')}${button('Cancel export', 'cancel', 'obsidian-btn-danger')}</div>
-    </footer>
-  </div>`.value;
-  const title = element(target, '[data-current-title]');
-  const phase = element(target, '[data-phase]');
+  target.empty();
+  const container = target.createDiv({ cls: 'p-0', attr: { 'data-tags': 'rp-container' } });
+  container.createEl('header', {
+    cls: 'mt-0 mb-4 text-obsidian font-semibold',
+    text: 'Rendering wiki export',
+    attr: { 'data-tags': 'rp-header' },
+  });
+
+  const detailsEl = container.createEl('details', { cls: 'mb-3', attr: { 'data-tags': 'rp-completed' } });
+  detailsEl.open = true;
+  const summary = detailsEl.createEl('summary', {
+    cls: 'font-semibold text-obsidian cursor-pointer py-2',
+    text: 'Completed notes (0)',
+  });
+  const completed = detailsEl.createDiv({
+    cls: 'min-h-[114px] max-h-[114px] overflow-y-auto border border-obsidian rounded p-1.5 mt-2',
+    attr: { 'data-completed-list': '' },
+  });
+
+  const current = container.createEl('section', {
+    cls: 'mt-3 p-2.5 bg-obsidian-alt rounded',
+    attr: { 'data-tags': 'rp-current' },
+  });
+  const title = current.createDiv({
+    cls: 'font-semibold text-obsidian mb-2 whitespace-nowrap overflow-hidden text-ellipsis',
+    attr: { 'data-current-title': '' },
+  });
+  const phase = current.createDiv({
+    cls: 'text-obsidian-xs text-obsidian-muted mb-2 h-4 whitespace-nowrap overflow-hidden text-ellipsis',
+    attr: { 'data-phase': '' },
+  });
+  progressBar(current);
+  const detailList = current.createDiv({ cls: 'flex flex-col gap-1.5 mt-2' });
+  detailRow(detailList, 'chart-bar', 'Diagrams');
+  detailRow(detailList, 'code-block', 'Code blocks');
+  detailRow(detailList, 'image', 'images');
+  const warning = current.createDiv({
+    cls: 'mt-2 p-1.5 rounded text-obsidian-sm warning-bg h-[28px]',
+    attr: { 'data-warning': '', role: 'status' },
+  });
+
+  const timeStats = container.createDiv({
+    cls: 'mt-2.5 p-2 bg-obsidian-alt rounded flex justify-around text-obsidian-sm',
+    attr: { 'data-tags': 'rp-time-stats' },
+  });
+  for (const [name, label] of [['timer', 'Elapsed'], ['hourglass', 'Remaining'], ['lightning', 'Speed']] as const) {
+    const cell = timeStats.createDiv({ cls: 'flex flex-col items-center gap-1' });
+    cell.createSpan({ cls: 'font-semibold', attr: { 'data-time': '' } });
+    const caption = cell.createSpan({ cls: 'text-obsidian-xs text-obsidian-muted' });
+    icon(caption, name, 'text-[1em]');
+    caption.append(` ${label}`);
+  }
+
+  const footer = container.createEl('footer', {
+    cls: 'mt-4 flex justify-between items-center gap-3',
+    attr: { 'data-tags': 'rp-footer' },
+  });
+  const paused = footer.createDiv({ cls: 'font-semibold text-obsidian-sm', attr: { 'data-paused': '' } });
+  icon(paused, 'pause', 'text-[1em]');
+  paused.append(' PAUSED');
+  const footerButtons = footer.createDiv({ cls: 'flex gap-3 ml-auto' });
+  const pauseButton = button(footerButtons, 'Pause', 'pause');
+  const cancelButton = button(footerButtons, 'Cancel export', 'cancel', 'obsidian-btn-danger');
+
   const overallFill = element(target, '[data-tags="rp-current"] > [data-tags="pb-container"] [data-tags="pb-fill"]');
-  const completed = element(target, '[data-completed-list]');
-  const summary = element(target, 'summary');
   const updateBar = bindProgressBar(element(target, '[data-tags="rp-current"] > [data-tags="pb-container"]'));
-  const warning = element(target, '[data-warning]');
-  const paused = element(target, '[data-paused]');
-  const pauseButton = element<HTMLButtonElement>(target, '[data-action="pause"]');
-  const cancelButton = element<HTMLButtonElement>(target, '[data-action="cancel"]');
   const times = [...target.querySelectorAll<HTMLElement>('[data-time]')];
-  const details = [...target.querySelectorAll<HTMLElement>('[data-tags="dr-container"]')].map(bindDetailRow);
+  const detailBars = [...target.querySelectorAll<HTMLElement>('[data-tags="dr-container"]')].map(bindDetailRow);
   let displayed = 0;
   let previousPaused: boolean | undefined;
   const store = new RenderingProgressStore(props, () => update());
@@ -57,25 +92,34 @@ export function createRenderingProgressView(target: HTMLElement, props: Renderin
       `Rendering ${store.currentNote.index + 1}/${props.metrics.totalNotes}: ${truncateTitle(store.currentNote.title, 40)}` : 'Preparing...');
     const running = !!store.currentNote && !store.isCancelled && !store.isCompleted;
     setText(phase, running ? `${store.currentNote?.phase ?? 'Working'} · ${formatDuration(store.noteElapsed)}` : '');
-    phase.style.visibility = running ? 'visible' : 'hidden';
+    phase.classList.toggle('rp-hidden', !running);
     overallFill.classList.toggle('progress-busy', running);
     updateBar(store.overallProgress);
     setText(summary, `Completed notes (${store.completedNotes.length})`);
     while (displayed < store.completedNotes.length) {
       const note = store.completedNotes[displayed++];
-      const item = document.createElement('div');
-      item.className = 'note-list-item';
-      item.innerHTML = html`<span class="text-obsidian-muted shrink-0">✓</span>
-        <span class="flex-1 ml-2 mr-4 max-w-[calc(100%-160px)] whitespace-nowrap overflow-hidden text-ellipsis text-left">${truncateTitle(note.title, 60)}</span>
-        <span class="text-obsidian-muted shrink-0 whitespace-nowrap">${noteStats([[(note.duration / 1000).toFixed(1), 'lightning'], [note.totalDiagrams, 'chart-bar'], [note.totalCodeBlocks, 'code-block'], [note.totalImages, 'image'], [note.linkCount, 'document']])}</span>`.value;
-      completed.append(item);
+      const item = completed.createDiv({ cls: 'note-list-item' });
+      item.createSpan({ cls: 'text-obsidian-muted shrink-0', text: '✓' });
+      item.createSpan({
+        cls: 'flex-1 ml-2 mr-4 max-w-[calc(100%-160px)] whitespace-nowrap overflow-hidden text-ellipsis text-left',
+        text: truncateTitle(note.title, 60),
+      });
+      noteStats(item.createSpan({ cls: 'text-obsidian-muted shrink-0 whitespace-nowrap' }), [
+        [(note.duration / 1000).toFixed(1), 'lightning'],
+        [note.totalDiagrams, 'chart-bar'],
+        [note.totalCodeBlocks, 'code-block'],
+        [note.totalImages, 'image'],
+        [note.linkCount, 'document'],
+      ]);
     }
-    (['diagrams', 'codeBlocks', 'images'] as const).forEach((key, index) => details[index](store.currentNote?.[key]));
+    (['diagrams', 'codeBlocks', 'images'] as const).forEach((key, index) => detailBars[index](store.currentNote?.[key]));
     setText(warning, store.warning || ' ');
-    warning.style.visibility = store.warning ? 'visible' : 'hidden';
-    paused.style.visibility = store.isPaused ? 'visible' : 'hidden';
+    warning.classList.toggle('rp-hidden', !store.warning);
+    paused.classList.toggle('rp-hidden', !store.isPaused);
     if (previousPaused !== store.isPaused) {
-      pauseButton.innerHTML = html`${icon(store.isPaused ? 'play' : 'pause', '1em')} ${store.isPaused ? 'Resume' : 'Pause'}`.value;
+      pauseButton.empty();
+      icon(pauseButton, store.isPaused ? 'play' : 'pause', 'text-[1em]');
+      pauseButton.append(store.isPaused ? ' Resume' : ' Pause');
       previousPaused = store.isPaused;
     }
     pauseButton.disabled = store.isCompleted || store.isCancelled;

@@ -288,6 +288,11 @@ describe('HtmlRenderer', () => {
         appendChild: vi.fn(),
         insertBefore: vi.fn(),
         firstChild: null,
+        createEl: vi.fn((tag: string, options?: { cls?: string; text?: string }) => {
+          const markup = `<${tag}${options?.cls ? ` class="${options.cls}"` : ''}>${options?.text ?? ''}</${tag}>`;
+          el.innerHTML = `${el.innerHTML ?? ''}${markup}`;
+          return el;
+        }),
       };
       if (frozen) {
         Object.defineProperty(el, 'innerHTML', { get: () => innerHTML, set: vi.fn() });
