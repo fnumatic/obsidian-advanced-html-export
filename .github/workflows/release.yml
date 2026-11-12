@@ -17,10 +17,12 @@ on:
         required: true
 
 env:
-  PLUGIN_NAME: obsidian-advanced-html-export # Plugin ID from manifest.json
+  PLUGIN_NAME: obsidian-advanced-html-export # GitHub repository name
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   resolve-tag:
@@ -47,7 +49,7 @@ jobs:
               echo "No release found yet; nothing to build."
               exit 0
             fi
-            if gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx "${PLUGIN_NAME}.zip"; then
+            if gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx "main.js"; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               echo "Assets for ${TAG} already exist; skipping."
               exit 0
@@ -79,9 +81,12 @@ jobs:
         run: |
           pnpm install --frozen-lockfile --allow-build=esbuild
           pnpm build
-          mkdir ${{ env.PLUGIN_NAME }}
-          cp dist/main.js dist/manifest.json dist/styles.css ${{ env.PLUGIN_NAME }}
-          zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/main.js
+            dist/styles.css
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,7 +94,6 @@ jobs:
         run: |
           # release-please creates the release and its notes; only attach assets here
           gh release upload "$TAG" \
-            ${{ env.PLUGIN_NAME }}.zip \
             dist/main.js \
             dist/styles.css \
             dist/manifest.json \

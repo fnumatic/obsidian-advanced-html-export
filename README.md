@@ -301,7 +301,7 @@ Versions follow Conventional Commits (`fix` → patch, `feat` → minor; pre-1.0
 
 - Built plugin files (main.js, manifest.json, styles.css)
 - CHANGELOG.md with release notes
-- GitHub release with attached plugin zip
+- GitHub release with the three plugin files and build provenance attestations
 - Version tags in git
 
 ### GitHub Actions
