@@ -24,7 +24,7 @@ export function createRenderingProgressView(target: HTMLElement, props: Renderin
     </details>
     <section data-tags="rp-current" class="mt-3 p-2.5 bg-obsidian-alt rounded">
       <div data-current-title class="font-semibold text-obsidian mb-2 whitespace-nowrap overflow-hidden text-ellipsis"></div>
-      <div data-phase class="text-obsidian-xs text-obsidian-muted mb-2"></div>
+      <div data-phase class="text-obsidian-xs text-obsidian-muted mb-2 h-4 whitespace-nowrap overflow-hidden text-ellipsis"></div>
       ${progressBar()}
       <div class="flex flex-col gap-1.5 mt-2">${detailRow('chart-bar', 'Diagrams')}${detailRow('code-block', 'Code blocks')}${detailRow('image', 'images')}</div>
       <div data-warning role="status" class="mt-2 p-1.5 rounded text-obsidian-sm warning-bg h-[28px]"></div>

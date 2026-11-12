@@ -29,6 +29,12 @@ The export engine and the HTML application inside exported files are unchanged.
   toggles the focused checkbox. Search and checkboxes have accessible names.
 - Completed notes append once. `push` retains the completed list instead of
   copying an ever-growing array on every event.
+- The dialog keeps one fixed geometry: the phase line reserves its height, status
+  lines are single-line with an ellipsis, the warning strip has a fixed height and
+  the completed list has fixed min/max heights. Without that, the phase line
+  collapsed between notes (14 px → 0) and the centered modal jumped 23 px up and
+  down on every note. The end-to-end test samples the modal rectangle every 100 ms
+  and fails if height or position changes.
 - All user strings interpolated into markup use the existing `escapeHtml` helper.
   Progress and warning text use `textContent`. No HTML from notes is executed.
 - Every view owns an `AbortController` for listeners. Disposal removes listeners

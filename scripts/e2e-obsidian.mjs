@@ -313,7 +313,7 @@ try {
         state.downloads.length = 0;
         state.errors.length = 0;
         state.warnings.length = 0;
-        window.__e2eUi = { states: [], start: performance.now() };
+        window.__e2eUi = { states: [], geometry: [], start: performance.now() };
         window.__e2eObserver?.disconnect();
         window.__e2eObserver = new MutationObserver(() => {
           if (!document.querySelector('.modal-container')) return;
@@ -328,6 +328,29 @@ try {
           if (!last || JSON.stringify(last) !== JSON.stringify(snapshot)) window.__e2eUi.states.push(snapshot);
         });
         window.__e2eObserver.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+        // Dialog geometry can shift without a DOM mutation; sample it independently.
+        clearInterval(window.__e2eGeometry);
+        window.__e2eGeometry = setInterval(() => {
+          const modal = document.querySelector('.modal');
+          const section = document.querySelector('[data-tags="rp-current"]');
+          if (!modal || !section) return;
+          const rect = modal.getBoundingClientRect();
+          const entry = {
+            w: Math.round(rect.width), h: Math.round(rect.height),
+            top: Math.round(rect.top), left: Math.round(rect.left),
+            sectionH: Math.round(section?.getBoundingClientRect().height ?? 0),
+            parts: {
+              title: Math.round(document.querySelector('[data-current-title]')?.getBoundingClientRect().height ?? 0),
+              phase: Math.round(document.querySelector('[data-phase]')?.getBoundingClientRect().height ?? 0),
+              bar: Math.round(document.querySelector('[data-tags="rp-current"] > [data-tags="pb-container"]')?.getBoundingClientRect().height ?? 0),
+              warn: Math.round(document.querySelector('[data-warning]')?.getBoundingClientRect().height ?? 0),
+              rows: [...document.querySelectorAll('[data-tags="dr-container"]')].map(row => Math.round(row.getBoundingClientRect().height)).join('/'),
+              statuses: [...document.querySelectorAll('[data-tags="dr-status"]')].map(node => Math.round(node.getBoundingClientRect().height)).join('/'),
+            },
+          };
+          const last = window.__e2eUi.geometry.at(-1);
+          if (!last || JSON.stringify(last) !== JSON.stringify(entry)) window.__e2eUi.geometry.push(entry);
+        }, 100);
         app.commands.executeCommandById('${pluginId}:export-wiki-as-html');
         return true;
       })()`);
@@ -360,6 +383,7 @@ try {
         const elapsed = states.map(entry => entry.elapsed).filter(Boolean);
         const percents = states.map(entry => Number(entry.percent.replace('%', ''))).filter(Number.isFinite);
         window.__e2eObserver.disconnect();
+        clearInterval(window.__e2eGeometry);
         return {
           bytes: html.length,
           pages: (html.match(/class="wiki-page markdown-body/g) || []).length,
@@ -371,6 +395,7 @@ try {
           percents: [...new Set(percents)],
           intermediatePercent: percents.slice(0, -1).some(value => value > 0 && value < 100),
           warningsShown: [...new Set(states.map(entry => entry.warning).filter(Boolean))],
+          geometry: window.__e2eUi.geometry,
           completed: states.at(-1)?.completed || '',
           durationMs: Math.round(performance.now() - window.__e2eUi.start),
           errors: state.errors.slice(),
@@ -384,6 +409,13 @@ try {
       assert.ok(analysis.manifest, 'export must contain the manifest');
       assert.deepEqual(analysis.errors, [], 'no unhandled rejection during export');
       assert.ok(analysis.uiStates >= 3, `progress UI must update repeatedly, saw ${analysis.uiStates}`);
+      // The dialog must not grow, shrink or wander while it reports progress.
+      const heights = analysis.geometry.map(entry => entry.h);
+      const tops = analysis.geometry.map(entry => entry.top);
+      assert.ok(Math.max(...heights) - Math.min(...heights) <= 1,
+        `dialog height must stay fixed, saw ${JSON.stringify([...new Set(heights)])}`);
+      assert.ok(Math.max(...tops) - Math.min(...tops) <= 1,
+        `dialog position must stay fixed, saw ${JSON.stringify([...new Set(tops)])}`);
       assert.ok(analysis.percents.includes(100), `progress must reach 100%, saw ${analysis.percents}`);
       // A short export can finish inside the first clock tick; only longer runs must show it advance.
       if (analysis.durationMs > 2000) assert.ok(analysis.distinctElapsed >= 2, 'elapsed timer must advance');
