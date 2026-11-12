@@ -37,7 +37,7 @@ export function analyzeNoteContent(content: string): NoteAnalysis {
   const allCodeBlocks = content.match(/```[\s\S]*?```/g) || [];
   const codeBlockCount = allCodeBlocks.length - diagramBlocks;
 
-  const diagrams = diagramMatches.map((diagram) => ({ type: diagram.type as string, content: diagram.content }));
+  const diagrams = diagramMatches.map((diagram) => ({ type: diagram.type, content: diagram.content }));
 
   const codeBlocks = allCodeBlocks
     .filter(block => !isDiagramBlock(block))

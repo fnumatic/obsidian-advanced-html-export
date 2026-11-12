@@ -90,9 +90,9 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
     // A render can wait tens of seconds on remote images. Report it while it happens,
     // not only after it finished, so the progress view never looks frozen.
-    let slowRenderTimer: ReturnType<typeof setInterval> | null = null;
+    let slowRenderTimer: number | null = null;
     try {
-      slowRenderTimer = setInterval(() => {
+      slowRenderTimer = window.setInterval(() => {
         this.emit({
           type: 'warning_slow_operation',
           timestamp: Date.now(),
@@ -266,7 +266,7 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       throw error;
     } finally {
       if (slowRenderTimer !== null) {
-        clearInterval(slowRenderTimer);
+        window.clearInterval(slowRenderTimer);
         slowRenderTimer = null;
       }
     }

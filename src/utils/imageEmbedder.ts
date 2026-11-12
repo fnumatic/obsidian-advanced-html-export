@@ -48,7 +48,7 @@ export class ImageEmbedder {
     private readonly settings: ImageEmbedderSettings,
     sharedImageCache?: Map<string, string>,
   ) {
-    this.imageCache = sharedImageCache || new Map();
+    this.imageCache = sharedImageCache || new Map<string, string>();
     this.imageFiles = this.initializeImageFiles();
   }
 

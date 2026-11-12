@@ -58,7 +58,8 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
   };
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const stored = await this.loadData() as Partial<AdvancedHtmlExportSettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, stored);
   }
 
   async saveSettings() {

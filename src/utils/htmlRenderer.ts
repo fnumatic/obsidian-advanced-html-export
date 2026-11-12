@@ -131,11 +131,11 @@ export default class HtmlRenderer {
    * so a crashed plugin doesn't abort the entire export.
    */
   protected async renderMarkdownSafely(content: string, el: HTMLElement, sourcePath: string, component: Component = this.component): Promise<RenderMarkdownResult> {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let timeout: number | undefined;
     try {
       const renderPromise = MarkdownRenderer.render(this.app, content, el, sourcePath, component);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error('timeout')), MARKDOWN_RENDER_TIMEOUT_MS);
+        timeout = window.setTimeout(() => reject(new Error('timeout')), MARKDOWN_RENDER_TIMEOUT_MS);
       });
       await Promise.race([renderPromise, timeoutPromise]);
       return { ok: true };
@@ -165,7 +165,7 @@ export default class HtmlRenderer {
         ...(isTimeout ? { timedOut: true } : {}),
       };
     } finally {
-      clearTimeout(timeout);
+      window.clearTimeout(timeout);
     }
   }
 

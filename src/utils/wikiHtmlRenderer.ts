@@ -114,7 +114,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     }
 
     private replaceWithMissingLink(anchor: HTMLAnchorElement, rawTarget: string): void {
-        const span = document.createElement('span');
+        const span = createEl('span');
         span.className = 'wiki-link-missing';
         span.setAttribute('data-missing-target', rawTarget);
         span.textContent = anchor.textContent || rawTarget;
@@ -190,7 +190,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     protected addHeadingIds(html: string): string {
         const idCounter: Record<string, number> = {};
         
-        return html.replace(/<h([123])[^>]*>([^<]+)<\/h\1>/g, (_match, level, text) => {
+        return html.replace(/<h([123])[^>]*>([^<]+)<\/h\1>/g, (_match: string, level: string, text: string) => {
             let baseId = text
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')

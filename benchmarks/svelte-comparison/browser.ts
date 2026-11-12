@@ -13,6 +13,29 @@ import '../../src/styles.css';
 import '../../src/ui/styles/plugin-styles.css';
 import './bench.css';
 
+// The plugin views expect Obsidian's element helpers, which a plain page lacks.
+const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+if (typeof proto.createEl !== 'function') {
+  proto.createEl = function (this: HTMLElement, tag: string, opts?: { cls?: string; text?: string; attr?: Record<string, string> }) {
+    const el = document.createElement(tag);
+    if (opts?.cls) el.className = opts.cls;
+    if (opts?.text !== undefined) el.textContent = opts.text;
+    for (const [name, value] of Object.entries(opts?.attr ?? {})) el.setAttribute(name, value);
+    this.appendChild(el);
+    return el;
+  };
+  proto.createDiv = function (this: HTMLElement, opts?: unknown) {
+    return (this as unknown as { createEl(tag: string, o?: unknown): HTMLElement }).createEl('div', opts);
+  };
+  proto.createSpan = function (this: HTMLElement, opts?: unknown) {
+    return (this as unknown as { createEl(tag: string, o?: unknown): HTMLElement }).createEl('span', opts);
+  };
+  proto.empty = function (this: HTMLElement) { this.replaceChildren(); };
+  proto.setCssProps = function (this: HTMLElement, values: Record<string, string>) {
+    for (const [name, value] of Object.entries(values)) this.style.setProperty(name, value);
+  };
+}
+
 const target = document.createElement('div');
 target.className = 'advanced-html-export-modal benchmark-target';
 document.body.append(target);
@@ -71,7 +94,7 @@ async function selection(count: number): Promise<Record<string, number>> {
   assert(selected !== null, 'Confirm selected notes');
   click('Cancel'); assert(cancelled, 'Cancel selection');
   const unmountStart = performance.now();
-  await unmount(view!); target.replaceChildren(); settle();
+  unmount(view!); target.replaceChildren(); settle();
   return { mountMs, noneMs, allMs, searchMs, toggleMs, unmountMs: performance.now() - unmountStart, domNodes };
 }
 
@@ -100,7 +123,7 @@ async function progress(count: number): Promise<Record<string, number>> {
   const domNodes = target.querySelectorAll('*').length;
   click('Cancel export');
   assert(token.isCancelled, 'Cancellation token');
-  await unmount(view); target.replaceChildren(); settle();
+  unmount(view); target.replaceChildren(); settle();
   return { eventsMs, eventCount: count * 5, domNodes };
 }
 
@@ -110,7 +133,7 @@ async function staticViews(): Promise<void> {
   settle();
   assert(target.querySelectorAll('.note-list-item').length === 10, 'Preview rows');
   for (const [label, value] of [['Select notes', 'selectNotes'], ['Export all', 'exportAll'], ['Cancel', 'cancel']]) { click(label); assert(choice === value, `Preview ${label}`); }
-  await unmount(preview); target.replaceChildren();
+  unmount(preview); target.replaceChildren();
   const report: ExportSizeReport = {
     rawBytes: 20000, outputBytes: 10000, categories: [{ key: 'images', bytes: 20000, share: 1 }],
     imageFormats: [{ format: 'webp', bytes: 20000, count: 1 }],
@@ -127,7 +150,7 @@ async function staticViews(): Promise<void> {
   assert(target.querySelector('[data-tags="es-artifact-original"]')?.textContent === report.largestArtifacts[0].original, 'Escaped artifact');
   assert(!target.querySelector('img'), 'Artifact HTML injection');
   click('Close'); assert(closed, 'Close statistics');
-  await unmount(statistics); target.replaceChildren();
+  unmount(statistics); target.replaceChildren();
 }
 
 function retainSelection(count: number): void {

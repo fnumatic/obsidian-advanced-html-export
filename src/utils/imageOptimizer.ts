@@ -21,7 +21,7 @@ export class ImageOptimizer {
    */
   static isWebPSupported(): boolean {
     try {
-      const canvas = document.createElement('canvas');
+      const canvas = createEl('canvas');
       canvas.width = 1;
       canvas.height = 1;
       const ctx = canvas.getContext('2d');
@@ -60,7 +60,7 @@ export class ImageOptimizer {
     }
 
     // Create canvas and draw the image
-    const canvas = document.createElement('canvas');
+    const canvas = createEl('canvas');
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     const ctx = canvas.getContext('2d');

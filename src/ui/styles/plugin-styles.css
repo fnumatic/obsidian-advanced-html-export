@@ -68,14 +68,6 @@
     border-color: var(--interactive-accent);
 }
 
-/* Scoped size override for our plugin modals only */
-body .advanced-html-export-modal {
-    --dialog-width: 700px !important;
-    --dialog-height: 620px !important;
-    --dialog-max-width: 90vw !important;
-    --dialog-max-height: 90vh !important;
-}
-
 /* Dimmed border for subtle separators */
 .border-dimmed {
     border-color: color-mix(in srgb, var(--background-modifier-border) 40%, transparent);

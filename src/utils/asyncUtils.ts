@@ -4,5 +4,5 @@
  * @returns A promise that resolves on the next macrotask
  */
 export function yieldToUI(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
 }

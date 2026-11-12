@@ -81,7 +81,7 @@ export class LinkResolver {
         return title
             .toLowerCase()
             .replace(/\s+/g, '-')
-            .replace(/[^\w\-]+/g, '')
+            .replace(/[^\w-]+/g, '')
             .replace(/--+/g, '-')
             .replace(/^-+/, '')
             .replace(/-+$/, '');
@@ -175,7 +175,7 @@ export class LinkResolver {
         const embedPlaceholders: string[] = [];
         for (const link of links) {
             if (link.type === 'image-embed') {
-                const placeholder = `\x00EMBED${embedPlaceholders.length}\x00`;
+                const placeholder = `\uE000EMBED${embedPlaceholders.length}\uE001`;
                 embedPlaceholders.push(link.original);
                 resolvedContent = resolvedContent.replace(link.original, placeholder);
             }
@@ -207,7 +207,7 @@ export class LinkResolver {
 
         // Third pass: restore image-embeds from placeholders
         for (const original of embedPlaceholders) {
-            resolvedContent = resolvedContent.replace(/\x00EMBED\d+\x00/, original);
+            resolvedContent = resolvedContent.replace(/\uE000EMBED\d+\uE001/, original);
         }
 
         return {

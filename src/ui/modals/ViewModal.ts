@@ -35,6 +35,12 @@ export abstract class ViewModal<TResult, TView extends ModalView = ModalView> ex
   onOpen(): void {
     this.contentEl.replaceChildren();
     this.modalEl.classList.add('advanced-html-export-modal');
+    this.modalEl.setCssProps({
+      '--dialog-width': '700px',
+      '--dialog-height': '620px',
+      '--dialog-max-width': '90vw',
+      '--dialog-max-height': '90vh',
+    });
     this.mounted = this.createView(this.contentEl);
   }
 

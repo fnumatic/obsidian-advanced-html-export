@@ -51,7 +51,7 @@ export const DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES = new Set([
 export function hideLanguageIdentifiers(markdown: string, languages?: Set<string>): string {
   const langSet = languages || DEFAULT_SYNTAX_HIGHLIGHT_LANGUAGES;
 
-  return markdown.replace(/```(\w+)(\s*)/g, (match, lang, trailingSpace) => {
+  return markdown.replace(/```(\w+)(\s*)/g, (match: string, lang: string, trailingSpace: string) => {
     const normalizedLang = lang.toLowerCase();
     if (langSet.has(normalizedLang)) {
       return `\`\`\`${LANG_PREFIX}${lang}${LANG_SUFFIX}${trailingSpace}`;

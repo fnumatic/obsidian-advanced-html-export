@@ -11,6 +11,16 @@ interface CreateElementOptions {
  * provided by the test environment (happy-dom / jsdom).
  */
 export function installObsidianDom(): void {
+  const globalScope = globalThis as { createEl?: unknown };
+  if (typeof globalScope.createEl !== 'function') {
+    globalScope.createEl = (tag: string, opts?: CreateElementOptions): HTMLElement => {
+      const el = document.createElement(tag);
+      if (opts?.cls) el.className = opts.cls;
+      if (opts?.text !== undefined) el.textContent = opts.text;
+      for (const [name, value] of Object.entries(opts?.attr ?? {})) el.setAttribute(name, value);
+      return el;
+    };
+  }
   if (typeof HTMLElement === 'undefined') return;
   const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
   if (typeof proto.createEl !== 'function') {
@@ -43,6 +53,7 @@ export function installObsidianDom(): void {
       for (const [name, value] of Object.entries(props)) this.style.setProperty(name, value);
     };
   }
+
 }
 
 /**

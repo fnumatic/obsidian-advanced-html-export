@@ -71,7 +71,7 @@ function encodeBase64(bytes: Uint8Array): string {
 function encodeBase85(bytes: Uint8Array): string {
     const paddedLength = Math.ceil(bytes.length / 4) * 4;
     let output = '';
-    const group: string[] = new Array(5);
+    const group: string[] = Array.from({ length: 5 }, () => '');
     for (let i = 0; i < paddedLength; i += 4) {
         const b0 = bytes[i] ?? 0;
         const b1 = bytes[i + 1] ?? 0;
@@ -147,7 +147,7 @@ const GZIP_LOADER = String.raw`(function () {
       fail(err && err.message ? err.message : String(err));
     }
   }
-  if (document.readyState === "complete") setTimeout(unpack, 0);
+  if (document.readyState === "complete") window.setTimeout(unpack, 0);
   else addEventListener("load", unpack, { once: true });
 })();`;
 

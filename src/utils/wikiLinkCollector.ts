@@ -55,15 +55,15 @@ export class WikiLinkCollector {
         const lowerTarget = linkTarget.toLowerCase();
 
         // 1. Exact path match on markdown files
-        const mdExact = this.vaultFiles.get(lowerTarget) as TFile | undefined;
+        const mdExact = this.vaultFiles.get(lowerTarget);
         if (mdExact) return mdExact;
 
         // 2. Exact path + .md
-        const mdWithExt = this.vaultFiles.get(lowerTarget + '.md') as TFile | undefined;
+        const mdWithExt = this.vaultFiles.get(lowerTarget + '.md');
         if (mdWithExt) return mdWithExt;
 
         // 3. Exact path match on viewable files
-        const vwExact = this.viewableFiles.get(lowerTarget) as TFile | undefined;
+        const vwExact = this.viewableFiles.get(lowerTarget);
         if (vwExact) return vwExact;
 
         // 4. Basename fallback for markdown (backward compat)

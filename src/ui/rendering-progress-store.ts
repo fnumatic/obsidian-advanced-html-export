@@ -23,9 +23,9 @@ const WARNING_TIMEOUT_MS = 5000;
  */
 export class RenderingProgressStore {
   private state: ProgressState = createProgressState();
-  private timer: ReturnType<typeof setInterval> | null = null;
-  private resultTimer: ReturnType<typeof setTimeout> | null = null;
-  private warningTimer: ReturnType<typeof setTimeout> | null = null;
+  private timer: number | null = null;
+  private resultTimer: number | null = null;
+  private warningTimer: number | null = null;
   private disposed = false;
 
   constructor(
@@ -82,15 +82,15 @@ export class RenderingProgressStore {
   /** Starts the elapsed-time ticker. */
   start(): void {
     if (this.disposed || this.timer !== null) return;
-    this.timer = setInterval(() => this.tick(), 1000);
+    this.timer = window.setInterval(() => this.tick(), 1000);
   }
 
   /** Stops all timers. Call when the view unmounts. */
   dispose(): void {
     this.disposed = true;
-    if (this.timer !== null) clearInterval(this.timer);
-    if (this.resultTimer !== null) clearTimeout(this.resultTimer);
-    if (this.warningTimer !== null) clearTimeout(this.warningTimer);
+    if (this.timer !== null) window.clearInterval(this.timer);
+    if (this.resultTimer !== null) window.clearTimeout(this.resultTimer);
+    if (this.warningTimer !== null) window.clearTimeout(this.warningTimer);
     this.timer = this.resultTimer = this.warningTimer = null;
   }
 
@@ -141,13 +141,13 @@ export class RenderingProgressStore {
   }
 
   private scheduleResult(callback: () => void, delay: number): void {
-    if (this.resultTimer !== null) clearTimeout(this.resultTimer);
-    this.resultTimer = setTimeout(callback, delay);
+    if (this.resultTimer !== null) window.clearTimeout(this.resultTimer);
+    this.resultTimer = window.setTimeout(callback, delay);
   }
 
   private scheduleWarningClear(): void {
-    if (this.warningTimer !== null) clearTimeout(this.warningTimer);
-    this.warningTimer = setTimeout(() => {
+    if (this.warningTimer !== null) window.clearTimeout(this.warningTimer);
+    this.warningTimer = window.setTimeout(() => {
       this.state = { ...this.state, warning: null };
       this.onChange();
     }, WARNING_TIMEOUT_MS);
