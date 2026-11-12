@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.0...0.12.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **render:** release DOM and components after each page ([d8fc2b4](https://github.com/fnumatic/obsidian-advanced-html-export/commit/d8fc2b49da3e66bc25967e12edcb9cb79b053106))
+
 ## [0.12.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.11.0...0.12.0) (2026-11-12)
 
 
