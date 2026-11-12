@@ -63,7 +63,7 @@ describe('size instrumentation', () => {
   let mockApp: {
     vault: {
       getFiles: Mock;
-      adapter: { readBinary: Mock };
+      readBinary: Mock;
     };
   };
   let ledger: ExportSizeLedger;
@@ -84,7 +84,7 @@ describe('size instrumentation', () => {
     mockApp = {
       vault: {
         getFiles: vi.fn().mockReturnValue([mockFile]),
-        adapter: { readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(8)) },
+        readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
       },
     };
 

@@ -53,9 +53,7 @@ describe('HtmlRenderer', () => {
   let mockApp: {
     vault: {
       getFiles: ReturnType<typeof vi.fn>;
-      adapter: {
-        readBinary: ReturnType<typeof vi.fn>;
-      };
+      readBinary: ReturnType<typeof vi.fn>;
     };
   };
   let mockComponent: Record<string, unknown>;
@@ -74,11 +72,9 @@ describe('HtmlRenderer', () => {
     mockApp = {
       vault: {
         getFiles: vi.fn().mockReturnValue(mockFiles),
-        adapter: {
-          readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(8))
-        }
+        readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(8))
       }
-    } as unknown as { vault: { getFiles: ReturnType<typeof vi.fn>; adapter: { readBinary: ReturnType<typeof vi.fn> } } };
+    } as unknown as { vault: { getFiles: ReturnType<typeof vi.fn>; readBinary: ReturnType<typeof vi.fn> } };
 
     mockComponent = {};
 
@@ -126,7 +122,7 @@ describe('HtmlRenderer', () => {
         stat: { mtime: 1234567890 }
       };
       mockApp.vault.getFiles.mockReturnValue([mockFile]);
-      mockApp.vault.adapter.readBinary.mockResolvedValue(new ArrayBuffer(8));
+      mockApp.vault.readBinary.mockResolvedValue(new ArrayBuffer(8));
 
       await renderer.render('# Test Content');
 
@@ -180,7 +176,7 @@ describe('HtmlRenderer', () => {
         stat: { mtime: 1234567890 }
       };
       mockApp.vault.getFiles.mockReturnValue([mockFile]);
-      mockApp.vault.adapter.readBinary.mockResolvedValue(new ArrayBuffer(8));
+      mockApp.vault.readBinary.mockResolvedValue(new ArrayBuffer(8));
 
        await rendererNoDedup.render('# Test Content');
 

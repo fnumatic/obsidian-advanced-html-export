@@ -43,7 +43,7 @@ describe('ImageEmbedder', () => {
   function build(files: MockImageFile[], sharedCache?: Map<string, string>): ImageEmbedder {
     readBinary = vi.fn().mockResolvedValue(new ArrayBuffer(8));
     const app = {
-      vault: { getFiles: vi.fn().mockReturnValue(files), adapter: { readBinary } },
+      vault: { getFiles: vi.fn().mockReturnValue(files), readBinary },
     } as unknown as App;
     return new ImageEmbedder(app, settings, sharedCache);
   }
@@ -62,7 +62,7 @@ describe('ImageEmbedder', () => {
   it('reads a vault image and returns an optimized data URI', async () => {
     const result = await embedder.convertImageToBase64String('app://test.png?1234567890');
 
-    expect(readBinary).toHaveBeenCalledWith('test.png');
+    expect(readBinary).toHaveBeenCalledWith(expect.objectContaining({ path: 'test.png' }));
     expect(result).toContain('data:image/webp;base64,');
   });
 

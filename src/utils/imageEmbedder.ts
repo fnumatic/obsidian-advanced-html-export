@@ -155,7 +155,7 @@ export class ImageEmbedder {
       return null;
     }
 
-    const buffer = await this.app.vault.adapter.readBinary(decodeURIComponent(file.path));
+    const buffer = await this.app.vault.readBinary(file);
     const mimeType = ImageOptimizer.getMimeType(file.extension);
     return { buffer, mimeType };
   }
