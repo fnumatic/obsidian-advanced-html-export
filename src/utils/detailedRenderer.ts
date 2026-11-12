@@ -30,8 +30,6 @@ export interface RenderEvent {
 
 export type RenderEventHandler = (event: RenderEvent) => void;
 
-export type { NoteAnalysis } from './contentAnalysis';
-
 const SLOW_RENDER_NOTICE_MS = 5000;
 
 export class DetailedWikiRenderer extends WikiHtmlRenderer {
@@ -103,7 +101,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
             operation: 'markdown_render',
             duration: performance.now() - this.currentNoteStartTime,
             noteName: file.basename,
-            inProgress: true,
           },
         });
       }, SLOW_RENDER_NOTICE_MS);
@@ -121,7 +118,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       // Phase 3: Render main content via shared pipeline
       token.throwIfCancelled();
-      const renderStartTime = performance.now();
       let totalImages = 0;
       let imageStartTime = 0;
 
@@ -142,20 +138,6 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
               details: {
                 error: result.error ?? 'MarkdownRenderer.render failed',
                 timedOut: result.timedOut === true,
-              }
-            });
-          }
-
-          const renderDuration = performance.now() - renderStartTime;
-          if (renderDuration > 5000) {
-            this.emit({
-              type: 'warning_slow_operation',
-              timestamp: Date.now(),
-              notePath: file.path,
-              details: {
-                operation: 'markdown_render',
-                duration: renderDuration,
-                noteName: file.basename
               }
             });
           }

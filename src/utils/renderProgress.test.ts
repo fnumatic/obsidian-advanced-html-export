@@ -20,7 +20,6 @@ function note(overrides: Partial<CurrentNoteProgress> = {}): CurrentNoteProgress
     diagrams: { total: 2, processed: 1 },
     codeBlocks: { total: 2, processed: 1 },
     images: { total: 2, processed: 1 },
-    overallProgress: 0,
     ...overrides,
   };
 }

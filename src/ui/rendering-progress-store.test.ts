@@ -173,17 +173,16 @@ describe('RenderingProgressStore', () => {
     expect(deps.onCancel).toHaveBeenCalledOnce();
   });
 
-  it('keeps the completed list identity and ignores late events after completion', () => {
+  it('ignores late events after completion', () => {
     const deps = makeDeps();
     deps.metrics.totalNotes = 1;
     const store = new RenderingProgressStore(deps);
-    const completed = store.completedNotes;
     store.handleEvent(noteStart());
     store.handleEvent(noteComplete());
     store.complete();
     store.handleEvent(noteStart());
     store.cancel();
-    expect(store.completedNotes).toBe(completed);
+    expect(store.completedNotes).toHaveLength(1);
     expect(store.currentNote).toBeNull();
     expect(store.overallProgress).toBe(100);
     vi.advanceTimersByTime(1000);

@@ -36,7 +36,7 @@ describe('slow render notice', () => {
     vi.advanceTimersByTime(11000);
     const warnings = events.filter(event => event.type === 'warning_slow_operation');
     expect(warnings).toHaveLength(2);
-    expect(warnings[0].details).toMatchObject({ operation: 'markdown_render', inProgress: true });
+    expect(warnings[0].details).toMatchObject({ operation: 'markdown_render' });
 
     finish('<p>done</p>');
     await task;

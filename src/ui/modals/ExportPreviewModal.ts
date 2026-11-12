@@ -5,8 +5,6 @@ import type { ExportPreviewAction } from '../types';
 import { createExportPreviewView } from '../views/export-preview-view';
 import { ViewModal } from './ViewModal';
 
-export type { ExportPreviewAction } from '../types';
-
 interface ExportPreviewResult {
   action: ExportPreviewAction;
   selectedNotes?: NoteInfo[];

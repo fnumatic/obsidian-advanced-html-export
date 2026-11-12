@@ -3,7 +3,6 @@
 import type { ExportMetrics, NoteInfo } from '../utils/wikiExportOrchestrator';
 import type { CancellationToken } from '../utils/cancellationToken';
 import type { PauseController } from '../utils/pauseController';
-import type { RenderEvent } from '../utils/detailedRenderer';
 import type { ExportSizeReport } from '../utils/exportSizeReport';
 
 // Export Preview Types
@@ -39,6 +38,17 @@ export interface CompletedNote {
   linkCount: number;
 }
 
+/** Which measurable part of a note changed. */
+export type DetailKey = 'diagrams' | 'codeBlocks' | 'images';
+
+/** One measurable part of a note: diagrams, code blocks or images. */
+export interface DetailItem {
+  total: number;
+  processed: number;
+  currentFileName?: string;
+  currentPhase?: string;
+}
+
 export interface CurrentNoteProgress {
   title: string;
   path: string;
@@ -48,23 +58,9 @@ export interface CurrentNoteProgress {
   phase?: string;
   /** Start of this note, used for the live per-note clock. */
   startedAt?: number;
-  diagrams: {
-    total: number;
-    processed: number;
-    currentType?: string;
-  };
-  codeBlocks: {
-    total: number;
-    processed: number;
-    currentLanguage?: string;
-  };
-  images: {
-    total: number;
-    processed: number;
-    currentFileName?: string;
-    currentPhase?: string;
-  };
-  overallProgress: number;
+  diagrams: DetailItem;
+  codeBlocks: DetailItem;
+  images: DetailItem;
 }
 
 export interface RenderingProgressProps {
@@ -74,6 +70,3 @@ export interface RenderingProgressProps {
   onComplete: () => void;
   onCancel: () => void;
 }
-
-// Re-export for convenience
-export type { ExportMetrics, NoteInfo, RenderEvent };

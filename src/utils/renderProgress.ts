@@ -2,7 +2,7 @@
  * Pure progress calculations and event mapping, independent of the DOM.
  */
 
-import type { CompletedNote, CurrentNoteProgress } from '../ui/types';
+import type { CompletedNote, CurrentNoteProgress, DetailItem, DetailKey } from '../ui/types';
 import type { RenderEvent } from './detailedRenderer';
 
 const DIAGRAM_WEIGHT = 0.3;
@@ -49,7 +49,6 @@ export function currentNoteFromEvent(event: RenderEvent, index: number, total: n
     diagrams: { total: numberDetail(event, 'totalDiagrams'), processed: 0 },
     codeBlocks: { total: numberDetail(event, 'totalCodeBlocks'), processed: 0 },
     images: { total: numberDetail(event, 'totalImages'), processed: 0 },
-    overallProgress: 0,
     phase: 'Rendering Markdown',
     startedAt: Date.now(),
   };
@@ -76,8 +75,8 @@ export function completedNoteFrom(currentNote: CurrentNoteProgress, event: Rende
 /** Returns a new snapshot with one sub-progress updated immutably. */
 export function updateNoteProgress(
   currentNote: CurrentNoteProgress,
-  type: 'diagrams' | 'codeBlocks' | 'images',
-  updates: Partial<{ total: number; processed: number; currentFileName?: string; currentPhase?: string }>,
+  type: DetailKey,
+  updates: Partial<DetailItem>,
 ): CurrentNoteProgress {
   return {
     ...currentNote,
@@ -88,21 +87,36 @@ export function updateNoteProgress(
   };
 }
 
+/** Reads a numeric detail field from a render event. */
+export function numberDetail(event: RenderEvent, key: string): number {
+  const value = event.details?.[key];
+  return typeof value === 'number' ? value : 0;
+}
+
+/** Human readable notice for a note that is still rendering. */
+export function slowRenderMessage(noteName: string, duration: number): string {
+  return `⚠️ Note is taking long to render: ${noteName} (${(duration / 1000).toFixed(1)}s)`;
+}
+
+/** Human readable notice for a slow image operation. */
+export function slowImageMessage(fileName: string, duration: number): string {
+  return `⚠️ Slow operation: ${fileName} (${(duration / 1000).toFixed(1)}s)`;
+}
+
 /** Human readable warning for a slow-operation event, or null. */
 export function warningMessage(event: RenderEvent): string | null {
   const details = event.details;
   if (details?.operation === 'image_processing') {
-    const duration = typeof details.duration === 'number' ? details.duration : 0;
-    return `⚠️ Slow operation: ${details.fileName} (${(duration / 1000).toFixed(1)}s)`;
+    return slowImageMessage(
+      typeof details.fileName === 'string' ? details.fileName : '',
+      typeof details.duration === 'number' ? details.duration : 0,
+    );
   }
   if (details?.operation === 'markdown_render') {
-    const duration = typeof details.duration === 'number' ? details.duration : 0;
-    return `⚠️ Note is taking long to render: ${details.noteName} (${(duration / 1000).toFixed(1)}s)`;
+    return slowRenderMessage(
+      typeof details.noteName === 'string' ? details.noteName : '',
+      typeof details.duration === 'number' ? details.duration : 0,
+    );
   }
   return null;
-}
-
-function numberDetail(event: RenderEvent, key: string): number {
-  const value = event.details?.[key];
-  return typeof value === 'number' ? value : 0;
 }

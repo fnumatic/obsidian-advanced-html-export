@@ -13,9 +13,14 @@ The export engine and the HTML application inside exported files are unchanged.
 - `src/ui/components/`: shared overall/detail progress bars and detail rows.
 - `src/ui/view-helpers.ts`: shared controls, icons, note statistics, cached
   element lookup, and change-only text updates.
-- `src/ui/rendering-progress-store.ts`: plain state, event handling, timers,
-  and a single change callback. It has no DOM dependency.
-- `src/ui/types.ts`: shared view contracts; progress state is not duplicated.
+- `src/ui/progress-core.ts`: pure progress transitions (`applyProgressEvent`,
+  `togglePause`, `cancelProgress`, `completeProgress`, selectors) with effects
+  returned as values; no timers, no DOM.
+- `src/ui/rendering-progress-store.ts`: the thin owner of timers, the notification
+  callback and the pause/cancel side effects. It keeps no transition logic of its
+  own.
+- `src/ui/types.ts`: shared view contracts and the `DetailItem`/`DetailKey` shapes
+  used by the progress core, the store and the detail rows.
 - `src/ui/styles/plugin-styles.css`: shared styles and scoped artifact table.
 - `uno.config.ts`: scans UI TypeScript templates, excluding tests. Dynamic icon
   classes stay explicitly safelisted. No component compiler extracts CSS.
