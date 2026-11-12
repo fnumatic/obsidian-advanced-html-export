@@ -92,12 +92,8 @@ export function createNoteSelectionView(target: HTMLElement, { notes, onConfirm,
     setText(summaries[2], `~${Math.max(1, Math.ceil((selected.size * 2000 + diagrams * 3000) / 60000))} min`);
   };
   const filter = (): void => {
-    const fragment = document.createDocumentFragment();
     const term = search.value.toLowerCase();
-    for (const { row, searchText } of rows) {
-      if (searchText.includes(term)) fragment.append(row);
-    }
-    list.replaceChildren(fragment);
+    list.replaceChildren(...rows.filter(({ searchText }) => searchText.includes(term)).map(({ row }) => row));
   };
   search.addEventListener('input', filter, { signal });
   list.addEventListener('change', event => {

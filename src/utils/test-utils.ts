@@ -83,7 +83,7 @@ export function createMockFile(path: string, content: string): TFile {
   file.name = name;
   file.stat = { mtime: Date.now(), ctime: Date.now(), size: content.length };
   (file as unknown as Record<string, unknown>).__content = content;
-  return file as unknown as TFile;
+  return file;
 }
 
 interface MockMetadataCacheEntry {
