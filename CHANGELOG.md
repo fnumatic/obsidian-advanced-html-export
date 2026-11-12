@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.11.0...0.12.0) (2026-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ui:** Svelte and its build dependencies are gone; plugin UI code lives in src/ui instead of src/components.
+
+### Bug Fixes
+
+* **ui:** keep progress dialog geometry stable ([1b9b73b](https://github.com/fnumatic/obsidian-advanced-html-export/commit/1b9b73b8f6ce8b513e79e576f0442bb496f0b8b8))
+
+
+### Code Refactoring
+
+* **ui:** replace Svelte with native DOM views ([e5f8e8a](https://github.com/fnumatic/obsidian-advanced-html-export/commit/e5f8e8ae82d483323e07bfabba0d3f7bc6916b25))
+
 ## [0.11.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.10.0...0.11.0) (2026-10-26)
 
 
