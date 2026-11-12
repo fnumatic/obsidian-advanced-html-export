@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.4](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.3...0.12.4) (2026-11-12)
+
+
+### Bug Fixes
+
+* **review:** remove DOM fragment and TFile cast ([013145f](https://github.com/fnumatic/obsidian-advanced-html-export/commit/013145f91e02987aa6dee10bfc32471992e18b3b))
+
 ## [0.12.3](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.2...0.12.3) (2026-11-12)
 
 
