@@ -1,16 +1,12 @@
-// src/ui/modals/RenderingProgressModal.ts
-// Wrapper class that bridges the Svelte RenderingProgress component with Obsidian's Modal API
-
 import { App } from 'obsidian';
-import { mount } from 'svelte';
-import RenderingProgress from '../../components/RenderingProgress.svelte';
-import type { ExportMetrics, NoteInfo } from '../../utils/wikiExportOrchestrator';
+import type { ExportMetrics } from '../../utils/wikiExportOrchestrator';
 import type { CancellationToken } from '../../utils/cancellationToken';
 import type { PauseController } from '../../utils/pauseController';
 import type { RenderEvent } from '../../utils/detailedRenderer';
-import { SvelteModal } from './SvelteModal';
+import { createRenderingProgressView, type RenderingProgressView } from '../views/rendering-progress-view';
+import { ViewModal } from './ViewModal';
 
-export class RenderingProgressModal extends SvelteModal<boolean> {
+export class RenderingProgressModal extends ViewModal<boolean, RenderingProgressView> {
   private token: CancellationToken;
   private pauseController: PauseController;
   private metrics: ExportMetrics;
@@ -19,8 +15,7 @@ export class RenderingProgressModal extends SvelteModal<boolean> {
     app: App,
     token: CancellationToken,
     pauseController: PauseController,
-    metrics: ExportMetrics,
-    _notes: NoteInfo[]
+    metrics: ExportMetrics
   ) {
     super(app);
     this.token = token;
@@ -28,26 +23,29 @@ export class RenderingProgressModal extends SvelteModal<boolean> {
     this.metrics = metrics;
   }
 
-  protected mountComponent(target: HTMLElement): ReturnType<typeof mount> {
-    return mount(RenderingProgress, {
-      target,
-      props: {
-        metrics: this.metrics,
-        token: this.token,
-        pauseController: this.pauseController,
-        onComplete: () => this.finish(true),
-        onCancel: () => this.finish(false),
-      },
+  protected createView(target: HTMLElement): RenderingProgressView {
+    return createRenderingProgressView(target, {
+      metrics: this.metrics,
+      token: this.token,
+      pauseController: this.pauseController,
+      onComplete: () => this.finish(true),
+      onCancel: () => this.finish(false),
     });
   }
 
   // Public method called by exportWiki to forward events
   handleEvent(event: RenderEvent): void {
-    const comp = this.getMountedComponent() as unknown as { handleEvent?: (event: RenderEvent) => void } | null;
-    comp?.handleEvent?.(event);
+    this.getMountedView()?.handleEvent(event);
+  }
+
+  /** Signals that the renderer has finished, even if individual notes failed. */
+  complete(): void {
+    this.getMountedView()?.complete();
   }
 
   protected getFallbackResult(): boolean {
+    this.token.cancel();
+    this.pauseController.resume();
     return false;
   }
 }

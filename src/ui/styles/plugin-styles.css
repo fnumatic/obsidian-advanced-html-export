@@ -95,7 +95,55 @@ body .advanced-html-export-modal {
     background: linear-gradient(90deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
 }
 
+/* Visible life while a phase runs without measurable sub-progress. */
+.progress-busy {
+    animation: progress-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+}
+
 .warning-bg {
     background-color: var(--background-modifier-error);
     color: var(--text-error);
+}
+
+/* Export statistics, scoped to this plugin rather than generated component IDs. */
+.advanced-html-export-modal .artifact-table {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
+    column-gap: 1rem;
+    row-gap: 0.4rem;
+    align-items: baseline;
+    width: 100%;
+    font-size: var(--font-ui-smaller, 12px);
+}
+
+.advanced-html-export-modal .artifact-table__header {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 0.25rem;
+}
+
+.advanced-html-export-modal .artifact-table__kind,
+.advanced-html-export-modal .artifact-table__export {
+    color: var(--text-muted);
+}
+
+.advanced-html-export-modal .artifact-table__original {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.advanced-html-export-modal .artifact-table__size {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
 }

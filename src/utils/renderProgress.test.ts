@@ -8,7 +8,7 @@ import {
   updateNoteProgress,
   warningMessage,
 } from './renderProgress';
-import type { CurrentNoteProgress } from '../components/types';
+import type { CurrentNoteProgress } from '../ui/types';
 import type { RenderEvent } from './detailedRenderer';
 
 function note(overrides: Partial<CurrentNoteProgress> = {}): CurrentNoteProgress {

@@ -5,6 +5,7 @@ import { LinkResolver } from './linkResolver';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { fillTemplate } from './templateUtils';
 import { hideLanguageIdentifiers, restoreLanguageIdentifiers, parseLanguagesString } from './codeBlockProcessor';
+import { blankRemoteImages, restoreRemoteImages } from './remoteImages';
 import { utf8ByteLength } from './exportSizeReport';
 import template from './wikiTemplates/template.html?raw';
 import styles from './wikiTemplates/styles.css?raw';
@@ -149,8 +150,10 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
 
         const el = document.body.createDiv();
 
+        const remote = blankRemoteImages(processedContent);
         await hooks?.beforeMarkdownRender?.();
-        const renderResult = await this.renderMarkdownSafely(processedContent, el, sourcePath);
+        const renderResult = await this.renderMarkdownSafely(remote.markdown, el, sourcePath);
+        if (remote.images.length > 0) restoreRemoteImages(el, remote.images);
         await hooks?.afterMarkdownRender?.(renderResult, el);
 
         if (this.settings.disableSyntaxHighlighting !== false) {

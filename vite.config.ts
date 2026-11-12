@@ -3,8 +3,6 @@ import { resolve } from 'path'
 import { builtinModules } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
-import extractorSvelte from '@unocss/extractor-svelte'
 import UnoCSS from '@unocss/vite'
 import UnoCSSConfig from './uno.config'
 
@@ -15,12 +13,6 @@ export default defineConfig({
   plugins: [
     UnoCSS({
       ...UnoCSSConfig,
-      extractors: [extractorSvelte()],
-    }),
-    svelte({
-      compilerOptions: {
-        runes: true
-      }
     }),
   ],
   resolve: {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_SETTINGS, resolveTimestampFormat } from './settings';
+import { DEFAULT_SETTINGS, resolveTimestampFormat, timestampPreview } from './settings';
 import { DEFAULT_TIMESTAMP_FORMAT } from './utils/fileUtils';
 
 describe('resolveTimestampFormat', () => {
@@ -33,7 +33,31 @@ describe('resolveTimestampFormat', () => {
     expect(resolveTimestampFormat(null, 'YYYY-MM-DD')).toBe('YYYY-MM-DD');
   });
 
-  it('defaults to a timestamped format', () => {
-    expect(DEFAULT_SETTINGS.timestampFormat).toBe(DEFAULT_TIMESTAMP_FORMAT);
+  it('is off by default', () => {
+    expect(resolveTimestampFormat(undefined, DEFAULT_SETTINGS.timestampFormat)).toBe(false);
+  });
+
+  it('defaults to no timestamp', () => {
+    expect(DEFAULT_SETTINGS.timestampFormat).toBe('');
+  });
+});
+
+describe('timestampPreview', () => {
+  const date = new Date(2026, 9, 27, 16, 30, 5);
+
+  it('shows the effect of a format', () => {
+    expect(timestampPreview('YYYY', date)).toBe('note-2026.html');
+    expect(timestampPreview('YYYY-MM-DD_HH-mm-ss', date)).toBe(
+      'note-2026-10-27_16-30-05.html',
+    );
+  });
+
+  it('shows the plain name when timestamps are off', () => {
+    expect(timestampPreview('', date)).toBe('note.html');
+    expect(timestampPreview('   ', date)).toBe('note.html');
+  });
+
+  it('shows the sanitized filename', () => {
+    expect(timestampPreview('YYYY/MM/DD', date)).toBe('note-2026_10_27.html');
   });
 });

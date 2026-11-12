@@ -113,14 +113,17 @@ The diagrams will be automatically converted to embedded SVG when exporting to H
 
 ### Timestamped filenames
 
-Exports append a local timestamp by default, so repeated exports do not overwrite
-each other:
+Timestamps are off by default, so a fresh installation writes `My Note.html`.
+Add a format under `Settings → Advanced HTML Export → Export options → Timestamp
+format` to enable them. The settings page shows a live preview of the resulting
+filename.
 
-- `My Note-2026-10-26_16-30-05.html`
-- `01-central-note-wiki-2026-10-26_16-30-05.html`
+Example with `YYYY`:
 
-The layout is configurable under `Settings → Advanced HTML Export → Export options
-→ Timestamp format`. Supported tokens:
+- `My Note-2026.html`
+- `01-central-note-wiki-2026.html`
+
+Supported tokens:
 
 | Token | Meaning | Example |
 | --- | --- | --- |
@@ -133,7 +136,8 @@ The layout is configurable under `Settings → Advanced HTML Export → Export o
 | `ss` | seconds | `05` |
 
 Other characters are kept as literals. Spaces and characters that are invalid in
-filenames become underscores. Leave the setting empty to disable timestamps.
+filenames become underscores. An empty format disables timestamps and is the
+default.
 
 Override the format per note in the frontmatter:
 
@@ -268,6 +272,16 @@ For automatic plugin reloading in Obsidian without restarting the app, install t
 - Run all tests: `pnpm test`
 - Run tests in watch mode: `pnpm test:watch`
 - Type check: `pnpm type-check`
+
+### Plugin UI
+
+The four export dialogs use TypeScript and native DOM views, without a UI
+framework runtime. Shared components handle buttons, icons and progress bars;
+the modal base class owns view cleanup. See [Native UI](docs/native-ui.md) for
+the structure, lifecycle rules and reproducible bundle/browser measurements.
+
+To test the plugin against the real Obsidian without a window or manual clicks,
+see [Headless end-to-end testing](docs/headless-obsidian-testing.md).
 
 
 

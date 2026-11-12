@@ -1,9 +1,8 @@
 /**
- * Pure helpers for the rendering progress view. Kept free of Svelte state so
- * the progress math and event mapping can be unit tested.
+ * Pure progress calculations and event mapping, independent of the DOM.
  */
 
-import type { CompletedNote, CurrentNoteProgress } from '../components/types';
+import type { CompletedNote, CurrentNoteProgress } from '../ui/types';
 import type { RenderEvent } from './detailedRenderer';
 
 const DIAGRAM_WEIGHT = 0.3;
@@ -51,7 +50,14 @@ export function currentNoteFromEvent(event: RenderEvent, index: number, total: n
     codeBlocks: { total: numberDetail(event, 'totalCodeBlocks'), processed: 0 },
     images: { total: numberDetail(event, 'totalImages'), processed: 0 },
     overallProgress: 0,
+    phase: 'Rendering Markdown',
+    startedAt: Date.now(),
   };
+}
+
+/** Applies a phase label to the current note without touching its counters. */
+export function updateNotePhase(currentNote: CurrentNoteProgress, phase: string): CurrentNoteProgress {
+  return { ...currentNote, phase };
 }
 
 /** Builds the completed-note summary for a note that just finished. */

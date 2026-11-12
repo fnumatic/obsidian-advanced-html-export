@@ -1,5 +1,4 @@
-// src/components/types.ts
-// Shared type definitions for Svelte components
+// Data contracts shared by the native views and rendering progress helpers.
 
 import type { ExportMetrics, NoteInfo } from '../utils/wikiExportOrchestrator';
 import type { CancellationToken } from '../utils/cancellationToken';
@@ -8,10 +7,12 @@ import type { RenderEvent } from '../utils/detailedRenderer';
 import type { ExportSizeReport } from '../utils/exportSizeReport';
 
 // Export Preview Types
+export type ExportPreviewAction = 'cancel' | 'exportAll' | 'selectNotes';
+
 export interface ExportPreviewProps {
   metrics: ExportMetrics;
   notes: NoteInfo[];
-  onAction: (action: 'cancel' | 'exportAll' | 'selectNotes') => void;
+  onAction: (action: ExportPreviewAction) => void;
 }
 
 // Export Statistics Types
@@ -43,6 +44,10 @@ export interface CurrentNoteProgress {
   path: string;
   index: number;
   total: number;
+  /** Human readable phase of the note, e.g. "Rendering Markdown". */
+  phase?: string;
+  /** Start of this note, used for the live per-note clock. */
+  startedAt?: number;
   diagrams: {
     total: number;
     processed: number;

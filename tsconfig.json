@@ -16,11 +16,9 @@
       "es5",
       "scripthost",
       "es2019"
-    ],
-    "types": ["svelte"]
+    ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.svelte"
+    "**/*.ts"
   ]
 }

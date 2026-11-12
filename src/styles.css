@@ -7,3 +7,9 @@
 .advanced-html-export-modal {
     pointer-events: auto;
 }
+
+.advanced-html-export-timestamp-preview {
+    margin-top: 0.35em;
+    font-family: var(--font-monospace);
+    color: var(--text-muted);
+}

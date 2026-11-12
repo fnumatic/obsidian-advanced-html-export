@@ -1,5 +1,10 @@
 # PRD: Svelte 5 UI Migration for Obsidian Advanced HTML Export
 
+> Historical proposal. Superseded by the native TypeScript/DOM migration on
+> 2026-11-12. See [Native UI](docs/native-ui.md) and the
+> [historical comparison](docs/svelte-comparison.md). Targets below are not
+> measurements of the current plugin.
+
 **Date:** 2026-02-08  
 **Branch:** feat/svelte-migrate  
 **Estimated Effort:** 19-26 hours (2-3 days)

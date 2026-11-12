@@ -20,14 +20,17 @@ export class Plugin {
 export class Modal {
   app: any;
   contentEl: HTMLElement;
+  modalEl: HTMLElement;
   
   constructor(app: any) {
     this.app = app;
     this.contentEl = document.createElement('div');
+    this.modalEl = document.createElement('div');
+    this.modalEl.append(this.contentEl);
   }
 
-  open(this: void) {}
-  close(this: void) {}
+  open() { this.onOpen(); }
+  close() { this.onClose(); }
   onOpen(this: void) {}
   onClose(this: void) {}
 }

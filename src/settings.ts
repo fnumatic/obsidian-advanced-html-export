@@ -1,4 +1,4 @@
-import { DEFAULT_TIMESTAMP_FORMAT } from './utils/fileUtils';
+import { DEFAULT_TIMESTAMP_FORMAT, formatTimestamp, sanitizeFilename } from './utils/fileUtils';
 
 /** Persisted plugin settings. */
 export interface AdvancedHtmlExportSettings {
@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   enableLazyLoading: true,
   enableImageDeduplication: true,
   exportCompression: 'none',
-  timestampFormat: DEFAULT_TIMESTAMP_FORMAT,
+  timestampFormat: '',
   showExportStatistics: false,
   linkDepth: 1,
   includeUnlinked: false,
@@ -57,4 +57,14 @@ export function resolveTimestampFormat(
   const fallback = settingFormat.trim();
   if (fallback.length > 0) return fallback;
   return frontmatterValue === true ? DEFAULT_TIMESTAMP_FORMAT : false;
+}
+
+/**
+ * Builds the filename preview for a timestamp format, e.g. `note-2026.html`
+ * for `YYYY`. Returns `note.html` when the format is empty.
+ */
+export function timestampPreview(format: string, date: Date = new Date()): string {
+  const trimmed = format.trim();
+  if (trimmed.length === 0) return 'note.html';
+  return `note-${sanitizeFilename(formatTimestamp(date, trimmed))}.html`;
 }

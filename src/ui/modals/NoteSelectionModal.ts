@@ -1,13 +1,10 @@
-// src/ui/modals/NoteSelectionModal.ts
-// Wrapper class that bridges the Svelte NoteSelection component with Obsidian's Modal API
-
 import { App } from 'obsidian';
-import { mount } from 'svelte';
-import NoteSelection from '../../components/NoteSelection.svelte';
 import type { NoteInfo } from '../../utils/wikiExportOrchestrator';
-import { SvelteModal } from './SvelteModal';
+import type { ModalView } from '../view';
+import { createNoteSelectionView } from '../views/note-selection-view';
+import { ViewModal } from './ViewModal';
 
-export class NoteSelectionModal extends SvelteModal<NoteInfo[] | null> {
+export class NoteSelectionModal extends ViewModal<NoteInfo[] | null> {
   private notes: NoteInfo[];
 
   constructor(app: App, notes: NoteInfo[]) {
@@ -15,14 +12,11 @@ export class NoteSelectionModal extends SvelteModal<NoteInfo[] | null> {
     this.notes = notes;
   }
 
-  protected mountComponent(target: HTMLElement): ReturnType<typeof mount> {
-    return mount(NoteSelection, {
-      target,
-      props: {
-        notes: this.notes,
-        onConfirm: (selected: NoteInfo[]) => this.finish(selected),
-        onCancel: () => this.finish(null),
-      },
+  protected createView(target: HTMLElement): ModalView {
+    return createNoteSelectionView(target, {
+      notes: this.notes,
+      onConfirm: (selected: NoteInfo[]) => this.finish(selected),
+      onCancel: () => this.finish(null),
     });
   }
 

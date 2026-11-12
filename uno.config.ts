@@ -1,6 +1,13 @@
 import { defineConfig, presetWind4, presetIcons } from 'unocss'
 
 export default defineConfig({
+  content: {
+    filesystem: ['src/ui/**/*.ts', '!src/ui/**/*.test.ts'],
+    pipeline: {
+      include: [/\/src\/ui\/.*\.ts(?:\?.*)?$/],
+      exclude: [/\.test\.ts/],
+    },
+  },
   presets: [
     presetWind4(),
     presetIcons({

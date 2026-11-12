@@ -8,6 +8,7 @@ import { analyzeNoteContent, type NoteAnalysis } from './contentAnalysis';
 
 export type RenderEventType = 
   | 'note_start'
+  | 'note_phase'
   | 'note_complete'
   | 'note_error'
   | 'diagram_start'
@@ -30,6 +31,8 @@ export interface RenderEvent {
 export type RenderEventHandler = (event: RenderEvent) => void;
 
 export type { NoteAnalysis } from './contentAnalysis';
+
+const SLOW_RENDER_NOTICE_MS = 5000;
 
 export class DetailedWikiRenderer extends WikiHtmlRenderer {
   private eventHandlers: RenderEventHandler[] = [];
@@ -87,8 +90,24 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       }
     });
 
+    // A render can wait tens of seconds on remote images. Report it while it happens,
+    // not only after it finished, so the progress view never looks frozen.
+    let slowRenderTimer: ReturnType<typeof setInterval> | null = null;
     try {
-      
+      slowRenderTimer = setInterval(() => {
+        this.emit({
+          type: 'warning_slow_operation',
+          timestamp: Date.now(),
+          notePath: file.path,
+          details: {
+            operation: 'markdown_render',
+            duration: performance.now() - this.currentNoteStartTime,
+            noteName: file.basename,
+            inProgress: true,
+          },
+        });
+      }, SLOW_RENDER_NOTICE_MS);
+
       this.emit({
         type: 'diagram_start',
         timestamp: Date.now(),
@@ -102,10 +121,16 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
 
       // Phase 3: Render main content via shared pipeline
       token.throwIfCancelled();
-
       const renderStartTime = performance.now();
       let totalImages = 0;
       let imageStartTime = 0;
+
+      this.emit({
+        type: 'note_phase',
+        timestamp: Date.now(),
+        notePath: file.path,
+        details: { phase: 'Rendering Markdown' },
+      });
 
       const hooks: RenderPipelineHooks = {
         afterMarkdownRender: (result) => {
@@ -145,6 +170,12 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
         },
         beforeImageProcessing: (el) => {
           token.throwIfCancelled();
+          this.emit({
+            type: 'note_phase',
+            timestamp: Date.now(),
+            notePath: file.path,
+            details: { phase: 'Processing images' },
+          });
           totalImages = el.querySelectorAll('img').length;
         },
         imageHooks: {
@@ -251,6 +282,11 @@ export class DetailedWikiRenderer extends WikiHtmlRenderer {
       });
 
       throw error;
+    } finally {
+      if (slowRenderTimer !== null) {
+        clearInterval(slowRenderTimer);
+        slowRenderTimer = null;
+      }
     }
   }
 

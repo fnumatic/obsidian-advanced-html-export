@@ -1,0 +1,548 @@
+{
+  "environment": {
+    "date": "2026-11-12T09:17:15.916Z",
+    "node": "v26.12.1",
+    "cpu": "AMD Ryzen 9 7940HS w/ Radeon 780M Graphics",
+    "logicalCpus": 16,
+    "ramGiB": 43.85487747192383,
+    "rounds": 7,
+    "versions": {
+      "vite": "8.1.3",
+      "typescript": "6.0.3",
+      "unocss": "66.7.4",
+      "vitest": "4.1.10"
+    },
+    "chrome": "Chrome/157.0.8103.50"
+  },
+  "builds": [
+    {
+      "round": 0,
+      "variant": "native",
+      "elapsedMs": 318.97988,
+      "cpuMs": 505.987,
+      "peakRssKiB": 307320,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    },
+    {
+      "round": 1,
+      "variant": "native",
+      "elapsedMs": 308.27263200000004,
+      "cpuMs": 468.761,
+      "peakRssKiB": 304628,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    },
+    {
+      "round": 2,
+      "variant": "native",
+      "elapsedMs": 302.453756,
+      "cpuMs": 485.392,
+      "peakRssKiB": 311712,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    },
+    {
+      "round": 3,
+      "variant": "native",
+      "elapsedMs": 305.947551,
+      "cpuMs": 469.239,
+      "peakRssKiB": 302796,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    },
+    {
+      "round": 4,
+      "variant": "native",
+      "elapsedMs": 303.15422,
+      "cpuMs": 459.37,
+      "peakRssKiB": 307632,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    },
+    {
+      "round": 5,
+      "variant": "native",
+      "elapsedMs": 308.018907,
+      "cpuMs": 499.422,
+      "peakRssKiB": 309824,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    },
+    {
+      "round": 6,
+      "variant": "native",
+      "elapsedMs": 310.25864900000005,
+      "cpuMs": 492.574,
+      "peakRssKiB": 305532,
+      "jsBytes": 115272,
+      "cssBytes": 18752,
+      "gzipJsBytes": 33583,
+      "svelteModules": 0
+    }
+  ],
+  "browser": [
+    {
+      "round": 0,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 7.9000000059604645,
+      "noneMs": 0.5,
+      "allMs": 0.5999999940395355,
+      "searchMs": 0.7999999821186066,
+      "toggleMs": 0.09999999403953552,
+      "unmountMs": 0.3999999761581421,
+      "domNodes": 800
+    },
+    {
+      "round": 0,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 50.80000001192093,
+      "noneMs": 3.0999999940395355,
+      "allMs": 2.7000000178813934,
+      "searchMs": 4.5999999940395355,
+      "toggleMs": 0.30000001192092896,
+      "unmountMs": 3.600000023841858,
+      "domNodes": 7775
+    },
+    {
+      "round": 0,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 302.90000000596046,
+      "noneMs": 17.400000005960464,
+      "allMs": 17.400000005960464,
+      "searchMs": 23.30000001192093,
+      "toggleMs": 0.800000011920929,
+      "unmountMs": 22.600000023841858,
+      "domNodes": 38775
+    },
+    {
+      "round": 0,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 53.19999998807907,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 0,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 265.69999998807907,
+      "eventCount": 2500,
+      "domNodes": 10062
+    },
+    {
+      "round": 1,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 4.799999982118607,
+      "noneMs": 0.30000001192092896,
+      "allMs": 0.4000000059604645,
+      "searchMs": 0.6000000238418579,
+      "toggleMs": 0.09999999403953552,
+      "unmountMs": 0.30000001192092896,
+      "domNodes": 800
+    },
+    {
+      "round": 1,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 43.20000001788139,
+      "noneMs": 2.800000011920929,
+      "allMs": 2.699999988079071,
+      "searchMs": 4.5999999940395355,
+      "toggleMs": 0.4000000059604645,
+      "unmountMs": 3.7999999821186066,
+      "domNodes": 7775
+    },
+    {
+      "round": 1,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 260.59999999403954,
+      "noneMs": 19,
+      "allMs": 19,
+      "searchMs": 24.400000005960464,
+      "toggleMs": 0.7999999821186066,
+      "unmountMs": 24.099999994039536,
+      "domNodes": 38775
+    },
+    {
+      "round": 1,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 54.400000005960464,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 1,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 266.5,
+      "eventCount": 2500,
+      "domNodes": 10062
+    },
+    {
+      "round": 2,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 4.9000000059604645,
+      "noneMs": 0.4000000059604645,
+      "allMs": 0.30000001192092896,
+      "searchMs": 0.7999999821186066,
+      "toggleMs": 0.09999999403953552,
+      "unmountMs": 0.3999999761581421,
+      "domNodes": 800
+    },
+    {
+      "round": 2,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 44.20000001788139,
+      "noneMs": 2.699999988079071,
+      "allMs": 2.7000000178813934,
+      "searchMs": 4.5,
+      "toggleMs": 0.29999998211860657,
+      "unmountMs": 4,
+      "domNodes": 7775
+    },
+    {
+      "round": 2,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 267.59999999403954,
+      "noneMs": 20.600000023841858,
+      "allMs": 24.30000001192093,
+      "searchMs": 37.80000001192093,
+      "toggleMs": 1.699999988079071,
+      "unmountMs": 24.700000017881393,
+      "domNodes": 38775
+    },
+    {
+      "round": 2,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 53.69999998807907,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 2,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 265.09999999403954,
+      "eventCount": 2500,
+      "domNodes": 10062
+    },
+    {
+      "round": 3,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 4.9000000059604645,
+      "noneMs": 0.5,
+      "allMs": 0.30000001192092896,
+      "searchMs": 0.7000000178813934,
+      "toggleMs": 0.20000001788139343,
+      "unmountMs": 0.30000001192092896,
+      "domNodes": 800
+    },
+    {
+      "round": 3,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 42.30000001192093,
+      "noneMs": 2.7999999821186066,
+      "allMs": 2.5999999940395355,
+      "searchMs": 4.699999988079071,
+      "toggleMs": 0.29999998211860657,
+      "unmountMs": 3.5999999940395355,
+      "domNodes": 7775
+    },
+    {
+      "round": 3,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 259.59999999403954,
+      "noneMs": 20.80000001192093,
+      "allMs": 18.900000005960464,
+      "searchMs": 24.799999982118607,
+      "toggleMs": 1,
+      "unmountMs": 24.30000001192093,
+      "domNodes": 38775
+    },
+    {
+      "round": 3,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 53.39999997615814,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 3,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 260.30000001192093,
+      "eventCount": 2500,
+      "domNodes": 10062
+    },
+    {
+      "round": 4,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 4.799999982118607,
+      "noneMs": 0.29999998211860657,
+      "allMs": 0.4000000059604645,
+      "searchMs": 0.699999988079071,
+      "toggleMs": 0.09999999403953552,
+      "unmountMs": 0.19999998807907104,
+      "domNodes": 800
+    },
+    {
+      "round": 4,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 43.69999998807907,
+      "noneMs": 2.9000000059604645,
+      "allMs": 2.699999988079071,
+      "searchMs": 4.5999999940395355,
+      "toggleMs": 0.29999998211860657,
+      "unmountMs": 3.699999988079071,
+      "domNodes": 7775
+    },
+    {
+      "round": 4,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 263.69999998807907,
+      "noneMs": 19.900000005960464,
+      "allMs": 18.900000005960464,
+      "searchMs": 25.099999994039536,
+      "toggleMs": 1.4000000059604645,
+      "unmountMs": 25.19999998807907,
+      "domNodes": 38775
+    },
+    {
+      "round": 4,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 53.5,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 4,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 267.2000000178814,
+      "eventCount": 2500,
+      "domNodes": 10062
+    },
+    {
+      "round": 5,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 5.0999999940395355,
+      "noneMs": 0.4000000059604645,
+      "allMs": 0.30000001192092896,
+      "searchMs": 0.800000011920929,
+      "toggleMs": 0.09999999403953552,
+      "unmountMs": 0.4000000059604645,
+      "domNodes": 800
+    },
+    {
+      "round": 5,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 42.80000001192093,
+      "noneMs": 3,
+      "allMs": 2.7000000178813934,
+      "searchMs": 4.5999999940395355,
+      "toggleMs": 0.29999998211860657,
+      "unmountMs": 4.0999999940395355,
+      "domNodes": 7775
+    },
+    {
+      "round": 5,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 263,
+      "noneMs": 19,
+      "allMs": 18.200000017881393,
+      "searchMs": 25,
+      "toggleMs": 0.8999999761581421,
+      "unmountMs": 24.69999998807907,
+      "domNodes": 38775
+    },
+    {
+      "round": 5,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 55.400000005960464,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 5,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 276.40000000596046,
+      "eventCount": 2500,
+      "domNodes": 10062
+    },
+    {
+      "round": 6,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 100,
+      "mountMs": 5,
+      "noneMs": 0.30000001192092896,
+      "allMs": 0.4000000059604645,
+      "searchMs": 0.800000011920929,
+      "toggleMs": 0.09999999403953552,
+      "unmountMs": 0.30000001192092896,
+      "domNodes": 800
+    },
+    {
+      "round": 6,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 1000,
+      "mountMs": 77.5,
+      "noneMs": 3,
+      "allMs": 2.5999999940395355,
+      "searchMs": 4.5,
+      "toggleMs": 0.19999998807907104,
+      "unmountMs": 3.5999999940395355,
+      "domNodes": 7775
+    },
+    {
+      "round": 6,
+      "variant": "native",
+      "scenario": "selection",
+      "count": 5000,
+      "mountMs": 269.2000000178814,
+      "noneMs": 15.799999982118607,
+      "allMs": 16.099999994039536,
+      "searchMs": 23.30000001192093,
+      "toggleMs": 0.800000011920929,
+      "unmountMs": 24.30000001192093,
+      "domNodes": 38775
+    },
+    {
+      "round": 6,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 100,
+      "eventsMs": 58.80000001192093,
+      "eventCount": 500,
+      "domNodes": 2062
+    },
+    {
+      "round": 6,
+      "variant": "native",
+      "scenario": "progress",
+      "count": 500,
+      "eventsMs": 291.5,
+      "eventCount": 2500,
+      "domNodes": 10062
+    }
+  ],
+  "heap": [
+    {
+      "variant": "native",
+      "round": 0,
+      "count": 5000,
+      "usedHeapDelta": 1253472,
+      "embedderHeapDelta": 61807000
+    },
+    {
+      "variant": "native",
+      "round": 1,
+      "count": 5000,
+      "usedHeapDelta": 1275280,
+      "embedderHeapDelta": 61171784
+    },
+    {
+      "variant": "native",
+      "round": 2,
+      "count": 5000,
+      "usedHeapDelta": 1275260,
+      "embedderHeapDelta": 61191984
+    },
+    {
+      "variant": "native",
+      "round": 3,
+      "count": 5000,
+      "usedHeapDelta": 1275220,
+      "embedderHeapDelta": 61288656
+    },
+    {
+      "variant": "native",
+      "round": 4,
+      "count": 5000,
+      "usedHeapDelta": 1275480,
+      "embedderHeapDelta": 61161536
+    },
+    {
+      "variant": "native",
+      "round": 5,
+      "count": 5000,
+      "usedHeapDelta": 1275320,
+      "embedderHeapDelta": 61217464
+    },
+    {
+      "variant": "native",
+      "round": 6,
+      "count": 5000,
+      "usedHeapDelta": 1275664,
+      "embedderHeapDelta": 61263872
+    }
+  ]
+}

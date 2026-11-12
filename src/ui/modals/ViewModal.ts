@@ -1,14 +1,12 @@
 import { App, Modal } from 'obsidian';
-import { mount, unmount } from 'svelte';
-
-type MountedComponent = ReturnType<typeof mount>;
+import type { ModalView } from '../view';
 
 /**
- * Base class for modals that host a Svelte component and resolve a typed
+ * Base class for modals that own a DOM view and resolve a typed
  * result when the modal closes.
  */
-export abstract class SvelteModal<TResult> extends Modal {
-  private mounted: MountedComponent | null = null;
+export abstract class ViewModal<TResult, TView extends ModalView = ModalView> extends Modal {
+  private mounted: TView | null = null;
   private resolvePromise: ((result: TResult) => void) | null = null;
 
   protected constructor(app: App) {
@@ -23,21 +21,21 @@ export abstract class SvelteModal<TResult> extends Modal {
     });
   }
 
-  /** Mounts the Svelte view into the modal content element. */
-  protected abstract mountComponent(target: HTMLElement): MountedComponent;
+  /** Creates the view inside the modal content element. */
+  protected abstract createView(target: HTMLElement): TView;
 
   /** Result used when the modal closes without an explicit choice. */
   protected abstract getFallbackResult(): TResult;
 
-  /** The mounted component instance, for event forwarding. */
-  protected getMountedComponent(): MountedComponent | null {
+  /** The current view, for typed event forwarding. */
+  protected getMountedView(): TView | null {
     return this.mounted;
   }
 
   onOpen(): void {
-    this.contentEl.empty();
-    this.modalEl.addClass('advanced-html-export-modal');
-    this.mounted = this.mountComponent(this.contentEl);
+    this.contentEl.replaceChildren();
+    this.modalEl.classList.add('advanced-html-export-modal');
+    this.mounted = this.createView(this.contentEl);
   }
 
   /** Resolves with a result and closes the modal. */
@@ -49,11 +47,9 @@ export abstract class SvelteModal<TResult> extends Modal {
   }
 
   onClose(): void {
-    if (this.mounted) {
-      void unmount(this.mounted);
-      this.mounted = null;
-    }
-    this.contentEl.empty();
+    this.mounted?.dispose();
+    this.mounted = null;
+    this.contentEl.replaceChildren();
 
     // Ensure we resolve if closed unexpectedly (e.g. Escape key).
     const resolve = this.resolvePromise;

@@ -4,7 +4,7 @@ import "./styles.css";
 import "./ui/styles/plugin-styles.css";
 import { ExportSingleFileCommand } from "./commands/exportSingleFile";
 import { ExportWikiCommand } from "./commands/exportWiki";
-import { DEFAULT_SETTINGS, type AdvancedHtmlExportSettings } from "./settings";
+import { DEFAULT_SETTINGS, timestampPreview, type AdvancedHtmlExportSettings } from "./settings";
 
 declare global {
   interface Window {
@@ -97,12 +97,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
 
     this.addToggle('Show export statistics', 'Show a size breakdown of the generated file after each export (what data uses how much space)', 'showExportStatistics');
 
-    this.addText(
-      'Timestamp format',
-      'Layout of the timestamp in exported filenames. Tokens: YYYY, YY, MM, DD, HH, mm, ss. Spaces and invalid filename characters become underscores. Leave empty to disable timestamps. Can be overridden per note via the "export.timestamp" frontmatter (false to disable, or another format).',
-      'timestampFormat',
-      'YYYY-MM-DD_HH-mm-ss'
-    );
+    this.addTimestampFormatSetting();
 
     this.addSlider('Wiki link depth', 'How many levels of links to include in wiki export (1 = direct links only)', 'linkDepth', [1, 10, 1]);
 
@@ -153,6 +148,32 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
           this.plugin.settings[key] = value;
           await this.plugin.saveSettings();
         }));
+  }
+
+  private addTimestampFormatSetting(): void {
+    const setting = new Setting(this.containerEl)
+      .setName('Timestamp format')
+      .setDesc('Layout of the timestamp in exported filenames. Tokens: YYYY, YY, MM, DD, HH, mm, ss. Spaces and invalid filename characters become underscores. Leave empty to disable timestamps (default). Can be overridden per note via the "export.timestamp" frontmatter (false to disable, or another format).');
+
+    const previewEl = setting.descEl.createDiv({ cls: 'advanced-html-export-timestamp-preview' });
+    const updatePreview = (format: string): void => {
+      previewEl.setText(
+        format.trim().length === 0
+          ? 'No timestamp: note.html'
+          : `Example: ${timestampPreview(format)}`,
+      );
+    };
+
+    setting.addText(text => text
+      .setPlaceholder('YYYY-MM-DD_HH-mm-ss')
+      .setValue(this.plugin.settings.timestampFormat)
+      .onChange(async (value) => {
+        this.plugin.settings.timestampFormat = value;
+        await this.plugin.saveSettings();
+        updatePreview(value);
+      }));
+
+    updatePreview(this.plugin.settings.timestampFormat);
   }
 
   private addText(name: string, desc: string, key: TextSettingKey, placeholder = ''): void {

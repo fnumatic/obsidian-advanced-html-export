@@ -70,24 +70,33 @@ export class ExportWikiCommand {
                 return;
             }
             orchestrator.setSelectedNotes(selectedNotes);
+            const selectedMetrics = orchestrator.getMetrics();
+            if (!selectedMetrics) {
+                throw new Error('Could not calculate metrics for the selected notes.');
+            }
 
             // Phase 4: Render selected notes with detailed progress
             const token = new CancellationToken();
             const pauseController = new PauseController();
-            const progressModal = new RenderingProgressModal(this.app, token, pauseController, metrics, selectedNotes);
+            const progressModal = new RenderingProgressModal(this.app, token, pauseController, selectedMetrics);
             const ledger = new ExportSizeLedger();
             for (const note of selectedNotes) {
                 ledger.recordNoteSource(note.file.stat?.size ?? 0);
             }
 
-            const renderPromise = this.performRendering(orchestrator, selectedNotes, options, token, pauseController, progressModal, ledger);
-            const rendered = await progressModal.openAndAwait();
-            if (!rendered) {
+            // Mount before the renderer emits events. Completion follows the render result, not a UI counter.
+            const progressResult = progressModal.openAndAwait();
+            const { renderedPages, renderer } = await this.performRendering(
+                orchestrator, selectedNotes, options, token, pauseController, progressModal, ledger
+            ).catch((error: unknown) => {
+                progressModal.close();
+                throw error;
+            });
+            progressModal.complete();
+            if (!await progressResult) {
                 new Notice('Export cancelled by user.');
                 return;
             }
-
-            const { renderedPages, renderer } = await renderPromise;
 
             // Record per-note artifacts (excluding inline images, which are
             // listed separately) for the largest-artifacts ranking.

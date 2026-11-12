@@ -1,20 +1,18 @@
-// src/ui/modals/ExportPreviewModal.ts
-// Wrapper class that bridges the Svelte ExportPreview component with Obsidian's Modal API
-
 import { App } from 'obsidian';
-import { mount } from 'svelte';
-import ExportPreview from '../../components/ExportPreview.svelte';
 import type { ExportMetrics, NoteInfo } from '../../utils/wikiExportOrchestrator';
-import { SvelteModal } from './SvelteModal';
+import type { ModalView } from '../view';
+import type { ExportPreviewAction } from '../types';
+import { createExportPreviewView } from '../views/export-preview-view';
+import { ViewModal } from './ViewModal';
 
-export type ExportPreviewAction = 'cancel' | 'exportAll' | 'selectNotes';
+export type { ExportPreviewAction } from '../types';
 
 interface ExportPreviewResult {
   action: ExportPreviewAction;
   selectedNotes?: NoteInfo[];
 }
 
-export class ExportPreviewModal extends SvelteModal<ExportPreviewResult> {
+export class ExportPreviewModal extends ViewModal<ExportPreviewResult> {
   private metrics: ExportMetrics;
   private notes: NoteInfo[];
 
@@ -24,14 +22,11 @@ export class ExportPreviewModal extends SvelteModal<ExportPreviewResult> {
     this.notes = notes;
   }
 
-  protected mountComponent(target: HTMLElement): ReturnType<typeof mount> {
-    return mount(ExportPreview, {
-      target,
-      props: {
-        metrics: this.metrics,
-        notes: this.notes,
-        onAction: (action: ExportPreviewAction) => this.finish({ action }),
-      },
+  protected createView(target: HTMLElement): ModalView {
+    return createExportPreviewView(target, {
+      metrics: this.metrics,
+      notes: this.notes,
+      onAction: (action: ExportPreviewAction) => this.finish({ action }),
     });
   }
 

@@ -1,44 +1,33 @@
-import type { ExportMetrics } from '../utils/wikiExportOrchestrator';
-import type { CancellationToken } from '../utils/cancellationToken';
-import type { PauseController } from '../utils/pauseController';
 import type { RenderEvent } from '../utils/detailedRenderer';
-import type { CompletedNote, CurrentNoteProgress } from './types';
+import type { CompletedNote, CurrentNoteProgress, RenderingProgressProps } from './types';
 import {
   calculateCurrentNoteProgress,
   completedNoteFrom,
   currentNoteFromEvent,
   formatDuration,
   updateNoteProgress,
+  updateNotePhase,
   warningMessage,
 } from '../utils/renderProgress';
 
 const WARNING_TIMEOUT_MS = 5000;
 
-export interface RenderingProgressDeps {
-  metrics: ExportMetrics;
-  token: CancellationToken;
-  pauseController: PauseController;
-  onComplete: () => void;
-  onCancel: () => void;
-}
-
 /**
- * Reactive state and event handling for the rendering progress view.
- * The Svelte component is a thin template over this store.
+ * Progress state and timers. The view receives one notification per change.
  */
 export class RenderingProgressStore {
-  completedNotes = $state<CompletedNote[]>([]);
-  currentNote = $state<CurrentNoteProgress | null>(null);
-  isPaused = $state(false);
-  isCancelled = $state(false);
-  isCompleted = $state(false);
-  elapsedTime = $state(0);
-  remainingTime = $state<number | null>(null);
-  speed = $state<string>('Starting...');
-  warning = $state<string | null>(null);
-  completedOpen = $state(true);
+  completedNotes: CompletedNote[] = [];
+  currentNote: CurrentNoteProgress | null = null;
+  isPaused = false;
+  isCancelled = false;
+  isCompleted = false;
+  elapsedTime = 0;
+  remainingTime: number | null = null;
+  speed = 'Starting...';
+  warning: string | null = null;
 
-  readonly overallProgress = $derived.by(() => {
+  get overallProgress(): number {
+    if (this.isCompleted) return 100;
     const total = this.deps.metrics.totalNotes;
     if (total <= 0) return 0;
 
@@ -48,30 +37,41 @@ export class RenderingProgressStore {
     }
     const currentProgress = calculateCurrentNoteProgress(this.currentNote);
     return Math.min(100, Math.round(notesProgress * 100 + currentProgress * (100 / total)));
-  });
+  }
 
-  readonly elapsedLabel = $derived(formatDuration(this.elapsedTime));
-  readonly remainingLabel = $derived(
-    this.remainingTime !== null ? `~${formatDuration(this.remainingTime)}` : 'Calculating...',
-  );
+  get elapsedLabel(): string {
+    return formatDuration(this.elapsedTime);
+  }
 
-  private readonly deps: RenderingProgressDeps;
+  get remainingLabel(): string {
+    return this.remainingTime !== null ? `~${formatDuration(this.remainingTime)}` : 'Calculating...';
+  }
+
+  /** Time spent on the note currently being rendered. */
+  get noteElapsed(): number {
+    return this.currentNote?.startedAt ? Date.now() - this.currentNote.startedAt : 0;
+  }
+
+  private readonly deps: RenderingProgressProps;
   private readonly startTime = Date.now();
   private timer: ReturnType<typeof setInterval> | null = null;
   private warningTimer: ReturnType<typeof setTimeout> | null = null;
+  private resultTimer: ReturnType<typeof setTimeout> | null = null;
+  private disposed = false;
 
-  constructor(deps: RenderingProgressDeps) {
+  constructor(deps: RenderingProgressProps, private readonly onChange: () => void = () => {}) {
     this.deps = deps;
   }
 
   /** Starts the elapsed-time ticker. */
   start(): void {
-    if (this.timer !== null) return;
+    if (this.disposed || this.timer !== null) return;
     this.timer = setInterval(() => this.tick(), 1000);
   }
 
   /** Stops all timers. Call when the view unmounts. */
   dispose(): void {
+    this.disposed = true;
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
@@ -79,6 +79,10 @@ export class RenderingProgressStore {
     if (this.warningTimer !== null) {
       clearTimeout(this.warningTimer);
       this.warningTimer = null;
+    }
+    if (this.resultTimer !== null) {
+      clearTimeout(this.resultTimer);
+      this.resultTimer = null;
     }
   }
 
@@ -92,11 +96,12 @@ export class RenderingProgressStore {
       this.remainingTime = avgTimePerNote * remainingNotes;
       this.speed = `${(this.completedNotes.length / (this.elapsedTime / 60000)).toFixed(1)} notes/min`;
     }
+    this.onChange();
   }
 
   /** Applies a render event to the progress state. */
   handleEvent(event: RenderEvent): void {
-    if (this.isCancelled) return;
+    if (this.disposed || this.isCancelled || this.isCompleted) return;
 
     switch (event.type) {
       case 'note_start':
@@ -105,6 +110,11 @@ export class RenderingProgressStore {
       case 'note_complete':
         this.handleNoteComplete(event);
         break;
+      case 'note_phase': {
+        const phase = typeof event.details?.phase === 'string' ? event.details.phase : '';
+        if (this.currentNote && phase) this.currentNote = updateNotePhase(this.currentNote, phase);
+        break;
+      }
       case 'note_error':
         this.setWarning(`Error rendering ${event.noteTitle}: ${event.details?.error}`);
         break;
@@ -140,10 +150,12 @@ export class RenderingProgressStore {
         break;
       }
     }
+    this.onChange();
   }
 
   /** Toggles pause on the underlying pause controller. */
   togglePause(): void {
+    if (this.disposed || this.isCancelled || this.isCompleted) return;
     if (this.isPaused) {
       this.deps.pauseController.resume();
       this.isPaused = false;
@@ -151,27 +163,38 @@ export class RenderingProgressStore {
       this.deps.pauseController.pause();
       this.isPaused = true;
     }
+    this.onChange();
   }
 
   /** Cancels the export and notifies the caller after a short grace period. */
   cancel(): void {
+    if (this.disposed || this.isCancelled || this.isCompleted) return;
     this.isCancelled = true;
     this.deps.token.cancel();
+    this.deps.pauseController.resume();
+    this.isPaused = false;
     this.warning = 'Cancelling... Please wait for current operation to complete.';
-    setTimeout(() => this.deps.onCancel(), 500);
+    this.resultTimer = setTimeout(() => this.deps.onCancel(), 500);
+    this.onChange();
+  }
+
+  /** Finishes only when the export command confirms that rendering has settled. */
+  complete(): void {
+    if (this.disposed || this.isCancelled || this.isCompleted) return;
+    this.isCompleted = true;
+    this.currentNote = null;
+    this.remainingTime = 0;
+    this.resultTimer = setTimeout(() => this.deps.onComplete(), 1000);
+    this.onChange();
   }
 
   private handleNoteComplete(event: RenderEvent): void {
     const current = this.currentNote;
     if (!current) return;
 
-    this.completedNotes = [...this.completedNotes, completedNoteFrom(current, event)];
+    this.completedNotes.push(completedNoteFrom(current, event));
     this.currentNote = null;
 
-    if (this.completedNotes.length === this.deps.metrics.totalNotes && !this.isCancelled) {
-      this.isCompleted = true;
-      setTimeout(() => this.deps.onComplete(), 1000);
-    }
   }
 
   private update(
@@ -198,6 +221,7 @@ export class RenderingProgressStore {
     if (message !== null) {
       this.warningTimer = setTimeout(() => {
         this.warning = null;
+        this.onChange();
       }, WARNING_TIMEOUT_MS);
     }
   }
