@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WikiExportOrchestrator, WikiExportOptions } from './wikiExportOrchestrator';
-import { createMockFile, installMockDocument, mockAppWithFiles } from './test-utils';
+import { createMockFile, installMockDocument, mockAppWithFiles } from '../__mocks__/testUtils';
 
 const options: WikiExportOptions = {
   imageQuality: 'high',

@@ -64,7 +64,7 @@ Vite 8.1.3, TypeScript 6.0.3, UnoCSS 66.7.4 and Vitest 4.1.10. Machine:
 Ryzen 9 7940HS, 16 logical CPUs, 43.9 GiB RAM visible to the OS.
 
 Seven measured rounds plus one discarded warmup; values below are medians.
-Raw data: [production-results.json](../benchmarks/svelte-comparison/production-results.json).
+Raw data: [production-results.json](../scripts/benchmarks/svelte-comparison/production-results.json).
 
 | Metric | Production native UI |
 |---|---:|
@@ -100,7 +100,7 @@ pnpm install --frozen-lockfile
 pnpm test
 pnpm type-check
 pnpm build
-node benchmarks/svelte-comparison/run.mjs
+node scripts/benchmarks/svelte-comparison/run.mjs
 ```
 
 ### Fully automated end-to-end export test

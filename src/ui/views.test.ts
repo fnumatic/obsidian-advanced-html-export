@@ -11,7 +11,7 @@ import { createExportPreviewView } from './views/export-preview-view';
 import { createExportStatisticsView } from './views/export-statistics-view';
 import { createRenderingProgressView } from './views/rendering-progress-view';
 import { element } from './view-helpers';
-import { installObsidianDom } from '../utils/test-utils';
+import { installObsidianDom } from '../__mocks__/testUtils';
 import { NoteSelectionModal } from './modals/NoteSelectionModal';
 import { ExportPreviewModal } from './modals/ExportPreviewModal';
 import { ExportStatisticsModal } from './modals/ExportStatisticsModal';

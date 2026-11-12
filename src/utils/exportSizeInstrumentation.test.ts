@@ -11,7 +11,7 @@ import {
 } from './exportSizeInstrumentation';
 import { ExportSizeLedger } from './exportSizeLedger';
 import { utf8ByteLength } from './exportSizeReport';
-import { installObsidianDom } from './test-utils';
+import { installObsidianDom } from '../__mocks__/testUtils';
 
 // Mock ImageOptimizer
 vi.mock('./imageOptimizer', () => ({

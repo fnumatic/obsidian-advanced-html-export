@@ -1,4 +1,4 @@
-import { installObsidianDom } from './test-utils';
+import { installObsidianDom } from './testUtils';
 
 // Node-based test files have no window; the plugin uses window.* timers for
 // popout-window compatibility.

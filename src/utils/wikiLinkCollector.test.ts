@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { App } from 'obsidian';
 import { WikiLinkCollector } from './wikiLinkCollector';
 import { LinkResolver } from './linkResolver';
-import { installMockDocument, mockAppWithFiles } from './test-utils';
+import { installMockDocument, mockAppWithFiles } from '../__mocks__/testUtils';
 
 function makeCollector(app: App): WikiLinkCollector {
   return new WikiLinkCollector(app, new LinkResolver());

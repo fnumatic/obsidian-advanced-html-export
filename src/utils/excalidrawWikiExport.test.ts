@@ -6,7 +6,7 @@ import { DetailedWikiRenderer } from './detailedRenderer';
 import WikiHtmlRenderer from './wikiHtmlRenderer';
 import { CancellationToken } from './cancellationToken';
 import { PauseController } from './pauseController';
-import { installObsidianDom, mockAppWithFiles } from './test-utils';
+import { installObsidianDom, mockAppWithFiles } from '../__mocks__/testUtils';
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -3,7 +3,7 @@ import { Component } from 'obsidian';
 import { DetailedWikiRenderer } from './detailedRenderer';
 import { ExportSizeLedger } from './exportSizeLedger';
 import { utf8ByteLength } from './exportSizeReport';
-import { mockAppWithFiles } from './test-utils';
+import { mockAppWithFiles } from '../__mocks__/testUtils';
 
 type Report = ReturnType<ExportSizeLedger['finalize']>;
 

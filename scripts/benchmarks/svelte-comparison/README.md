@@ -17,7 +17,7 @@ current results, and limitations.
 Run from the repository root with existing pnpm dependencies and Google Chrome:
 
 ```sh
-node benchmarks/svelte-comparison/run.mjs
+node scripts/benchmarks/svelte-comparison/run.mjs
 pnpm test
 pnpm type-check
 pnpm build

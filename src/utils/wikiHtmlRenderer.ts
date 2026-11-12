@@ -114,8 +114,7 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
     }
 
     private replaceWithMissingLink(anchor: HTMLAnchorElement, rawTarget: string): void {
-        const span = createEl('span');
-        span.className = 'wiki-link-missing';
+        const span = createSpan({ cls: 'wiki-link-missing' });
         span.setAttribute('data-missing-target', rawTarget);
         span.textContent = anchor.textContent || rawTarget;
         anchor.replaceWith(span);

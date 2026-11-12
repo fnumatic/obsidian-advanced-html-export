@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, Component, MarkdownRenderer } from 'obsidian';
 import HtmlRenderer from './htmlRenderer';
 import WikiHtmlRenderer, { type RenderPipelineHooks } from './wikiHtmlRenderer';
-import { installObsidianDom } from './test-utils';
+import { installObsidianDom } from '../__mocks__/testUtils';
 
 class TestWikiRenderer extends WikiHtmlRenderer {
   renderContent(hooks?: RenderPipelineHooks): Promise<string> {

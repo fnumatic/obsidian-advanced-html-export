@@ -1,16 +1,16 @@
-import { createNoteSelectionView as NoteSelection } from '../../src/ui/views/note-selection-view';
-import { createRenderingProgressView as RenderingProgress } from '../../src/ui/views/rendering-progress-view';
-import { createExportPreviewView as ExportPreview } from '../../src/ui/views/export-preview-view';
-import { createExportStatisticsView as ExportStatistics } from '../../src/ui/views/export-statistics-view';
-import type { ModalView } from '../../src/ui/view';
-import type { ExportMetrics, NoteInfo } from '../../src/utils/wikiExportOrchestrator';
-import type { RenderEvent } from '../../src/utils/detailedRenderer';
-import type { ExportSizeReport } from '../../src/utils/exportSizeReport';
-import { CancellationToken } from '../../src/utils/cancellationToken';
-import { PauseController } from '../../src/utils/pauseController';
+import { createNoteSelectionView as NoteSelection } from '../../../src/ui/views/note-selection-view';
+import { createRenderingProgressView as RenderingProgress } from '../../../src/ui/views/rendering-progress-view';
+import { createExportPreviewView as ExportPreview } from '../../../src/ui/views/export-preview-view';
+import { createExportStatisticsView as ExportStatistics } from '../../../src/ui/views/export-statistics-view';
+import type { ModalView } from '../../../src/ui/view';
+import type { ExportMetrics, NoteInfo } from '../../../src/utils/wikiExportOrchestrator';
+import type { RenderEvent } from '../../../src/utils/detailedRenderer';
+import type { ExportSizeReport } from '../../../src/utils/exportSizeReport';
+import { CancellationToken } from '../../../src/utils/cancellationToken';
+import { PauseController } from '../../../src/utils/pauseController';
 import 'virtual:uno.css';
-import '../../src/styles.css';
-import '../../src/ui/styles/plugin-styles.css';
+import '../../../src/styles.css';
+import '../../../src/ui/styles/plugin-styles.css';
 import './bench.css';
 
 // The plugin views expect Obsidian's element helpers, which a plain page lacks.

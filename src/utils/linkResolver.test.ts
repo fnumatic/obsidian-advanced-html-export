@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { LinkResolver } from './linkResolver';
-import { createMockFile } from './test-utils';
+import { createMockFile } from '../__mocks__/testUtils';
 
 describe('LinkResolver', () => {
   describe('extractLinks', () => {

@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { loadConfigFromFile } from 'vite';
 
-export const directory = resolve('benchmarks/svelte-comparison');
+export const directory = resolve('scripts/benchmarks/svelte-comparison');
 export const output = resolve('/tmp/opencode/obsidian-svelte-comparison');
 
 export async function config() {

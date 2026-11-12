@@ -11,7 +11,7 @@ interface CreateElementOptions {
  * provided by the test environment (happy-dom / jsdom).
  */
 export function installObsidianDom(): void {
-  const globalScope = globalThis as { createEl?: unknown };
+  const globalScope = globalThis as { createEl?: unknown; createSpan?: unknown };
   if (typeof globalScope.createEl !== 'function') {
     globalScope.createEl = (tag: string, opts?: CreateElementOptions): HTMLElement => {
       const el = document.createElement(tag);
@@ -20,6 +20,10 @@ export function installObsidianDom(): void {
       for (const [name, value] of Object.entries(opts?.attr ?? {})) el.setAttribute(name, value);
       return el;
     };
+  }
+  if (typeof globalScope.createSpan !== 'function') {
+    globalScope.createSpan = (opts?: CreateElementOptions): HTMLElement =>
+      (globalScope.createEl as (tag: string, o?: CreateElementOptions) => HTMLElement)('span', opts);
   }
   if (typeof HTMLElement === 'undefined') return;
   const proto = HTMLElement.prototype as unknown as Record<string, unknown>;

@@ -84,7 +84,7 @@ Values are medians. Negative change means less time or fewer bytes.
   explicit garbage collection, over fresh navigations. JavaScript heap excludes
   DOM/native allocations. CDP embedder heap is shown separately. Neither is total
   application RSS. The smaller JS heap alone must not be called a 95% RAM saving.
-- All raw rounds are in [results.json](../benchmarks/svelte-comparison/results.json).
+- All raw rounds are in [results.json](../scripts/benchmarks/svelte-comparison/results.json).
 
 ## Functional checks
 
