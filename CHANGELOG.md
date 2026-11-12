@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.3](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.2...0.12.3) (2026-11-12)
+
+
+### Bug Fixes
+
+* **review:** clear Obsidian lint warnings ([0bbf311](https://github.com/fnumatic/obsidian-advanced-html-export/commit/0bbf3114a3dff2c93aa258826c80f5154fc011bf))
+
 ## [0.12.2](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.1...0.12.2) (2026-11-12)
 
 
