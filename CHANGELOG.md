@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.1...0.12.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **ui:** build views with DOM helpers instead of innerHTML ([a20ce9f](https://github.com/fnumatic/obsidian-advanced-html-export/commit/a20ce9f5ba6b78f7179873bd43962437a956882d))
+
 ## [0.12.1](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.0...0.12.1) (2026-11-12)
 
 
