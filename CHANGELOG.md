@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.4...0.13.0) (2026-11-12)
+
+
+### Features
+
+* **settings:** add declarative setting definitions ([993bf04](https://github.com/fnumatic/obsidian-advanced-html-export/commit/993bf04a3dcdb014de28b58070017f32910b0ff9))
+
 ## [0.12.4](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.3...0.12.4) (2026-11-12)
 
 
