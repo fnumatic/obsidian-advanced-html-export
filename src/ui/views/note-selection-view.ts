@@ -1,7 +1,6 @@
 import type { NoteSelectionProps } from '../types';
 import type { ModalView } from '../view';
-import { escapeHtml } from '../../utils/htmlUtils';
-import { bindAction, button, element, icon, setText, summaryStat } from '../view-helpers';
+import { html, bindAction, button, element, icon, setText, summaryStat } from '../view-helpers';
 
 /** Builds the selector once and reuses its rows when filtering. */
 export function createNoteSelectionView(target: HTMLElement, { notes, onConfirm, onCancel }: NoteSelectionProps): ModalView {
@@ -9,7 +8,7 @@ export function createNoteSelectionView(target: HTMLElement, { notes, onConfirm,
   const { signal } = events;
   let selected = new Set(notes.map(note => note.path));
   let warningTimer: ReturnType<typeof setTimeout> | undefined;
-  target.innerHTML = `<div data-tags="ns-container" class="flex flex-col">
+  target.innerHTML = html`<div data-tags="ns-container" class="flex flex-col">
     <header data-tags="ns-header" class="flex justify-between items-center mb-4">
       <h2 class="m-0 text-obsidian font-semibold">Select notes</h2>
       <span data-count class="text-obsidian-sm text-obsidian-muted bg-obsidian-alt px-3 py-1 rounded-full"></span>
@@ -26,7 +25,7 @@ export function createNoteSelectionView(target: HTMLElement, { notes, onConfirm,
     <footer data-tags="ns-footer" class="flex justify-end gap-3 mt-5 pt-4 border-t border-dimmed">
       ${button('Cancel', 'cancel')}${button('Export', 'export', 'obsidian-btn-primary mod-cta')}
     </footer>
-  </div>`;
+  </div>`.value;
   const list = element(target, '[data-tags="ns-list"]');
   const count = element(target, '[data-count]');
   const warning = element(target, '[data-tags="ns-warning"]');
@@ -35,9 +34,9 @@ export function createNoteSelectionView(target: HTMLElement, { notes, onConfirm,
   const rows = [...notes].sort((a, b) => b.estimatedDiagrams - a.estimatedDiagrams).map(note => {
     const row = document.createElement('label');
     row.className = 'note-list-item cursor-pointer';
-    row.innerHTML = `<input type="checkbox" data-path="${escapeHtml(note.path)}" aria-label="${escapeHtml(`Select ${note.title}`)}" class="w-4 h-4 cursor-pointer">
-      <div class="flex-1 min-w-0"><div class="whitespace-nowrap overflow-hidden text-ellipsis">${escapeHtml(note.title)}</div><div class="text-obsidian-muted whitespace-nowrap overflow-hidden text-ellipsis">${escapeHtml(note.path)}</div></div>
-      <span class="text-obsidian-muted">${note.estimatedDiagrams > 0 ? icon('chart-bar') + note.estimatedDiagrams : ''}${icon('link')}${note.linkCount}</span>`;
+    row.innerHTML = html`<input type="checkbox" data-path="${note.path}" aria-label="Select ${note.title}" class="w-4 h-4 cursor-pointer">
+      <div class="flex-1 min-w-0"><div class="whitespace-nowrap overflow-hidden text-ellipsis">${note.title}</div><div class="text-obsidian-muted whitespace-nowrap overflow-hidden text-ellipsis">${note.path}</div></div>
+      <span class="text-obsidian-muted">${note.estimatedDiagrams > 0 ? [icon('chart-bar'), note.estimatedDiagrams] : ''}${icon('link')}${note.linkCount}</span>`.value;
     return { note, row, checkbox: element<HTMLInputElement>(row, 'input'), searchText: `${note.title}\n${note.path}`.toLowerCase() };
   });
 

@@ -1,8 +1,8 @@
-import { element, setText } from '../view-helpers';
+import { element, html, setText, type SafeHtml } from '../view-helpers';
 
 /** Shared markup for overall progress and the small detail bars. */
-export function progressBar(small = false): string {
-  return `<div data-tags="pb-container" role="progressbar" aria-label="${small ? 'Item progress' : 'Overall progress'}" aria-valuemin="0" aria-valuemax="100" class="overflow-hidden bg-obsidian ${small ? 'rounded h-1.5 opacity-40' : 'rounded-full h-4 relative'}"><div data-tags="pb-fill" class="h-full rounded-full progress-gradient"></div>${small ? '' : '<span data-tags="pb-text" class="absolute inset-0 flex items-center justify-center text-obsidian-xs font-semibold text-white" style="text-shadow:0 1px 2px rgba(0,0,0,0.3)"></span>'}</div>`;
+export function progressBar(small = false): SafeHtml {
+  return html`<div data-tags="pb-container" role="progressbar" aria-label="${small ? 'Item progress' : 'Overall progress'}" aria-valuemin="0" aria-valuemax="100" class="overflow-hidden bg-obsidian ${small ? 'rounded h-1.5 opacity-40' : 'rounded-full h-4 relative'}"><div data-tags="pb-fill" class="h-full rounded-full progress-gradient"></div>${small ? '' : html`<span data-tags="pb-text" class="absolute inset-0 flex items-center justify-center text-obsidian-xs font-semibold text-white" style="text-shadow:0 1px 2px rgba(0,0,0,0.3)"></span>`}</div>`;
 }
 
 /** Binds once; subsequent updates only touch the bar's dynamic properties. */
