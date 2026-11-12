@@ -35,7 +35,10 @@ vi.mock('./imageOptimizer', () => ({
 const rendered = vi.hoisted(() => ({ html: '' }));
 
 vi.mock('obsidian', () => ({
-  Component: class MockComponent {},
+  Component: class MockComponent {
+    load(): void {}
+    unload(): void {}
+  },
   MarkdownRenderer: {
     render: vi.fn(async (_app: unknown, _markdown: string, el: HTMLElement) => {
       el.innerHTML = rendered.html;

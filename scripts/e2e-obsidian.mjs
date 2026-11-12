@@ -290,9 +290,10 @@ try {
 
   const scenarios = [
     { name: 'single note selected', note: 'export2/01-central-note.md', select: 'export2/02-topic-02.md', pages: 1 },
-    { name: 'all collected notes', note: 'export2/01-central-note.md', select: null, pages: null },
+    ...Array.from({ length: 3 }, (_, index) => ({ name: `all collected notes ${index + 1}`, note: 'export2/01-central-note.md', select: null, pages: null })),
   ];
   const results = [];
+  const baselineRenderComponents = await evaluate(`app.plugins.plugins['${pluginId}']._children?.length ?? 0`);
   for (const scenario of scenarios) {
     if (scenarioFilter && !scenario.name.includes(scenarioFilter)) continue;
     const result = await step(scenario.name, async () => {
@@ -317,6 +318,7 @@ try {
         window.__e2eObserver?.disconnect();
         window.__e2eObserver = new MutationObserver(() => {
           if (!document.querySelector('.modal-container')) return;
+          if (document.querySelector('[data-tags="rp-container"]')) window.__e2eUi.renderStartedAt ??= performance.now();
           const snapshot = {
             percent: document.querySelector('[data-tags="pb-text"]')?.textContent || '',
             elapsed: document.querySelectorAll('[data-time]')[0]?.textContent || '',
@@ -326,6 +328,7 @@ try {
           };
           const last = window.__e2eUi.states.at(-1);
           if (!last || JSON.stringify(last) !== JSON.stringify(snapshot)) window.__e2eUi.states.push(snapshot);
+          if (snapshot.percent === '100%') window.__e2eUi.renderFinishedAt ??= performance.now();
         });
         window.__e2eObserver.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
         // Dialog geometry can shift without a DOM mutation; sample it independently.
@@ -398,8 +401,11 @@ try {
           geometry: window.__e2eUi.geometry,
           completed: states.at(-1)?.completed || '',
           durationMs: Math.round(performance.now() - window.__e2eUi.start),
+          renderDurationMs: Math.round(window.__e2eUi.renderFinishedAt - window.__e2eUi.renderStartedAt),
           errors: state.errors.slice(),
           warnings: state.warnings.slice(),
+          bodyChildren: document.body.children.length,
+          retainedRenderComponents: app.plugins.plugins['advanced-html-export']._children?.length ?? 0,
         };
       })()`);
       if (scenario.pages !== null) assert.equal(analysis.pages, scenario.pages, `${scenario.name}: page count`);
@@ -408,6 +414,7 @@ try {
       assert.ok(analysis.activePage, 'export must show an active page');
       assert.ok(analysis.manifest, 'export must contain the manifest');
       assert.deepEqual(analysis.errors, [], 'no unhandled rejection during export');
+      assert.equal(analysis.retainedRenderComponents, baselineRenderComponents, 'export must not retain Markdown render components');
       assert.ok(analysis.uiStates >= 3, `progress UI must update repeatedly, saw ${analysis.uiStates}`);
       // The dialog must not grow, shrink or wander while it reports progress.
       const heights = analysis.geometry.map(entry => entry.h);
@@ -418,7 +425,7 @@ try {
         `dialog position must stay fixed, saw ${JSON.stringify([...new Set(tops)])}`);
       assert.ok(analysis.percents.includes(100), `progress must reach 100%, saw ${analysis.percents}`);
       // A short export can finish inside the first clock tick; only longer runs must show it advance.
-      if (analysis.durationMs > 2000) assert.ok(analysis.distinctElapsed >= 2, 'elapsed timer must advance');
+      if (analysis.renderDurationMs > 1500) assert.ok(analysis.distinctElapsed >= 2, 'elapsed timer must advance');
       // Remote images must survive unchanged, but must never stall the render.
       if (analysis.remoteImageSources > 0) {
         assert.ok(analysis.durationMs < 20000, `remote images must not stall the export, took ${analysis.durationMs} ms`);

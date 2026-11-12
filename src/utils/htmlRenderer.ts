@@ -130,11 +130,12 @@ export default class HtmlRenderer {
    * Renders markdown safely – isolates foreign postprocessor errors
    * so a crashed plugin doesn't abort the entire export.
    */
-  protected async renderMarkdownSafely(content: string, el: HTMLElement, sourcePath: string): Promise<RenderMarkdownResult> {
+  protected async renderMarkdownSafely(content: string, el: HTMLElement, sourcePath: string, component: Component = this.component): Promise<RenderMarkdownResult> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      const renderPromise = MarkdownRenderer.render(this.app, content, el, sourcePath, this.component);
+      const renderPromise = MarkdownRenderer.render(this.app, content, el, sourcePath, component);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('timeout')), MARKDOWN_RENDER_TIMEOUT_MS);
+        timeout = setTimeout(() => reject(new Error('timeout')), MARKDOWN_RENDER_TIMEOUT_MS);
       });
       await Promise.race([renderPromise, timeoutPromise]);
       return { ok: true };
@@ -167,6 +168,24 @@ export default class HtmlRenderer {
           : error instanceof Error ? error.message : String(error),
         ...(isTimeout ? { timedOut: true } : {}),
       };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /** Keeps postprocessors alive through image processing, but never beyond this page. */
+  protected async withRenderContainer(render: (el: HTMLElement, component: Component) => Promise<string>): Promise<string> {
+    const el = document.body.createDiv();
+    const component = new Component();
+    try {
+      component.load();
+      return await render(el, component);
+    } finally {
+      try {
+        component.unload();
+      } finally {
+        el.remove();
+      }
     }
   }
 
@@ -186,33 +205,34 @@ export default class HtmlRenderer {
       ? hideLanguageIdentifiers(markdownContent, languages)
       : markdownContent;
 
-    const el = document.body.createDiv();
-    await this.renderMarkdownSafely(processedContent, el, '.');
+    return this.withRenderContainer(async (el, component) => {
+      await this.renderMarkdownSafely(processedContent, el, '.', component);
 
-    // Post-process: restore language identifiers
-    if (this.settings.disableSyntaxHighlighting !== false) {
-      restoreLanguageIdentifiers(el);
-    }
+      // Post-process: restore language identifiers
+      if (this.settings.disableSyntaxHighlighting !== false) {
+        restoreLanguageIdentifiers(el);
+      }
 
-    // Remove copy-code buttons if they exist
-    el.querySelectorAll('.copy-code-button').forEach(e => {
-      e.remove();
+      // Remove copy-code buttons if they exist
+      el.querySelectorAll('.copy-code-button').forEach(e => {
+        e.remove();
+      });
+
+      this.measureContentSizes(el, {
+        ...(noteLabel ? { noteLabel } : {}),
+        diagramSources: extractDiagramSources(markdownContent),
+      });
+
+      let html: string;
+      if (this.settings.enableImageDeduplication) {
+        html = await this.renderWithDeduplication(el);
+      } else {
+        await this.renderWithoutDeduplication(el);
+        html = el.innerHTML;
+      }
+
+      return html;
     });
-
-    this.measureContentSizes(el, {
-      ...(noteLabel ? { noteLabel } : {}),
-      diagramSources: extractDiagramSources(markdownContent),
-    });
-
-    let html: string;
-    if (this.settings.enableImageDeduplication) {
-      html = await this.renderWithDeduplication(el);
-    } else {
-      await this.renderWithoutDeduplication(el);
-      html = el.innerHTML;
-    }
-
-    return html;
   }
 
   /** Processes all images in an element (delegates to the image embedder). */

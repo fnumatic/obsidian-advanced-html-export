@@ -148,42 +148,43 @@ export default class WikiHtmlRenderer extends HtmlRenderer {
             ? hideLanguageIdentifiers(resolvedContent, languages)
             : resolvedContent;
 
-        const el = document.body.createDiv();
+        return this.withRenderContainer(async (el, component) => {
 
-        const remote = blankRemoteImages(processedContent);
-        await hooks?.beforeMarkdownRender?.();
-        const renderResult = await this.renderMarkdownSafely(remote.markdown, el, sourcePath);
-        if (remote.images.length > 0) restoreRemoteImages(el, remote.images);
-        await hooks?.afterMarkdownRender?.(renderResult, el);
+            const remote = blankRemoteImages(processedContent);
+            await hooks?.beforeMarkdownRender?.();
+            const renderResult = await this.renderMarkdownSafely(remote.markdown, el, sourcePath, component);
+            if (remote.images.length > 0) restoreRemoteImages(el, remote.images);
+            await hooks?.afterMarkdownRender?.(renderResult, el);
 
-        if (this.settings.disableSyntaxHighlighting !== false) {
-            restoreLanguageIdentifiers(el);
-        }
-        await hooks?.afterLanguageRestore?.(el);
+            if (this.settings.disableSyntaxHighlighting !== false) {
+                restoreLanguageIdentifiers(el);
+            }
+            await hooks?.afterLanguageRestore?.(el);
 
-        el.querySelectorAll('.copy-code-button').forEach((e) => {
-            e.remove();
+            el.querySelectorAll('.copy-code-button').forEach((e) => {
+                e.remove();
+            });
+
+            this.measureContentSizes(el, {
+                noteLabel: noteLabelFromPath(sourcePath),
+                diagramSources: extractDiagramSources(markdownContent),
+            });
+
+            await hooks?.beforeImageProcessing?.(el);
+            await this.processImagesInElement(el, hooks?.imageHooks, hooks?.onImageProcessed);
+            await hooks?.afterImageProcessing?.(el);
+
+            await hooks?.beforeNormalizeLinks?.(el);
+            this.normalizeRenderedLinks(el);
+
+            await hooks?.beforeHeadingIds?.(el);
+            let html = el.innerHTML;
+            html = this.addHeadingIds(html);
+
+            // Note: Restoration script is added globally in generateWikiHtml, not per-page
+
+            return html;
         });
-
-        this.measureContentSizes(el, {
-            noteLabel: noteLabelFromPath(sourcePath),
-            diagramSources: extractDiagramSources(markdownContent),
-        });
-
-        await hooks?.beforeImageProcessing?.(el);
-        await this.processImagesInElement(el, hooks?.imageHooks, hooks?.onImageProcessed);
-        await hooks?.afterImageProcessing?.(el);
-
-        await hooks?.beforeNormalizeLinks?.(el);
-        this.normalizeRenderedLinks(el);
-
-        await hooks?.beforeHeadingIds?.(el);
-        let html = el.innerHTML;
-        html = this.addHeadingIds(html);
-
-        // Note: Restoration script is added globally in generateWikiHtml, not per-page
-
-        return html;
     }
 
     protected addHeadingIds(html: string): string {

@@ -24,7 +24,7 @@ export function installObsidianDom(): void {
  */
 export function installMockDocument(): void {
   const body = {
-    createDiv: () => ({ innerHTML: '', querySelectorAll: () => [], setAttribute: () => {} }),
+    createDiv: () => ({ innerHTML: '', querySelectorAll: () => [], setAttribute: () => {}, remove: () => {} }),
   };
   Object.defineProperty(globalThis, 'document', {
     value: { body, createElement: () => ({ innerHTML: '' }) },

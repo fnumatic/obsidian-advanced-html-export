@@ -42,7 +42,10 @@ Object.defineProperty(global, 'document', {
 
 // Mock Obsidian modules
 vi.mock('obsidian', () => ({
-  Component: class MockComponent {},
+  Component: class MockComponent {
+    load = vi.fn();
+    unload = vi.fn();
+  },
   MarkdownRenderer: {
     render: vi.fn()
   },
@@ -104,7 +107,7 @@ describe('HtmlRenderer', () => {
         innerHTML: '<p>Rendered content</p>'
       };
 
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+      mockBody.createDiv.mockReturnValue({ ...mockElement, remove: vi.fn() } as unknown as HTMLElement);
 
       // Mock MarkdownRenderer.render
       const { MarkdownRenderer } = await import('obsidian');
@@ -129,9 +132,9 @@ describe('HtmlRenderer', () => {
       expect(MarkdownRenderer.render).toHaveBeenCalledWith(
         mockApp,
         '# Test Content',
-        mockElement,
+        expect.objectContaining(mockElement),
         '.',
-        mockComponent
+        expect.objectContaining({ load: expect.any(Function), unload: expect.any(Function) })
       );
        expect(mockImg.setAttribute).toHaveBeenCalledWith('data-hash', 'testhash');
        expect(mockImg.setAttribute).toHaveBeenCalledWith('src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
@@ -161,7 +164,7 @@ describe('HtmlRenderer', () => {
         innerHTML: '<img src="app://test.png?1234567890"><p>Content</p>'
       };
 
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+      mockBody.createDiv.mockReturnValue({ ...mockElement, remove: vi.fn() } as unknown as HTMLElement);
 
       const { MarkdownRenderer } = await import('obsidian');
       (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
@@ -194,7 +197,7 @@ describe('HtmlRenderer', () => {
         innerHTML: '<p>Content</p>'
       };
 
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+      mockBody.createDiv.mockReturnValue({ ...mockElement, remove: vi.fn() } as unknown as HTMLElement);
 
       const { MarkdownRenderer } = await import('obsidian');
       (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
@@ -227,7 +230,7 @@ describe('HtmlRenderer', () => {
         firstChild: null as unknown as ChildNode,
         innerHTML: '<p>Content</p>'
       };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+      mockBody.createDiv.mockReturnValue({ ...mockElement, remove: vi.fn() } as unknown as HTMLElement);
 
       const { MarkdownRenderer } = await import('obsidian');
       (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
@@ -264,7 +267,7 @@ describe('HtmlRenderer', () => {
         firstChild: null as unknown as ChildNode,
         innerHTML: '<p>Content</p>'
       };
-      mockBody.createDiv.mockReturnValue(mockElement as unknown as HTMLElement);
+      mockBody.createDiv.mockReturnValue({ ...mockElement, remove: vi.fn() } as unknown as HTMLElement);
 
       const { MarkdownRenderer } = await import('obsidian');
       (MarkdownRenderer.render as unknown as Mock).mockResolvedValue(undefined);
