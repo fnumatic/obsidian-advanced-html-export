@@ -16,13 +16,7 @@
     "test:e2e": "pnpm build && node scripts/e2e-obsidian.mjs"
   },
   "devDependencies": {
-    "@codemirror/language": "^6.12.4",
-    "@codemirror/state": "6.5.0",
-    "@codemirror/view": "6.38.6",
     "@iconify-json/carbon": "^1.2.24",
-    "@iconify-json/mdi": "^1.2.3",
-    "@lezer/common": "^1.5.2",
-    "@types/chai": "^5.2.3",
     "@types/node": "^24.13.2",
     "@unocss/preset-icons": "^66.7.4",
     "@unocss/preset-wind4": "^66.7.4",
