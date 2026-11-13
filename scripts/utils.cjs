@@ -49,11 +49,17 @@ function promptUser(question, options, formerVault = null) {
     console.log(`${index + 1}. ${marker} ${option}`)
   })
 
-  process.stdout.write('Enter your choice (number): ')
+  process.stdout.write('Enter your choice (number, Enter for *): ')
 
   return new Promise((resolve) => {
     process.stdin.once('data', (data) => {
-      const choice = parseInt(data.toString().trim())
+      const trimmed = data.toString().trim()
+      if (trimmed === '') {
+        resolve(formerVault && options.includes(formerVault) ? formerVault : options[0])
+        return
+      }
+
+      const choice = parseInt(trimmed)
       if (choice >= 1 && choice <= options.length) {
         resolve(options[choice - 1])
       } else {
