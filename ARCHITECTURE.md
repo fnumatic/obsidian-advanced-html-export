@@ -61,13 +61,14 @@ Obsidian plugin that exports notes as self-contained HTML files. Supports both s
 │   └── __mocks__/
 │       ├── obsidian.ts                  # Full Obsidian API mock
 │       └── virtual-uno.css              # Empty UnoCSS mock
-├── doc/
-│   ├── prd.md
-│   └── FEAT_*.md                        # Feature specifications
+├── docs/                                # Human documentation
+│   ├── headless-obsidian-testing.md
+│   ├── native-ui.md
+│   └── svelte-comparison.md
 ├── testdata/
 │   ├── testcase1/ ... testcase5/        # Wiki test fixtures (1-11 notes)
 │   └── testimages/                      # Sample images
-├── scripts/                             # Dev/build scripts (CJS)
+├── scripts/                             # Dev, build and benchmark scripts
 ├── package.json
 ├── vite.config.ts                       # Vite lib mode → CJS
 ├── vitest.config.ts
