@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.13.0...0.14.0) (2026-11-13)
+
+
+### Features
+
+* **dev:** accept the starred vault on Enter ([3c057b4](https://github.com/fnumatic/obsidian-advanced-html-export/commit/3c057b42f32ae256cbe1950ae03d9ce579d57a58))
+* **settings:** save exports automatically into a vault folder ([c50a8bb](https://github.com/fnumatic/obsidian-advanced-html-export/commit/c50a8bba433408f6bbc9873cb0541557730d999e))
+
 ## [0.13.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.12.4...0.13.0) (2026-11-12)
 
 
