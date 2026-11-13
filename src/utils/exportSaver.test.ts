@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { App, TFile, TFolder } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../settings';
 import { deliverExport } from './exportSaver';
+
+// No DOM here; the download branch only needs to be observable.
+const { downloadBlob } = vi.hoisted(() => ({ downloadBlob: vi.fn() }));
+vi.mock('./fileUtils', () => ({ downloadBlob }));
 
 function makeApp(existing: string[] = []) {
   const entries = new Map<string, TFile | TFolder>();
@@ -33,7 +37,7 @@ function makeApp(existing: string[] = []) {
   return { app: { vault } as unknown as App, created, modified, entries };
 }
 
-const autoSave = { ...DEFAULT_SETTINGS, autoSaveExport: true, exportFolder: 'exports' };
+const autoSave = { ...DEFAULT_SETTINGS, exportFolder: 'exports' };
 
 describe('deliverExport', () => {
   it('writes into the configured folder and creates it', async () => {
@@ -44,10 +48,12 @@ describe('deliverExport', () => {
     expect(created).toEqual(['exports/note.html']);
   });
 
-  it('uses the vault root for an empty folder', async () => {
-    const { app } = makeApp();
-    const target = await deliverExport(app, { ...autoSave, exportFolder: '  ' }, '', 'note.html');
+  it('downloads instead of saving when the folder is empty', async () => {
+    const { app, created } = makeApp();
+    const target = await deliverExport(app, { ...autoSave, exportFolder: '  ' }, '<html></html>', 'note.html');
     expect(target).toBe('note.html');
+    expect(created).toEqual([]);
+    expect(downloadBlob).toHaveBeenCalledOnce();
   });
 
   it('numbers the file when the name is taken and overwriting is off', async () => {

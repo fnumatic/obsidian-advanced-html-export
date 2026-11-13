@@ -126,14 +126,15 @@ Example with `YYYY`:
 ### Automatic saving
 
 By default an export is downloaded by the browser, which may ask where to put
-the file. Turn on `Settings → Advanced HTML Export → Automatic saving → Save
-exports automatically` to write exports straight into a vault folder instead, so
-no file dialog appears. `Export folder` names that folder (`exports` by default,
-empty means the vault root) and is created on the first export.
+the file. Set `Settings → Advanced HTML Export → Automatic saving → Export
+folder` (for example `exports`) to write exports straight into that vault folder
+instead, so no file dialog appears. The folder is created on the first export.
+Clear the field to download again.
 
 `Overwrite existing exports` decides what happens when the name is taken: on, the
 file is replaced; off, the export becomes `My Note-1.html`, `My Note-2.html` and
-so on.
+so on. Combined with a timestamp format you get one file per run, or one file
+per period when the format is coarser (for example `YYYY-MM-DD`).
 
 Supported tokens:
 

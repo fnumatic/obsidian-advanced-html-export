@@ -39,6 +39,11 @@ for (const [from, to] of [
     if (!String(error).includes('ENOENT')) throw error;
   }
 }
+// The source vault may carry settings from earlier runs; exports must not depend on them.
+const dataPath = join(vault, pluginDir, 'data.json');
+const data = existsSync(dataPath) ? JSON.parse(await readFile(dataPath, 'utf8')) : {};
+delete data.autoSaveExport;
+await writeFile(dataPath, JSON.stringify({ ...data, exportFolder: '', overwriteExport: false }, null, 2));
 const enabled = JSON.parse(await readFile(join(vault, '.obsidian/community-plugins.json'), 'utf8'));
 if (!enabled.includes(pluginId)) {
   await writeFile(join(vault, '.obsidian/community-plugins.json'), JSON.stringify([...enabled, pluginId], null, 2));
@@ -445,7 +450,6 @@ try {
     const state = await evaluate(`(async () => {
       const plugin = app.plugins.plugins['${pluginId}'];
       const previous = {
-        autoSave: plugin.settings.autoSaveExport,
         folder: plugin.settings.exportFolder,
         overwrite: plugin.settings.overwriteExport,
       };
@@ -454,7 +458,6 @@ try {
       const leaf = app.workspace.getLeaf(false);
       await leaf.openFile(app.vault.getAbstractFileByPath('export2/02-topic-02.md'));
       app.workspace.setActiveLeaf(leaf, { focus: true });
-      plugin.settings.autoSaveExport = true;
       plugin.settings.exportFolder = 'auto-export';
       plugin.settings.overwriteExport = false;
       const downloadsBefore = window.__e2e.downloads.length;
@@ -469,7 +472,6 @@ try {
         const folder = app.vault.getAbstractFileByPath('auto-export');
         if (folder) await app.vault.delete(folder, true);
         Object.assign(plugin.settings, {
-          autoSaveExport: previous.autoSave,
           exportFolder: previous.folder,
           overwriteExport: previous.overwrite,
         });

@@ -18,7 +18,6 @@ export interface AdvancedHtmlExportSettings {
   disableSyntaxHighlighting: boolean;
   syntaxHighlightLanguages: string;
   exportAuthor: string;
-  autoSaveExport: boolean;
   exportFolder: string;
   overwriteExport: boolean;
 }
@@ -42,8 +41,7 @@ export const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   disableSyntaxHighlighting: true,
   syntaxHighlightLanguages: DEFAULT_LANGUAGES,
   exportAuthor: '',
-  autoSaveExport: false,
-  exportFolder: 'exports',
+  exportFolder: '',
   overwriteExport: false,
 };
 

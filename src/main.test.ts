@@ -30,4 +30,19 @@ describe('TestPlugin', () => {
     const plugin = new TestPlugin({} as unknown as App, {} as unknown as PluginManifest);
     expect(typeof plugin.onload).toBe('function');
   });
+
+  it('keeps automatic saving off after the 0.14 switch was off', async () => {
+    const plugin = new TestPlugin({} as unknown as App, {} as unknown as PluginManifest);
+    plugin.loadData = async () => ({ autoSaveExport: false, exportFolder: 'exports' });
+    await plugin.loadSettings();
+    expect(plugin.settings.exportFolder).toBe('');
+    expect('autoSaveExport' in plugin.settings).toBe(false);
+  });
+
+  it('keeps the saved export folder when automatic saving was on', async () => {
+    const plugin = new TestPlugin({} as unknown as App, {} as unknown as PluginManifest);
+    plugin.loadData = async () => ({ autoSaveExport: true, exportFolder: 'exports' });
+    await plugin.loadSettings();
+    expect(plugin.settings.exportFolder).toBe('exports');
+  });
 });

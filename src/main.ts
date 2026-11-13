@@ -19,7 +19,6 @@ type BooleanSettingKey =
   | 'enableThemeToggle'
   | 'enableInlineTOC'
   | 'disableSyntaxHighlighting'
-  | 'autoSaveExport'
   | 'overwriteExport'
   | 'debugMode';
 
@@ -61,8 +60,13 @@ export default class AdvancedHtmlExportPlugin extends Plugin {
   };
 
   async loadSettings() {
-    const stored = await this.loadData() as Partial<AdvancedHtmlExportSettings> | null;
+    const stored = await this.loadData() as
+      (Partial<AdvancedHtmlExportSettings> & { autoSaveExport?: boolean }) | null;
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored);
+    // 0.14 had a separate switch next to the folder. The folder decides now,
+    // so an explicit "off" must not turn saving on through the stored folder.
+    if (stored?.autoSaveExport === false) this.settings.exportFolder = '';
+    delete (this.settings as AdvancedHtmlExportSettings & { autoSaveExport?: boolean }).autoSaveExport;
   }
 
   async saveSettings() {
@@ -116,8 +120,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
         type: 'group',
         heading: 'Automatic saving',
         items: [
-          this.toggleDefinition('autoSaveExport', 'Save exports automatically', 'Write finished exports straight into the vault folder below instead of downloading them, so no file dialog appears.'),
-          this.textDefinition('exportFolder', 'Export folder', 'Vault folder for automatic saving. Created on the first export. Leave empty to use the vault root.', 'exports'),
+          this.textDefinition('exportFolder', 'Export folder', 'Vault folder that receives finished exports. The folder is created on the first export, and no file dialog appears. Leave empty to download exports instead.', 'exports'),
           this.toggleDefinition('overwriteExport', 'Overwrite existing exports', 'Replace a file with the same name. When off, the export gets a numbered name such as note-1.html.'),
         ],
       },
@@ -208,9 +211,7 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
 
     this.addHeading('Automatic saving');
 
-    this.addToggle('Save exports automatically', 'Write finished exports straight into the vault folder below instead of downloading them, so no file dialog appears.', 'autoSaveExport');
-
-    this.addText('Export folder', 'Vault folder for automatic saving. Created on the first export. Leave empty to use the vault root.', 'exportFolder', 'exports');
+    this.addText('Export folder', 'Vault folder that receives finished exports. The folder is created on the first export, and no file dialog appears. Leave empty to download exports instead.', 'exportFolder', 'exports');
 
     this.addToggle('Overwrite existing exports', 'Replace a file with the same name. When off, the export gets a numbered name such as note-1.html.', 'overwriteExport');
 

@@ -6,8 +6,8 @@ import type { AdvancedHtmlExportSettings } from '../settings';
 import { downloadBlob } from './fileUtils';
 
 /**
- * Saves an export automatically into the configured vault folder, or falls
- * back to the browser download when automatic saving is off.
+ * Saves an export into the configured vault folder, or falls back to the
+ * browser download when no folder is set. An empty folder is the switch.
  * @param app Obsidian app, used for the vault
  * @param settings Plugin settings that select the destination
  * @param html The finished export document
@@ -20,15 +20,15 @@ export async function deliverExport(
   html: string,
   filename: string,
 ): Promise<string> {
-  if (!settings.autoSaveExport) {
+  const target = normalizePath(settings.exportFolder.trim() || '/');
+  if (target === '/') {
     downloadBlob(new Blob([html], { type: 'text/html' }), filename);
     return filename;
   }
 
-  const folder = normalizePath(settings.exportFolder.trim() || '/');
-  await ensureFolder(app, folder);
+  await ensureFolder(app, target);
 
-  const path = resolveTargetPath(app, folder, filename, settings.overwriteExport);
+  const path = resolveTargetPath(app, target, filename, settings.overwriteExport);
   const existing = app.vault.getAbstractFileByPath(path);
   if (existing instanceof TFile) {
     await app.vault.modify(existing, html);
