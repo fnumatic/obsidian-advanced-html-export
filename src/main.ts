@@ -19,9 +19,11 @@ type BooleanSettingKey =
   | 'enableThemeToggle'
   | 'enableInlineTOC'
   | 'disableSyntaxHighlighting'
+  | 'autoSaveExport'
+  | 'overwriteExport'
   | 'debugMode';
 
-type TextSettingKey = 'wikiTitle' | 'exportAuthor' | 'syntaxHighlightLanguages' | 'timestampFormat';
+type TextSettingKey = 'wikiTitle' | 'exportAuthor' | 'syntaxHighlightLanguages' | 'timestampFormat' | 'exportFolder';
 
 type DropdownSettingKey = 'imageQuality' | 'exportCompression' | 'defaultTheme';
 
@@ -112,6 +114,15 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
       },
       {
         type: 'group',
+        heading: 'Automatic saving',
+        items: [
+          this.toggleDefinition('autoSaveExport', 'Save exports automatically', 'Write finished exports straight into the vault folder below instead of downloading them, so no file dialog appears.'),
+          this.textDefinition('exportFolder', 'Export folder', 'Vault folder for automatic saving. Created on the first export. Leave empty to use the vault root.', 'exports'),
+          this.toggleDefinition('overwriteExport', 'Overwrite existing exports', 'Replace a file with the same name. When off, the export gets a numbered name such as note-1.html.'),
+        ],
+      },
+      {
+        type: 'group',
         heading: 'Developer options',
         items: [
           this.toggleDefinition('debugMode', 'Debug mode', 'Enable detailed performance logging and timing measurements for exports (reload required)'),
@@ -194,6 +205,14 @@ class AdvancedHtmlExportSettingTab extends PluginSettingTab {
     this.addToggle('Show export statistics', 'Show a size breakdown of the generated file after each export (what data uses how much space)', 'showExportStatistics');
 
     this.addTimestampFormatSetting();
+
+    this.addHeading('Automatic saving');
+
+    this.addToggle('Save exports automatically', 'Write finished exports straight into the vault folder below instead of downloading them, so no file dialog appears.', 'autoSaveExport');
+
+    this.addText('Export folder', 'Vault folder for automatic saving. Created on the first export. Leave empty to use the vault root.', 'exportFolder', 'exports');
+
+    this.addToggle('Overwrite existing exports', 'Replace a file with the same name. When off, the export gets a numbered name such as note-1.html.', 'overwriteExport');
 
     this.addSlider('Wiki link depth', 'How many levels of links to include in wiki export (1 = direct links only)', 'linkDepth', [1, 10, 1]);
 

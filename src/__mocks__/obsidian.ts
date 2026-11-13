@@ -57,6 +57,15 @@ export class TFile {
   name: string = '';
 }
 
+export class TFolder {
+  path: string = '';
+  name: string = '';
+}
+
+export function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/';
+}
+
 export class App {
   vault: any = {};
   workspace: any = {};

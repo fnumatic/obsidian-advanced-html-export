@@ -440,6 +440,46 @@ try {
     });
     results.push({ scenario: scenario.name, ...result });
   }
+  // Automatic saving must write into the vault instead of downloading.
+  evidence.autoSave = await step('automatic saving', async () => {
+    const state = await evaluate(`(async () => {
+      const plugin = app.plugins.plugins['${pluginId}'];
+      const previous = {
+        autoSave: plugin.settings.autoSaveExport,
+        folder: plugin.settings.exportFolder,
+        overwrite: plugin.settings.overwriteExport,
+      };
+      const wait = ms => new Promise(resolve => window.setTimeout(resolve, ms));
+      const files = () => app.vault.getFiles().filter(file => file.path.startsWith('auto-export/')).map(file => file.path).sort();
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(app.vault.getAbstractFileByPath('export2/02-topic-02.md'));
+      app.workspace.setActiveLeaf(leaf, { focus: true });
+      plugin.settings.autoSaveExport = true;
+      plugin.settings.exportFolder = 'auto-export';
+      plugin.settings.overwriteExport = false;
+      const downloadsBefore = window.__e2e.downloads.length;
+      try {
+        const deadline = Date.now() + 25000;
+        app.commands.executeCommandById('${pluginId}:export-current-file-as-html');
+        while (Date.now() < deadline && files().length === 0) await wait(200);
+        const saved = files();
+        const content = saved.length > 0 ? await app.vault.read(app.vault.getAbstractFileByPath(saved[0])) : '';
+        return { saved, bytes: content.length, downloads: window.__e2e.downloads.length - downloadsBefore };
+      } finally {
+        const folder = app.vault.getAbstractFileByPath('auto-export');
+        if (folder) await app.vault.delete(folder, true);
+        Object.assign(plugin.settings, {
+          autoSaveExport: previous.autoSave,
+          exportFolder: previous.folder,
+          overwriteExport: previous.overwrite,
+        });
+      }
+    })()`);
+    assert.deepEqual(state.saved, ['auto-export/02-topic-02.html'], 'automatic saving writes into the export folder');
+    assert.ok(state.bytes > 1000, 'the saved file must contain the export');
+    assert.equal(state.downloads, 0, 'automatic saving must not download');
+    return state;
+  });
   await evaluate(`(() => {
     const state = window.__e2e;
     URL.createObjectURL = state.originalCreate;

@@ -123,6 +123,18 @@ Example with `YYYY`:
 - `My Note-2026.html`
 - `01-central-note-wiki-2026.html`
 
+### Automatic saving
+
+By default an export is downloaded by the browser, which may ask where to put
+the file. Turn on `Settings → Advanced HTML Export → Automatic saving → Save
+exports automatically` to write exports straight into a vault folder instead, so
+no file dialog appears. `Export folder` names that folder (`exports` by default,
+empty means the vault root) and is created on the first export.
+
+`Overwrite existing exports` decides what happens when the name is taken: on, the
+file is replaced; off, the export becomes `My Note-1.html`, `My Note-2.html` and
+so on.
+
 Supported tokens:
 
 | Token | Meaning | Example |

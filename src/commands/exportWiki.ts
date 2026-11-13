@@ -5,7 +5,8 @@ import { WikiExportOrchestrator, NoteInfo, ExportMetrics } from '../utils/wikiEx
 import { ExportPreviewModal } from '../ui/modals/ExportPreviewModal';
 import { NoteSelectionModal } from '../ui/modals/NoteSelectionModal';
 import { RenderingProgressModal } from '../ui/modals/RenderingProgressModal';
-import { downloadBlob, generateWikiFilename } from '../utils/fileUtils';
+import { generateWikiFilename } from '../utils/fileUtils';
+import { deliverExport } from '../utils/exportSaver';
 import { resolveTimestampFormat } from '../settings';
 import { wrapHtmlForExportWithMeta, resolveCompressionMode, type CompressionMode } from '../utils/selfExtract';
 import { ExportSizeLedger } from '../utils/exportSizeLedger';
@@ -113,7 +114,7 @@ export class ExportWikiCommand {
                 selectedNotes.map(n => ({ slug: n.slug, title: n.title, path: n.path }))
             );
 
-            this.deliverExport(file, htmlContent, ledger);
+            await this.deliverExport(file, htmlContent, ledger);
 
             // Export debug log if in debug mode
             debugLogger.exportToFile();
@@ -167,7 +168,7 @@ export class ExportWikiCommand {
     }
 
     /** Compresses, downloads and (optionally) reports the finished export. */
-    private deliverExport(file: TFile, htmlContent: string, ledger: ExportSizeLedger): void {
+    private async deliverExport(file: TFile, htmlContent: string, ledger: ExportSizeLedger): Promise<void> {
         const containerTitle = this.plugin.settings.wikiTitle || file.basename;
         const { html: outputHtml, meta } = wrapHtmlForExportWithMeta(
             htmlContent,
@@ -179,8 +180,8 @@ export class ExportWikiCommand {
         const filename = generateWikiFilename(file.path, {
             timestamp: this.timestampFormatFor(file),
         });
-        downloadBlob(new Blob([outputHtml], { type: 'text/html' }), filename);
-        new Notice(`Wiki exported as ${filename}`);
+        const target = await deliverExport(this.app, this.plugin.settings, outputHtml, filename);
+        new Notice(`Wiki exported as ${target}`);
 
         if (this.plugin.settings.showExportStatistics) {
             new ExportStatisticsModal(this.app, ledger.finalize()).open();

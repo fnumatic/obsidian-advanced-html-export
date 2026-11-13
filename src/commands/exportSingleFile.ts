@@ -1,7 +1,8 @@
 import { App, Notice, TFile } from 'obsidian';
 import type AdvancedHtmlExportPlugin from '../main';
 import HtmlRenderer from '../utils/htmlRenderer';
-import { downloadBlob, generateSafeFilename } from '../utils/fileUtils';
+import { generateSafeFilename } from '../utils/fileUtils';
+import { deliverExport } from '../utils/exportSaver';
 import { resolveTimestampFormat } from '../settings';
 import { wrapHtmlForExportWithMeta, resolveCompressionMode } from '../utils/selfExtract';
 import { ExportSizeLedger } from '../utils/exportSizeLedger';
@@ -78,7 +79,6 @@ export class ExportSingleFileCommand {
         activeFile.basename
       );
       ledger.applyCompression(meta);
-      const blob = new Blob([outputHtml], { type: 'text/html' });
       const filename = generateSafeFilename(activeFile.path, 'html', {
         timestamp: resolveTimestampFormat(
           frontmatterExport?.timestamp,
@@ -86,11 +86,11 @@ export class ExportSingleFileCommand {
         ),
       });
 
-      downloadBlob(blob, filename);
+      const target = await deliverExport(this.app, this.plugin.settings, outputHtml, filename);
 
       // Update progress notice
       progressNotice.hide();
-      new Notice(`File exported as ${filename}`);
+      new Notice(`File exported as ${target}`);
 
       if (this.plugin.settings.showExportStatistics) {
         new ExportStatisticsModal(this.app, ledger.finalize()).open();

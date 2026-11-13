@@ -18,6 +18,9 @@ export interface AdvancedHtmlExportSettings {
   disableSyntaxHighlighting: boolean;
   syntaxHighlightLanguages: string;
   exportAuthor: string;
+  autoSaveExport: boolean;
+  exportFolder: string;
+  overwriteExport: boolean;
 }
 
 export const DEFAULT_LANGUAGES = 'javascript,typescript,jsx,tsx,html,xml,css,scss,sass,c,cpp,c++,h,hpp,c#,csharp,cs,java,rust,go,ruby,swift,kotlin,scala,objective-c,objectivec,objc,python,py,perl,php,lua,raku,bash,sh,shell,powershell,ps1,cmd,batch,awk,tcl,json,jsonc,json5,yaml,yml,ini,toml,sql,pgsql,postgresql,mysql,sqlite,haskell,ocaml,fsharp,erlang,elixir,clojure,dart,flutter,groovy,gradle,maven,dockerfile,docker,cmake,makefile,markdown,md,latex,tex,asciidoc,adoc,protobuf,proto,thrift,graphql,diff,patch,vim,nginx,apache,apacheconf,lighttpd,terraform,hcl,ansible,puppet,r,julia,matlab,octave,vb,vbnet,vba,vbscript,basic,pascal,delphi,lazarus,fpc';
@@ -39,6 +42,9 @@ export const DEFAULT_SETTINGS: AdvancedHtmlExportSettings = {
   disableSyntaxHighlighting: true,
   syntaxHighlightLanguages: DEFAULT_LANGUAGES,
   exportAuthor: '',
+  autoSaveExport: false,
+  exportFolder: 'exports',
+  overwriteExport: false,
 };
 
 /**
