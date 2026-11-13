@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.14.0...0.15.0) (2026-11-13)
+
+
+### Features
+
+* **settings:** drive autosave through the export folder ([e4cb59d](https://github.com/fnumatic/obsidian-advanced-html-export/commit/e4cb59d9a3dc2375688c8e07e90c289a637e17ea))
+
 ## [0.14.0](https://github.com/fnumatic/obsidian-advanced-html-export/compare/0.13.0...0.14.0) (2026-11-13)
 
 
