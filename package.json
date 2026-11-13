@@ -13,8 +13,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "pnpm build && node scripts/e2e-obsidian.mjs",
-    "validate-workflow": "./bin/act push --eventpath push_event.json -P ubuntu-latest=catthehacker/ubuntu:act-latest"
+    "test:e2e": "pnpm build && node scripts/e2e-obsidian.mjs"
   },
   "devDependencies": {
     "@codemirror/language": "^6.12.4",

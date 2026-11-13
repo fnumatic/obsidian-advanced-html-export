@@ -24,7 +24,6 @@ Obsidian plugin that exports notes as self-contained HTML files with advanced fe
 - **Watch mode**: `pnpm test:watch` - Run tests with file watching for development
 - **Single test by name**: `pnpm test -- --testNamePattern="test name"` - Run tests matching pattern
 - **Single test file**: `pnpm test path/to/test.js` - Run specific test file
-- **Workflow validation**: `pnpm validate-workflow` - Test GitHub Actions locally
 
 ## TypeScript Configuration
 

@@ -309,17 +309,6 @@ Versions follow Conventional Commits (`fix` → patch, `feat` → minor; pre-1.0
 - `release-please.yml`: Creates/updates the release PR and, on release, the tag and GitHub release
 - `release.yml`: Triggers on version tags, builds the plugin and attaches the release assets
 
-### Local testing of GitHub Actions
-
-Use the `act` tool to test workflows locally:
-```bash
-# Install act
-curl https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
-
-# Test release workflow
-act -j release
-```
-
 ## Standing on shoulders of giants
 
 - https://github.com/obsidian-tools/obsidian-tools
